@@ -22,29 +22,7 @@ bool     LoadROM(const struct retro_game_info* game);
 void     InitROM(bool);
 bool     InitMemory();
 void     DeinitMemory();
-void     WriteProtectROM();
 void     FixROMSpeed(int32_t FastROMSpeed);
-void     MapRAM();
-void     MapExtraRAM();
-void     SetaDSPMap();
-void     BSLoROMMap();
-void     JumboLoROMMap(bool);
-void     LoROMMap();
-void     LoROM24MBSMap();
-void     SRAM512KLoROMMap();
-void     SRAM1024KLoROMMap();
-void     SufamiTurboLoROMMap();
-void     HiROMMap();
-void     SuperFXROMMap();
-void     TalesROMMap(bool);
-void     AlphaROMMap();
-void     SA1ROMMap();
-void     SPC7110HiROMMap();
-void     SPC7110Sram(uint8_t);
-void     SetaDSPMap();
-void     DSPMap();
-void     CapcomProtectLoROMMap();
-void     XBANDHiROMMap();
 bool     match_na(const char*);
 bool     match_lo_na(const char* str);
 bool     match_hi_na(const char* str);
@@ -64,6 +42,41 @@ void     SetPCBase(uint32_t Address);
 uint8_t* GetMemPointer(uint32_t Address);
 uint8_t* GetBasePointer(uint32_t Address);
 
+uint32_t map_mirror(uint32_t, uint32_t);
+void     map_lorom(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+void     map_hirom(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+void     map_lorom_offset(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+void     map_hirom_offset(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+void     map_space(uint32_t, uint32_t, uint32_t, uint32_t, uint8_t*);
+void     map_index(uint32_t, uint32_t, uint32_t, uint32_t, intptr_t, int32_t);
+void     map_System();
+void     map_WRAM();
+void     map_LoROMSRAM();
+void     map_HiROMSRAM();
+void     map_DSP();
+void     map_C4();
+void     map_OBC1();
+void     map_SetaDSP();
+void     map_WriteProtectROM();
+void     Map_Initialize();
+void     Map_LoROMMap();
+void     Map_NoMAD1LoROMMap();
+void     Map_JumboLoROMMap();
+void     Map_ROM24MBSLoROMMap();
+void     Map_SRAM512KLoROMMap();
+void     Map_SufamiTurboPseudoLoROMMap();
+void     Map_SuperFXLoROMMap();
+void     Map_SetaDSPLoROMMap();
+void     Map_SDD1LoROMMap();
+void     Map_SA1LoROMMap();
+void     Map_CapcomProtectLoROMMap();
+void     Map_HiROMMap();
+void     Map_ExtendedHiROMMap();
+void     Map_SPC7110HiROMMap();
+void     Map_BSCartLoROMMap(bool mapping);
+void     Map_BSCartHiROMMap();
+void     Map_XBANDHiROMMap();
+
 enum
 {
 	MAP_CPU,
@@ -81,6 +94,7 @@ enum
 	MAP_CX4,
 	MAP_OBC_RAM,
 	MAP_SETA_DSP,
+	MAP_BSX,
 	MAP_XBAND,
 	MAP_NONE,
 	MAP_LAST

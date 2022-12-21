@@ -20,6 +20,24 @@ void InitSPC7110() /* Emulate power on state */
 	s7r.AlignBy = 1;
 }
 
+static void SetSPC7110SRAMMap(uint8_t newstate)
+{
+	if (newstate & 0x80)
+	{
+		Memory.Map[0x006] = (uint8_t*) MAP_HIROM_SRAM;
+		Memory.Map[0x007] = (uint8_t*) MAP_HIROM_SRAM;
+		Memory.Map[0x306] = (uint8_t*) MAP_HIROM_SRAM;
+		Memory.Map[0x307] = (uint8_t*) MAP_HIROM_SRAM;
+	}
+	else
+	{
+		Memory.Map[0x006] = (uint8_t*) MAP_RONLY_SRAM;
+		Memory.Map[0x007] = (uint8_t*) MAP_RONLY_SRAM;
+		Memory.Map[0x306] = (uint8_t*) MAP_RONLY_SRAM;
+		Memory.Map[0x307] = (uint8_t*) MAP_RONLY_SRAM;
+	}
+}
+
 uint8_t GetSPC7110(uint16_t Address) /* reads SPC7110 and RTC registers. */
 {
 	uint32_t i;
@@ -676,7 +694,7 @@ void SetSPC7110(uint8_t data, uint16_t Address)
 			break;
 		/* math status register possibly read only */
 		case 0x4830: /* SRAM toggle */
-			SPC7110Sram(data);
+			SetSPC7110SRAMMap(data);
 			s7r.reg4830 = data;
 			break;
 		case 0x4831: /* Bank DX mapping */

@@ -238,9 +238,8 @@ void SA1SetPCBase(uint32_t address)
 
 static void SetSA1MemMap(uint32_t which1, uint8_t map)
 {
-	int32_t c;
-	int32_t i;
-	int32_t start = which1 * 0x100 + 0xc00;
+	int32_t c, i;
+	int32_t start  = which1 * 0x100 + 0xc00;
 	int32_t start2 = which1 * 0x200;
 
 	if (which1 >= 2)
@@ -251,7 +250,7 @@ static void SetSA1MemMap(uint32_t which1, uint8_t map)
 		uint8_t* block = &Memory.ROM[(map & 7) * 0x100000 + (c << 12)];
 
 		for (i = c; i < c + 16; i++)
-			Memory.Map[start + i] = SA1.Map[start + i] = block;
+			Memory.Map[start  + i] = SA1.Map[start  + i] = block;
 	}
 
 	if (map & 0x80)

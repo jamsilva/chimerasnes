@@ -3,6 +3,8 @@
 
 #include "port.h"
 
+uint8_t NullGet(uint32_t Address);
+void    NullSet(uint8_t Byte, uint32_t Address);
 uint8_t GetST010(uint32_t Address);
 void    SetST010(uint8_t Byte, uint32_t Address);
 

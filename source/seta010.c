@@ -592,3 +592,6 @@ void SetST010(uint8_t Byte, uint32_t Address)
 	ST010.op_reg = 0;
 	ST010.execute = 0;
 }
+
+uint8_t NullGet(uint32_t Address)               { return 0; }
+void    NullSet(uint8_t Byte, uint32_t Address) {}
