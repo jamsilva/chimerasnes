@@ -356,6 +356,8 @@ static INLINE void StartSrc(int32_t ch)
 	UnpckSrc(mix[ch].bHdr, &mix[ch].bCur, mix[ch].sBuf, &mix[ch].sP1, &mix[ch].sP2);
 }
 
+static INLINE void ChgSilence(int32_t ch);
+
 static INLINE void UpdateSrc(int32_t ch)
 {
 	if (mix[ch].bHdr & 1) /* Is this the end block? */
@@ -375,6 +377,13 @@ static INLINE void UpdateSrc(int32_t ch)
 
 	/* Save block header */
 	mix[ch].bHdr = DSP_GET_BYTE(mix[ch].bCur);
+
+	if((mix[ch].bHdr & 1) && !(mix[ch].bHdr & 2)) /* Is this the end block? */
+	{
+		APU.DSP[APU_ENDX] |= chs[ch].m;
+		mix[ch].mFlg |= MFLG_END;
+		ChgSilence(ch);
+	}
 
 	if (mix[ch].mFlg & MFLG_OFF)
 		mix[ch].bCur += 9;
@@ -510,13 +519,8 @@ void ResetAPUDSP()
 		mix[i].bHdr = DSP_GET_BYTE(mix[i].bCur);
 
 		/* Envelope */
-		mix[i].eMode = E_IDLE;
-		mix[i].eRIdx = 0x1f;
-		mix[i].eRate = rateTab[mix[i].eRIdx];
+		ChgSilence(i);
 		mix[i].eDec = 0;
-		mix[i].eVal = 0;
-		mix[i].eAdj = A_KOF;
-		mix[i].eDest = D_MIN;
 
 		/* Samples */
 		memset(mix[i].sBuf, 0, sizeof(int16_t) * 32);
@@ -557,7 +561,7 @@ void ResetAPUDSP()
 void StoreAPUDSP()
 {
 	int32_t i, eVal;
-	SetFilterCoefficient(0, (int32_t) (int8_t) APU.DSP[0x0f]); /* No filter */
+	SetFilterCoefficient(0, (int32_t) (int8_t) APU.DSP[APU_C0]); /* No filter */
 
 	for (i = 0; i < 8; i++)
 	{
@@ -950,10 +954,13 @@ static INLINE void UpdateEnv(int32_t i)
 
 static INLINE void CalcEnv(int32_t i)
 {
+	uint32_t e;
+
 	if (mix[i].eMode & E_IDLE)
 		return;
 
-	uint32_t e = (mix[i].eDec += mix[i].eRate) >> FIXED_POINT_SHIFT;
+	mix[i].eDec += mix[i].eRate;
+	e = mix[i].eDec >> FIXED_POINT_SHIFT;
 	mix[i].eDec &= FIXED_POINT_REMAINDER;
 
 	for (; e; e--)
@@ -963,6 +970,17 @@ static INLINE void CalcEnv(int32_t i)
 		if (mix[i].eMode & E_IDLE)
 			break;
 	}
+}
+
+static INLINE void ChgSilence(int32_t ch)
+{
+	mix[ch].eMode = E_DIRECT;
+	mix[ch].eRIdx = 0;
+	mix[ch].eRate = rateTab[mix[ch].eRIdx];
+	mix[ch].eAdj = A_EXP;
+	mix[ch].eVal = mix[ch].eDest = D_MIN;
+	mix[ch].mFlg |= MFLG_OFF;
+	mix[ch].mFlg &= (MFLG_MUTE | MFLG_OFF);
 }
 
 static INLINE void ProcessSrc(int32_t i)
@@ -1180,30 +1198,9 @@ static void RKOf(int32_t i, uint8_t val)
 	}
 }
 
-static void RFlg(int32_t i, uint8_t val)
+static void RFlg(int32_t _1, uint8_t val)
 {
-	if (val & APU_SOFT_RESET) /* Has a soft reset been initiated? */
-	{
-		val |= APU_MUTE;
-
-		/* Reset internal voice settings */
-		for (i = 0; i < 8; i++)
-		{
-			mix[i].mFlg |= MFLG_OFF;
-			mix[i].mFlg &= (MFLG_MUTE | MFLG_OFF);
-
-			mix[i].mDec = 0;
-			mix[i].mOut = 0;
-			mix[i].eMode = E_IDLE;
-			mix[i].eDec = 0;
-		}
-
-		APU.DSP[APU_ENDX] = 0; /* Clear end block flags */
-		APU.DSP[APU_KON] = 0;
-		APU.DSP[APU_KOFF] = 0;
-		voiceKon = 0;
-	}
-
+	(void) _1;
 	disEcho = (disEcho & ~APU_ECHO_DISABLED) | (val & APU_ECHO_DISABLED); /* Disable echo */
 	APU.DSP[APU_FLG] = val;
 	SetNoiseHertz();
@@ -1236,8 +1233,8 @@ static INLINE void NoiseGen() /* Noise Generator - Generates white noise samples
 	if (nDec < 0x7800)
 		return;
 
-	feedback = (nSmp << 13) ^ (nSmp << 14);
 	nDec -= 0x7800;
+	feedback = (nSmp << 13) ^ (nSmp << 14);
 	nSmp = (feedback & 0x4000) ^ (nSmp >> 1);
 }
 
@@ -1297,13 +1294,16 @@ static INLINE int32_t ProcessSample(int32_t ch)
 		else if (eVal < D_MIN)
 			eVal = D_MIN;
 
-		if (!(APU.DSP[APU_NON] & chs[ch].m))
+		if (APU.DSP[APU_NON] & chs[ch].m)
 		{
-			mix[ch].mOut = ((GetCurSample(ch) * eVal) >> (E_SHIFT + 7));
-			return ((GetCurSample(ch) * eVal) >> (E_SHIFT + 7));
+			mix[ch].mOut = (((int32_t) ((int16_t) (nSmp << 1)) * eVal) >> (E_SHIFT + 7)) & ~1;
+			return mix[ch].mOut;
 		}
 		else
-			return mix[ch].mOut = (((int32_t) ((int16_t) (nSmp << 1)) * eVal) >> (E_SHIFT + 7)) & ~1;
+		{
+			mix[ch].mOut = ((GetCurSample(ch) * eVal) >> (E_SHIFT + 7)) & ~1;
+			return ((GetCurSample(ch) * eVal) >> (E_SHIFT + 7)) & ~1;
+		}
 	}
 	else /* Note this, the noise hears only the length of the sound source data. */
 		return mix[ch].mOut = 0;
@@ -1356,8 +1356,8 @@ static INLINE void ECHOFilter(int32_t* l, int32_t* r, int32_t ll, int32_t rr)
 
 	if (!(APU.DSP[APU_FLG] & APU_ECHO_DISABLED)) /* Add feedback */
 	{
-		DSP_SET_WORD((echoStart + echoCur + 0) << 1, INT16_CLAMP(ll + ((*l * echoFB) >> 7)));
-		DSP_SET_WORD((echoStart + echoCur + 1) << 1, INT16_CLAMP(rr + ((*r * echoFB) >> 7)));
+		DSP_SET_WORD((echoStart + echoCur + 0) << 1, INT16_CLAMP(ll + ((*l * echoFB) >> 7)) & ~1);
+		DSP_SET_WORD((echoStart + echoCur + 1) << 1, INT16_CLAMP(rr + ((*r * echoFB) >> 7)) & ~1);
 	}
 
 	echoCur = (echoCur + 2) % echoDel;
@@ -1377,6 +1377,12 @@ void MixSamples(int16_t* pBuf, int32_t num) /* Emulate DSP - Emulates the DSP of
 
 		for (ch = 0; ch < 8; ch++)
 		{
+			if (APU.DSP[APU_FLG] & APU_SOFT_RESET)
+			{
+				if(!(mix[ch].mFlg & MFLG_OFF))
+					ChgSilence(ch);
+			}
+
 			if ((mix[ch].mFlg & MFLG_SSRC) || mix[ch].bStart != mix[ch].bMixStart)
 			{
 				mix[ch].mFlg &= ~MFLG_SSRC;
@@ -1435,7 +1441,7 @@ void MixSamples(int16_t* pBuf, int32_t num) /* Emulate DSP - Emulates the DSP of
 			pBuf[1] = INT16_CLAMP(MixSampleR);
 		}
 		else /* Clear sound buffer */
-			memset(pBuf, 0, DSP_SIZE * sizeof(int16_t));
+			pBuf[0] = pBuf[1] = 0;
 	}
 }
 
@@ -1468,19 +1474,18 @@ static INLINE int32_t UnpckSrcFilter(int32_t f, int32_t p1, int32_t p2)
 static void UnpckSrc(uint8_t blk_hdr, uint16_t* xsample_blk, int16_t* output_buf, int32_t* smp_1, int32_t* smp_2)
 {
 	int32_t i;
-	uint8_t* sample_blk = DSP_GET_SRC_P(*xsample_blk);
+	uint8_t* sample_blk = DSP_GET_SRC_P(*xsample_blk) + 1;
 	const int* BRR_row = &brrTab[(blk_hdr & 0xf0)];
 	int32_t f = (blk_hdr & 0x0c) >> 2;
 	*xsample_blk += 9;
-	sample_blk++; /* skip header */
 
 	for (i = 0; i < 8; i++)
 	{
 		*smp_2 = BRR_row[sample_blk[0] >> 4] + UnpckSrcFilter(f, *smp_1, *smp_2);
-		*smp_2 = (int16_t) (INT16_CLAMP(*smp_2) * 2);
+		*smp_2 = (int16_t) (INT16_CLAMP(*smp_2) << 1);
 		output_buf[0] = *smp_2;
 		*smp_1 = BRR_row[sample_blk[0] & 0x0f] + UnpckSrcFilter(f, *smp_2, *smp_1);
-		*smp_1 = (int16_t) (INT16_CLAMP(*smp_1) * 2);
+		*smp_1 = (int16_t) (INT16_CLAMP(*smp_1) << 1);
 		output_buf[1] = *smp_1;
 		sample_blk++;
 		output_buf += 2;
