@@ -145,7 +145,7 @@ void ClearIRQSource(uint32_t source)
 			SUPERFX_EXEC;                                                                                                             \
 			CPU.Cycles -= Settings.H_Max;                                                                                             \
 			                                                                                                                          \
-			if (IAPU.APUExecuting)                                                                                                    \
+			if (IAPU.Executing)                                                                                                    \
 				APU.Cycles -= Settings.H_Max;                                                                                         \
 			else                                                                                                                      \
 				APU.Cycles = 0;                                                                                                       \
@@ -220,7 +220,7 @@ void ClearIRQSource(uint32_t source)
 					IAPU.RAM[0xff] = (IAPU.RAM[0xff] + 1) & 0xf;                                                                      \
 					APU.Timer[2] -= APU.TimerTarget[2];                                                                               \
 					IAPU.WaitCounter++;                                                                                               \
-					IAPU.APUExecuting = Settings.APUEnabled;                                                                          \
+					IAPU.Executing = Settings.APUEnabled;                                                                          \
 				}                                                                                                                     \
 			}                                                                                                                         \
 			                                                                                                                          \
@@ -238,7 +238,7 @@ void ClearIRQSource(uint32_t source)
 						IAPU.RAM[0xfd + i] = (IAPU.RAM[0xfd + i] + 1) & 0xf;                                                          \
 						APU.Timer[i] = 0;                                                                                             \
 						IAPU.WaitCounter++;                                                                                           \
-						IAPU.APUExecuting = Settings.APUEnabled;                                                                      \
+						IAPU.Executing = Settings.APUEnabled;                                                                      \
 					}                                                                                                                 \
 				}                                                                                                                     \
 			}                                                                                                                         \

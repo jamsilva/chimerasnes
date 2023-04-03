@@ -65,7 +65,7 @@ void ResetAPU()
 	IAPU.Registers.P = 0x02;
 	APUUnpackStatus();
 	IAPU.Registers.PC = 0;
-	IAPU.APUExecuting = Settings.APUEnabled;
+	IAPU.Executing = Settings.APUEnabled;
 	IAPU.WaitAddress1 = NULL;
 	IAPU.WaitAddress2 = NULL;
 	IAPU.WaitCounter = 1;

@@ -2339,45 +2339,21 @@ static void Op0CM0()
 	#define BranchCheck()
 #endif
 
-#ifdef SA1_OPCODES
-	static INLINE void CPUShutdown()
-	{
-		if (Settings.Shutdown && CPU.PC == CPU.WaitAddress)
-		{
-			if (CPU.WaitCounter >= 1)
-				SA1.Executing = false;
-			else
-				CPU.WaitCounter++;
-		}
-	}
-#else
-	static INLINE void CPUShutdown()
-	{
-		if (Settings.Shutdown && CPU.PC == CPU.WaitAddress)
-		{
-			/* Don't skip cycles with a pending NMI or IRQ - could cause delayed
-			 * interrupt. Interrupts are delayed for a few cycles already, but
-			 * the delay could allow the shutdown code to cycle skip again.
-			 * Was causing screen flashing on Top Gear 3000. */
-			if (CPU.WaitCounter == 0 && !(CPU.Flags & (IRQ_PENDING_FLAG | NMI_FLAG)))
-			{
-				CPU.WaitAddress = NULL;
-				CPU.Cycles = CPU.NextEvent;
+#ifndef SA1_OPCODES
+static INLINE void APUExecute()
+{
+	if (!IAPU.Executing)
+		return;
 
-				if (IAPU.APUExecuting)
-				{
-					do
-					{
-						APU_EXECUTE1();
-					} while (APU.Cycles < CPU.NextEvent);
-				}
-			}
-			else if (CPU.WaitCounter >= 2)
-				CPU.WaitCounter = 1;
-			else
-				CPU.WaitCounter--;
-		}
-	}
+	ICPU.Executing = false;
+
+	do
+	{
+		APU_EXECUTE1();
+	} while (APU.Cycles < CPU.NextEvent);
+
+	ICPU.Executing = true;
+}
 #endif
 
 static INLINE void ForceShutdown() /* From the speed-hacks branch of CatSFC */
@@ -2387,14 +2363,31 @@ static INLINE void ForceShutdown() /* From the speed-hacks branch of CatSFC */
 #else
 	CPU.WaitAddress = NULL;
 	CPU.Cycles = CPU.NextEvent;
+	APUExecute();
+#endif
+}
 
-	if (IAPU.APUExecuting)
-	{
-		do
-		{
-			APU_EXECUTE1();
-		} while (APU.Cycles < CPU.NextEvent);
-	}
+static INLINE void CPUShutdown()
+{
+	if (!Settings.Shutdown || CPU.PC != CPU.WaitAddress)
+		return;
+
+#ifdef SA1_OPCODES
+	if (CPU.WaitCounter >= 1)
+		ForceShutdown();
+	else
+		CPU.WaitCounter++;
+#else
+	/* Don't skip cycles with a pending NMI or IRQ - could cause delayed
+	 * interrupt. Interrupts are delayed for a few cycles already, but
+	 * the delay could allow the shutdown code to cycle skip again.
+	 * Was causing screen flashing on Top Gear 3000. */
+	if (CPU.WaitCounter == 0 && !(CPU.Flags & (IRQ_PENDING_FLAG | NMI_FLAG)))
+		ForceShutdown();
+	else if (CPU.WaitCounter >= 2)
+		CPU.WaitCounter = 1;
+	else
+		CPU.WaitCounter--;
 #endif
 }
 
@@ -3534,14 +3527,7 @@ static void OpCB() /* WAI */
 		return;
 
 	CPU.Cycles = CPU.NextEvent;
-
-	if (!IAPU.APUExecuting)
-		return;
-
-	do
-	{
-		APU_EXECUTE1();
-	} while (APU.Cycles < CPU.NextEvent);
+	APUExecute();
 #endif
 }
 

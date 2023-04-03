@@ -559,7 +559,7 @@ void DoDMA(uint8_t Channel)
 		} while (count);
 	}
 
-	IAPU.APUExecuting = Settings.APUEnabled;
+	IAPU.Executing = Settings.APUEnabled;
 	APU_EXECUTE();
 
 	if ((Settings.Chip & GSU) == GSU)

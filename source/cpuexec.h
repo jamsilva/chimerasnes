@@ -14,7 +14,8 @@ typedef struct
 	bool       Carry       : 1;
 	bool       Overflow    : 1;
 	bool       Zero        : 1;
-	int16_t    _SICPU_PAD1 : 13;
+	bool       Executing   : 1;
+	int16_t    _SICPU_PAD1 : 12;
 	uint8_t    Negative;
 	uint8_t    OpenBus;
 	uint32_t   ShiftedDB;

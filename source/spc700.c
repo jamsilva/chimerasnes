@@ -22,12 +22,10 @@ uint32_t Work32 = 0;
 	{                                                                                        \
 		if (IAPU.WaitCounter == 0)                                                           \
 		{                                                                                    \
-			if (APU.Cycles < EXT.NextAPUTimerPos && EXT.NextAPUTimerPos < CPU.Cycles)        \
-				APU.Cycles = EXT.NextAPUTimerPos;                                            \
-			else if (APU.Cycles < CPU.Cycles)                                                \
-				APU.Cycles = CPU.Cycles;                                                     \
-			                                                                                 \
-			IAPU.APUExecuting = false;                                                       \
+			if (!ICPU.Executing)                                                             \
+				APU.Cycles = CPU.Cycles = CPU.NextEvent;                                     \
+			else                                                                             \
+				IAPU.Executing = false;                                                      \
 		}                                                                                    \
 		else if (IAPU.WaitCounter >= 2)                                                      \
 			IAPU.WaitCounter = 1;                                                            \
@@ -797,7 +795,7 @@ void Apu0F() /* BRK */
 void ApuEF_FF() /* SLEEP / STOP */
 {
 	APU.TimerEnabled[0] = APU.TimerEnabled[1] = APU.TimerEnabled[2] = false;
-	IAPU.APUExecuting                                               = false;
+	IAPU.Executing                                                  = false;
 }
 
 void Apu10() /* BPL */

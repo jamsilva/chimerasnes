@@ -13,7 +13,7 @@
 	}
 
 #define APU_EXECUTE()                   \
-	if (!IAPU.APUExecuting)             \
+	if (!IAPU.Executing)                \
 		APU.Cycles = CPU.Cycles;        \
 	else                                \
 		while (APU.Cycles < CPU.Cycles) \
@@ -21,11 +21,11 @@
 
 typedef struct
 {
-	bool          APUExecuting : 1;
-	bool          Carry        : 1;
-	bool          Overflow     : 1;
-	int8_t        _SIAPU_PAD1  : 5;
-	int8_t        _SIAPU_PAD2  : 8;
+	bool          Executing   : 1;
+	bool          Carry       : 1;
+	bool          Overflow    : 1;
+	int8_t        _SIAPU_PAD1 : 5;
+	int8_t        _SIAPU_PAD2 : 8;
 	uint8_t       Bit;
 	uint8_t       Zero;
 	int32_t       OneCycle;

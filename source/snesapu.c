@@ -272,7 +272,7 @@ static INLINE void APUTimerPulse()
 			IAPU.RAM[pos] = (IAPU.RAM[pos] + 1) & 0xf;
 			APU.Timer[i] -= APU.TimerTarget[i];
 			IAPU.WaitCounter = 1;
-			IAPU.APUExecuting = Settings.APUEnabled;
+			IAPU.Executing = Settings.APUEnabled;
 		}
 	}
 }

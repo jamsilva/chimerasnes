@@ -47,6 +47,7 @@ void ResetCPU()
 	CPU.SRAMModified = false;
 	SetPCBase(ICPU.Registers.PC);
 	ICPU.Opcodes = OpcodesE1;
+	ICPU.Executing = true;
 	CPU.NMICycleCount = 0;
 	CPU.IRQCycleCount = 0;
 	UnpackStatus();

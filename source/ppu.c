@@ -616,7 +616,7 @@ void SetPPU(uint8_t Byte, uint16_t Address)
 				APUMainLoop();
 
 			IAPU.RAM[(Address & 3) | 0xf4] = Byte;
-			IAPU.APUExecuting = Settings.APUEnabled;
+			IAPU.Executing = Settings.APUEnabled;
 			IAPU.WaitCounter = 1;
 			break;
 		case 0x2180: // WMDATA
@@ -894,10 +894,10 @@ uint8_t GetPPU(uint16_t Address)
 		case 0x217d:
 		case 0x217e:
 		case 0x217f:
-			IAPU.APUExecuting = Settings.APUEnabled;
+			IAPU.Executing = Settings.APUEnabled;
 			IAPU.WaitCounter++;
 
-			if (IAPU.APUExecuting)
+			if (IAPU.Executing)
 				return APU.OutPorts[Address & 3];
 
 			CPU.BranchSkip = true;
