@@ -832,7 +832,7 @@ void InitROM(bool Interleaved)
 		}
 		else if (Settings.Chip == ST_010 || Settings.Chip == ST_011)
 			Map_SetaDSPLoROMMap();
-		else if (Settings.Chip == GSU)
+		else if ((Settings.Chip & GSU) == GSU)
 			Map_SuperFXLoROMMap();
 		else if (Settings.Chip == SA_1)
 			Map_SA1LoROMMap();
@@ -1555,6 +1555,7 @@ void ApplyROMFixes()
 	APUTimingHacks();
 
 	/* Specific game fixes */
+	Settings.SecretOfEvermoreHack = match_na("SECRET OF EVERMORE");
 	Settings.StarfoxHack = match_na("STAR FOX") || match_na("STAR WING");
 	Settings.WinterGold = match_na("FX SKIING NINTENDO 96") || match_na("DIRT RACER") || Settings.StarfoxHack;
 	Settings.HBlankStart = (256 * Settings.H_Max) / SNES_MAX_HCOUNTER;

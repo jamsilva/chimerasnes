@@ -179,13 +179,14 @@ enum
 
 typedef struct
 {
-	bool     APUEnabled      : 1;
-	bool     PAL             : 1;
-	bool     Shutdown        : 1;
-	bool     StarfoxHack     : 1;
-	bool     WinterGold      : 1;
-	int8_t   _SSettings_PAD1 : 3;
-	int8_t   _SSettings_PAD2 : 8;
+	bool     APUEnabled           : 1;
+	bool     PAL                  : 1;
+	bool     Shutdown             : 1;
+	bool     StarfoxHack          : 1;
+	bool     WinterGold           : 1;
+	bool     SecretOfEvermoreHack : 1;
+	int8_t   _SSettings_PAD1      : 2;
+	int8_t   _SSettings_PAD2      : 8;
 	uint8_t  ControllerOption;
 	uint8_t  Chip;
 	int32_t  H_Max;

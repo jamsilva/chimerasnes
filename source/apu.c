@@ -112,7 +112,7 @@ void SetAPUControl(uint8_t byte)
 
 	if ((byte & 0x80) && !APU.ShowROM)
 		memcpy(&IAPU.RAM[0xffc0], APUROM, sizeof(APUROM));
-	
+
 	APU.ShowROM = (bool) (byte & 0x80);
 	IAPU.RAM[0xf1] = byte;
 }
@@ -193,6 +193,9 @@ void APUSetByte(uint8_t data, uint16_t addr)
 		case 0xf5: /* CPUIO1 */
 		case 0xf6: /* CPUIO2 */
 		case 0xf7: /* CPUIO3 */
+			if (Settings.PAL && Settings.SecretOfEvermoreHack)
+				IAPU.RAM[addr] = data;
+
 			APU.OutPorts[addr & 3] = data;
 			return;
 		case 0xfa: /* T0TARGET */
