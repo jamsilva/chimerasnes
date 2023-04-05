@@ -92,6 +92,9 @@ typedef struct
 	bool     HTimerEnabled        : 1;
 	bool     VTimerEnabled        : 1;
 	int8_t   _SPPU_PAD1           : 7;
+	int8_t   _SPPU_PAD2           : 8;
+	int8_t   _SPPU_PAD3           : 8;
+	int8_t   _SPPU_PAD4           : 8;
 	bool     BGMosaic[4];
 	bool     ClipWindow1Inside[6];
 	bool     ClipWindow2Inside[6];
@@ -100,6 +103,7 @@ typedef struct
 	uint8_t  Brightness;
 	uint8_t  BGnxOFSbyte;
 	uint8_t  CGADD;
+	uint8_t  CGSavedByte;
 	uint8_t  FirstSprite;
 	uint8_t  FixedColourRed;
 	uint8_t  FixedColourGreen;
@@ -443,12 +447,12 @@ static INLINE void REGISTER_2122(uint8_t Byte)
 {
 	if (PPU.CGFLIP)
 	{
-		if ((Byte & 0x7f) != (PPU.CGDATA[PPU.CGADD] >> 8))
+		if ((Byte & 0x7f) != (PPU.CGDATA[PPU.CGADD] >> 8) || PPU.CGSavedByte != (uint8_t) (PPU.CGDATA[PPU.CGADD] & 0xff))
 		{
 			FLUSH_REDRAW();
-			PPU.CGDATA[PPU.CGADD] &= 0x00ff;
-			PPU.CGDATA[PPU.CGADD] |= (Byte & 0x7f) << 8;
+			PPU.CGDATA[PPU.CGADD]        = (Byte & 0x7f) << 8 | PPU.CGSavedByte;
 			IPPU.ColorsChanged           = true;
+			IPPU.Red[PPU.CGADD]          = IPPU.XB[PPU.CGSavedByte & 0x1f];
 			IPPU.Blue[PPU.CGADD]         = IPPU.XB[(Byte >> 2) & 0x1f];
 			IPPU.Green[PPU.CGADD]        = IPPU.XB[(PPU.CGDATA[PPU.CGADD] >> 5) & 0x1f];
 			IPPU.ScreenColors[PPU.CGADD] = (uint16_t) BUILD_PIXEL(IPPU.Red[PPU.CGADD], IPPU.Green[PPU.CGADD], IPPU.Blue[PPU.CGADD]);
@@ -456,15 +460,9 @@ static INLINE void REGISTER_2122(uint8_t Byte)
 
 		PPU.CGADD++;
 	}
-	else if (Byte != (uint8_t) (PPU.CGDATA[PPU.CGADD] & 0xff))
+	else
 	{
-		FLUSH_REDRAW();
-		PPU.CGDATA[PPU.CGADD] &= 0x7f00;
-		PPU.CGDATA[PPU.CGADD] |= Byte;
-		IPPU.ColorsChanged           = true;
-		IPPU.Red[PPU.CGADD]          = IPPU.XB[Byte & 0x1f];
-		IPPU.Green[PPU.CGADD]        = IPPU.XB[(PPU.CGDATA[PPU.CGADD] >> 5) & 0x1f];
-		IPPU.ScreenColors[PPU.CGADD] = (uint16_t) BUILD_PIXEL(IPPU.Red[PPU.CGADD], IPPU.Green[PPU.CGADD], IPPU.Blue[PPU.CGADD]);
+		PPU.CGSavedByte = Byte;
 	}
 
 	PPU.CGFLIP = !PPU.CGFLIP;

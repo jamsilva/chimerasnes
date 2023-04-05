@@ -52,7 +52,7 @@ static INLINE void AbsoluteIndexedIndirect(bool read)
 	OpAddress = (ICPU.Registers.X.W + *(uint16_t*) CPU.PC) & 0xffff;
 #endif
 
-	AddCycles(CPU.MemSpeedx2);
+	AddCycles(CPU.MemSpeedx2 + ONE_CYCLE);
 	ICPU.OpenBus = CPU.PC[1];
 	CPU.PC += 2;
 	OpAddress = GetWord(ICPU.ShiftedPB + OpAddress);

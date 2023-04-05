@@ -409,7 +409,7 @@ static void check_variables(bool first_run)
 			freq = 10.0;
 
 		/* Convert MHz value to Hz and multiply by required factors. */
-		superfx_speed_per_line = (uint32_t) ((0.417 * 1.5e6 * freq) * ((1.0f / FRAMES_PER_SECOND) / ((float) SNES_MAX_VCOUNTER)));
+		superfx_speed_per_line = (uint32_t) ((582340.5 * freq) * ((1.0f / FRAMES_PER_SECOND) / ((float) SNES_MAX_VCOUNTER)));
 	}
 
 	var.key = "chimerasnes_reduce_sprite_flicker";

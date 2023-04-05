@@ -114,7 +114,7 @@ void SetPPU(uint8_t Byte, uint16_t Address)
 		else if (Settings.Chip == S_RTC && Address == 0x2801)
 			SetSRTC(Byte, Address);
 
-		Memory.FillRAM[Address] = Byte;
+		ICPU.OpenBus = Memory.FillRAM[Address] = Byte;
 		return;
 	}
 
@@ -457,7 +457,7 @@ void SetPPU(uint8_t Byte, uint16_t Address)
 			break;
 		case 0x212b: /* Windows 1 & 2 overlap logic for objects and colour window */
 			if (Byte == Memory.FillRAM[0x212b])
-					break;
+				break;
 
 			FLUSH_REDRAW();
 			PPU.ClipWindowOverlapLogic[4] = Byte & 0x03;
@@ -648,7 +648,7 @@ void SetPPU(uint8_t Byte, uint16_t Address)
 			break;
 	}
 
-	Memory.FillRAM[Address] = Byte;
+	ICPU.OpenBus = Memory.FillRAM[Address] = Byte;
 }
 
 uint8_t GetPPU(uint16_t Address)
@@ -656,7 +656,7 @@ uint8_t GetPPU(uint16_t Address)
 	uint8_t byte;
 
 	if (Address < 0x2100) /* not a real PPU reg */
-		return ICPU.OpenBus;  /* treat as unmapped memory returning last byte on the bus */
+		return PPU.OpenBus1;  /* treat as unmapped memory returning last byte on the bus */
 
 	if (Address >= 0x2188)
 	{
@@ -666,14 +666,10 @@ uint8_t GetPPU(uint16_t Address)
 			return GetSA1(Address);
 		else if (Settings.Chip == S_RTC && Address == 0x2800)
 			return GetSRTC(Address);
-
-		if (Model->_5C77 == 2)
-		{
-			if (Address == 0x21c2)
-				return 0x20;
-			else if (Address == 0x21c3)
-				return 0;
-		}
+		else if (Address == 0x21c2)
+			return (Model->_5C77 == 2) ? 0x20 : PPU.OpenBus2;
+		else if (Address == 0x21c3)
+			return (Model->_5C77 == 2) ? 0 : PPU.OpenBus2;
 
 		return ICPU.OpenBus;
 	}

@@ -1166,7 +1166,9 @@ void map_LoROMSRAM()
 		hi = 0xffff;
 
 	map_index(0x70, 0x7d, 0x0000, hi, MAP_LOROM_SRAM, MAP_TYPE_RAM);
-	map_index(0xf0, 0xff, 0x0000, hi, MAP_LOROM_SRAM, MAP_TYPE_RAM);
+
+	if (Memory.SRAMSize > 0)
+		map_index(0xf0, 0xff, 0x0000, hi, MAP_LOROM_SRAM, MAP_TYPE_RAM);
 }
 
 void map_HiROMSRAM()
@@ -1426,6 +1428,9 @@ void Map_SA1LoROMMap()
 	for (int c = 0x600; c < 0x700; c++) /* SA-1 Banks 60->6f */
 		SA1.Map[c] = SA1.WriteMap[c] = (uint8_t*) MAP_BWRAM_BITMAP;
 
+	for (int c = 0x7e0; c < 0x800; c++) /* WRAM is inaccessable */
+		SA1.Map[c] = SA1.WriteMap[c] = (uint8_t*) MAP_NONE;
+
 	Memory.BWRAM = Memory.SRAM;
 }
 
@@ -1671,7 +1676,6 @@ void ApplyROMFixes()
 	Settings.SecretOfEvermoreHack = match_na("SECRET OF EVERMORE");
 	Settings.StarfoxHack = match_na("STAR FOX") || match_na("STAR WING");
 	Settings.WinterGold = match_na("FX SKIING NINTENDO 96") || match_na("DIRT RACER") || Settings.StarfoxHack;
-	Settings.HBlankStart = (256 * Settings.H_Max) / SNES_MAX_HCOUNTER;
 
 	HDMATimingHacks();
 
