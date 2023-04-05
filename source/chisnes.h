@@ -174,7 +174,9 @@ enum
 	SA_1       = OTHERCHIP | V0,
 	CX_4       = OTHERCHIP | V1,
 	S_DD1      = OTHERCHIP | V2,
-	OBC_1      = OTHERCHIP | V3
+	OBC_1      = OTHERCHIP | V3,
+
+	NUMCHIPS   = 0xff
 };
 
 typedef struct
