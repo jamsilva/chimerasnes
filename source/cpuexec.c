@@ -16,8 +16,6 @@
 	{                                                                \
 		do                                                           \
 		{                                                            \
-			APU_EXECUTE();                                           \
-			                                                         \
 			if (CPU.Flags)                                           \
 			{                                                        \
 				if (CPU.Flags & NMI_FLAG)                            \
@@ -66,6 +64,8 @@
 			                                                         \
 			if (CPU.Cycles >= CPU.NextEvent)                         \
 				HBLANK_PROCESSING;                                   \
+			                                                         \
+			APU_EXECUTE();                                           \
 			                                                         \
 			if (finishedFrame)                                       \
 				break;                                               \

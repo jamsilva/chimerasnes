@@ -548,7 +548,7 @@ void SetPPU(uint8_t Byte, uint16_t Address)
 		case 0x213e: /* PPU status (time over and range over) */
 		case 0x213f: /* NTSC/PAL select and field (read-only) */
 			return;
-		case 0x2140:
+		case 0x2140: /* APUIO0, APUIO1, APUIO2, APUIO3 */
 		case 0x2141:
 		case 0x2142:
 		case 0x2143:

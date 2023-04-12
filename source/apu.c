@@ -210,7 +210,7 @@ void APUSetByte(uint8_t data, uint16_t addr)
 			return;
 	}
 
-	if (APU.ShowROM && addr >= 0xFFC0)
+	if (addr >= 0xffc0 && APU.ShowROM)
 		return;
 
 	if ((IAPU.RAM[0xf0] & 0x02) && !(IAPU.RAM[0xf0] & 0x04)) /* writes to $ffc0-$ffff always go to apuram, even if the iplrom is enabled */

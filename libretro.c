@@ -570,10 +570,10 @@ void retro_get_system_info(struct retro_system_info* info)
 
 void retro_get_system_av_info(struct retro_system_av_info* info)
 {
-	info->geometry.base_width   = 256;
-	info->geometry.base_height  = 224;
-	info->geometry.max_width    = 512;
-	info->geometry.max_height   = 512;
+	info->geometry.base_width   = SNES_WIDTH;
+	info->geometry.base_height  = SNES_HEIGHT;
+	info->geometry.max_width    = MAX_SNES_WIDTH;
+	info->geometry.max_height   = MAX_SNES_HEIGHT;
 	info->geometry.aspect_ratio = 4.0 / 3.0;
 	info->timing.sample_rate    = SNES_SAMPLE_RATE;
 	info->timing.fps            = VIDEO_REFRESH_RATE;

@@ -9,15 +9,6 @@
 #define MEMMAP_SHIFT           12
 #define MEMMAP_MASK            (MEMMAP_BLOCK_SIZE - 1)
 
-/* Extended ROM Formats */
-enum
-{
-	NOPE,
-	YEAH,
-	BIGFIRST,
-	SMALLFIRST
-};
-
 bool     LoadROM(const struct retro_game_info* game);
 void     InitROM(bool);
 bool     InitMemory();
@@ -76,6 +67,15 @@ void     Map_BSLoROMMap();
 void     Map_BSCartLoROMMap(bool mapping);
 void     Map_BSCartHiROMMap();
 void     Map_XBANDHiROMMap();
+
+/* Extended ROM Formats */
+enum
+{
+	NOPE,
+	YEAH,
+	BIGFIRST,
+	SMALLFIRST
+};
 
 enum
 {

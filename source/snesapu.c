@@ -4,6 +4,40 @@
 #include "snesapu.h"
 #include "soundux.h"
 
+/* Envelope mode masks */
+#define E_TYPE 0x01 /* Type of adj: Constant(1/64 or 1/256) / Exp.(255/256) */
+#define E_DIR  0x02 /* Direction: Decrease / Increase */
+#define E_DEST 0x04 /* Destination: Default(0 or 1) / Other(x/8 or .75) */
+#define E_ADSR 0x08 /* Envelope mode: Gain/ADSR */
+#define E_IDLE 0x80 /* Envelope speed is set to 0 */
+
+#define E_DEC    0x00 /* Linear decrease */
+#define E_EXP    0x01 /* Exponential decrease */
+#define E_INC    0x02 /* Linear increase */
+#define E_BENT   0x06 /* Bent line increase */
+#define E_REL    0x08 /* Release mode */
+#define E_SUST   0x09 /* Sustain mode */
+#define E_ATT    0x0A /* Attack mode */
+#define E_DECAY  0x0D /* Decay mode */
+#define E_DIRECT 0x87 /* Direct gain */
+
+/* Envelope adjustment rates */
+#define A_GAIN  (1 << E_SHIFT)         /* Amount to adjust envelope values */
+#define A_LIN   ((128 * A_GAIN) / 64)  /* Linear rate to increase/decrease envelope */
+#define A_KOF   ((128 * A_GAIN) / 256) /* Rate to decrease envelope during release */
+#define A_BENT  ((128 * A_GAIN) / 256) /* Rate to increase envelope after bend */
+#define A_NOATT (64 * A_GAIN)          /* Rate to increase if attack rate is set to 0ms */
+#define A_EXP   0                      /* Rate to decrease envelope exponentially (Not used) */
+
+/* Envelope destination values */
+#define D_MAX    ((128 * A_GAIN) - 1)     /* Maximum envelope value */
+#define D_ATTACK ((128 * A_GAIN) - 1)     /* Destination of attack rate */
+#define D_BENT   ((128 * A_GAIN * 3) / 4) /* First destination of bent line */
+#define D_EXP    ((128 * A_GAIN) / 8)     /* Minimum decay destination value */
+#define D_MIN    0                        /* Minimum envelope value */
+
+#define DSP_SIZE 2
+
 typedef struct
 {
 	/* Waveform */
@@ -49,40 +83,6 @@ static const struct
 	{0x01, 0x00}, {0x02, 0x10}, {0x04, 0x20}, {0x08, 0x30},
 	{0x10, 0x40}, {0x20, 0x50}, {0x40, 0x60}, {0x80, 0x70}
 };
-
-/* Envelope mode masks */
-#define E_TYPE 0x01 /* Type of adj: Constant(1/64 or 1/256) / Exp.(255/256) */
-#define E_DIR  0x02 /* Direction: Decrease / Increase */
-#define E_DEST 0x04 /* Destination: Default(0 or 1) / Other(x/8 or .75) */
-#define E_ADSR 0x08 /* Envelope mode: Gain/ADSR */
-#define E_IDLE 0x80 /* Envelope speed is set to 0 */
-
-#define E_DEC    0x00 /* Linear decrease */
-#define E_EXP    0x01 /* Exponential decrease */
-#define E_INC    0x02 /* Linear increase */
-#define E_BENT   0x06 /* Bent line increase */
-#define E_REL    0x08 /* Release mode */
-#define E_SUST   0x09 /* Sustain mode */
-#define E_ATT    0x0A /* Attack mode */
-#define E_DECAY  0x0D /* Decay mode */
-#define E_DIRECT 0x87 /* Direct gain */
-
-/* Envelope adjustment rates */
-#define A_GAIN  (1 << E_SHIFT)         /* Amount to adjust envelope values */
-#define A_LIN   ((128 * A_GAIN) / 64)  /* Linear rate to increase/decrease envelope */
-#define A_KOF   ((128 * A_GAIN) / 256) /* Rate to decrease envelope during release */
-#define A_BENT  ((128 * A_GAIN) / 256) /* Rate to increase envelope after bend */
-#define A_NOATT (64 * A_GAIN)          /* Rate to increase if attack rate is set to 0ms */
-#define A_EXP   0                      /* Rate to decrease envelope exponentially (Not used) */
-
-/* Envelope destination values */
-#define D_MAX    ((128 * A_GAIN) - 1)     /* Maximum envelope value */
-#define D_ATTACK ((128 * A_GAIN) - 1)     /* Destination of attack rate */
-#define D_BENT   ((128 * A_GAIN * 3) / 4) /* First destination of bent line */
-#define D_EXP    ((128 * A_GAIN) / 8)     /* Minimum decay destination value */
-#define D_MIN    0                        /* Minimum envelope value */
-
-#define DSP_SIZE 2
 
 static int32_t brrTab[256];
 static int16_t gaussTab[1024];
@@ -204,14 +204,19 @@ static const uint32_t freqTab[32] = /* Frequency table; number of samples betwee
 	10,  8,    6,    5,    4,    3,   2,   1
 };
 
-static const uint64_t max48 = UINT64_C(0xffffffffffff);
+static const uint16_t rateTab[32] =
+{
+	0x0000, 0x000F, 0x0014, 0x0018, 0x001E, 0x0028, 0x0030, 0x003C,
+	0x0050, 0x0060, 0x0078, 0x00A0, 0x00C0, 0x00F0, 0x0140, 0x0180,
+	0x01E0, 0x0280, 0x0300, 0x03C0, 0x0500, 0x0600, 0x0780, 0x0A00,
+	0x0C00, 0x0F00, 0x1400, 0x1800, 0x1E00, 0x2800, 0x3C00, 0x7800
+};
 
 static uint8_t src_buffer[9]; /* Temporary */
 
 /* Mixing */
 static VoiceMix mix[8];      /* Mixing settings for each voice and waveform playback */
 static uint8_t  voiceKon;    /* Voices that are currently being key on */
-static uint32_t rateTab[32]; /* Update Rate Table */
 
 /* DSP Options */
 static int32_t  dspRate;  /* Output sample rate */
@@ -393,15 +398,7 @@ static INLINE void UpdateSrc(int32_t ch)
 
 static INLINE void SetNoiseHertz()
 {
-	uint8_t i = APU.DSP[APU_FLG] & 0x1f;
-
-	if(i == 0)
-	{
-		nRate = 0;
-		nSmp = 0;
-	}
-	else
-		nRate =  (uint32_t) (max48 / (uint64_t)(freqTab[i] << 16));
+	nRate = rateTab[APU.DSP[APU_FLG] & 0x1f];
 }
 
 static INLINE void InitReg(int32_t reg, uint8_t val)
@@ -463,13 +460,6 @@ void SetPlaybackRate(int32_t rate)
 	dspRate = rate;
 	pitchAdj = (uint32_t) (((uint64_t) SNES_SAMPLE_RATE << (FIXED_POINT_SHIFT + 4)) / dspRate);
 	r = (uint64_t) 0x1000 * pitchAdj;
-	rateTab[0] = 0;
-
-	for (i = 1; i < 32; i++)
-	{
-		rr = r / freqTab[i];
-		rateTab[i] = (uint32_t) ((rr >> FIXED_POINT_SHIFT) + ((rr & FIXED_POINT_REMAINDER) ? 1 : 0));
-	}
 
 	for (i = 0; i < 7; i++) /* Adjust voice rates */
 	{
@@ -706,13 +696,13 @@ static INLINE void ChgSus(int32_t i)
 	if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal <= D_MIN)
 	{
 		mix[i].eMode = E_IDLE | E_SUST;
-		mix[i].eDec = 0;
+		mix[i].eDec  = 0;
 	}
 	else
 		mix[i].eMode = E_SUST;
 
 	mix[i].eRate = rateTab[mix[i].eRIdx];
-	mix[i].eAdj = A_EXP;
+	mix[i].eAdj  = A_EXP;
 	mix[i].eDest = D_MIN;
 }
 
@@ -729,7 +719,7 @@ static INLINE void ChgDec(int32_t i)
 
 	mix[i].eRIdx = ((APU.DSP[chs[i].o + APU_ADSR1] & 0x70) >> 3) + 0x10;
 	mix[i].eRate = rateTab[mix[i].eRIdx];
-	mix[i].eAdj = A_EXP;
+	mix[i].eAdj  = A_EXP;
 	mix[i].eDest = eDest;
 	mix[i].eMode = E_DECAY;
 }
@@ -746,7 +736,7 @@ static INLINE void ChgAtt(int32_t i)
 
 	mix[i].eRIdx = (ar << 1) + 1;
 	mix[i].eRate = rateTab[mix[i].eRIdx];
-	mix[i].eAdj = (ar == 0x0f) ? A_NOATT : A_LIN;
+	mix[i].eAdj  = (ar == 0x0f) ? A_NOATT : A_LIN;
 	mix[i].eDest = D_ATTACK;
 	mix[i].eMode = E_ATT;
 }
@@ -777,8 +767,8 @@ static INLINE void ChgGain(int32_t i)
 		mix[i].eMode = E_DIRECT;
 		mix[i].eRIdx = 0;
 		mix[i].eRate = rateTab[mix[i].eRIdx];
-		mix[i].eAdj = A_EXP;
-		mix[i].eVal = mix[i].eDest = (int32_t) (APU.DSP[chs[i].o + APU_GAIN] & 0x7f) * A_GAIN;
+		mix[i].eAdj  = A_EXP;
+		mix[i].eVal  = mix[i].eDest = (int32_t) (APU.DSP[chs[i].o + APU_GAIN] & 0x7f) * A_GAIN;
 		return;
 	}
 
@@ -790,13 +780,13 @@ static INLINE void ChgGain(int32_t i)
 		if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal <= D_MIN)
 		{
 			mix[i].eMode = E_IDLE | E_DEC;
-			mix[i].eDec = 0;
+			mix[i].eDec  = 0;
 		}
 		else
 			mix[i].eMode = E_DEC;
 
 		mix[i].eRate = rateTab[mix[i].eRIdx];
-		mix[i].eAdj = A_LIN;
+		mix[i].eAdj  = A_LIN;
 		mix[i].eDest = D_MIN;
 		break;
 	case 0x20: /* GainExp */
@@ -805,13 +795,13 @@ static INLINE void ChgGain(int32_t i)
 		if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal <= D_MIN)
 		{
 			mix[i].eMode = E_IDLE | E_EXP;
-			mix[i].eDec = 0;
+			mix[i].eDec  = 0;
 		}
 		else
 			mix[i].eMode = E_EXP;
 
 		mix[i].eRate = rateTab[mix[i].eRIdx];
-		mix[i].eAdj = A_EXP;
+		mix[i].eAdj  = A_EXP;
 		mix[i].eDest = D_MIN;
 		break;
 	case 0x40: /* GainInc */
@@ -820,13 +810,13 @@ static INLINE void ChgGain(int32_t i)
 		if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal >= D_ATTACK)
 		{
 			mix[i].eMode = E_IDLE | E_INC;
-			mix[i].eDec = 0;
+			mix[i].eDec  = 0;
 		}
 		else
 			mix[i].eMode = E_INC;
 
 		mix[i].eRate = rateTab[mix[i].eRIdx];
-		mix[i].eAdj = A_LIN;
+		mix[i].eAdj  = A_LIN;
 		mix[i].eDest = D_ATTACK;
 		break;
 	case 0x60: /* GainBent */
@@ -835,7 +825,7 @@ static INLINE void ChgGain(int32_t i)
 		if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal >= D_ATTACK)
 		{
 			mix[i].eMode = E_IDLE | E_BENT;
-			mix[i].eDec = 0;
+			mix[i].eDec  = 0;
 		}
 		else
 			mix[i].eMode = E_BENT;
@@ -844,12 +834,12 @@ static INLINE void ChgGain(int32_t i)
 
 		if (mix[i].eVal < D_BENT)
 		{
-			mix[i].eAdj = A_LIN;
+			mix[i].eAdj  = A_LIN;
 			mix[i].eDest = D_BENT;
 		}
 		else
 		{
-			mix[i].eAdj = A_BENT;
+			mix[i].eAdj  = A_BENT;
 			mix[i].eDest = D_ATTACK;
 		}
 
@@ -880,10 +870,11 @@ static INLINE void UpdateEnv(int32_t i)
 			mix[i].eVal--;
 			mix[i].eVal -= mix[i].eVal >> 8;
 
-			if (mix[i].eVal >= mix[i].eDest)
+			if (mix[i].eVal > mix[i].eDest)
 				return;
 
-			mix[i].eVal = mix[i].eDest;
+			if (mix[i].eVal < mix[i].eDest)
+				mix[i].eVal = mix[i].eDest;
 		}
 	}
 	else if (mix[i].eMode & E_DIR) /* Linear increase (mode 2, 6, or A) - E_INC, E_BENT, E_ATT */
@@ -892,10 +883,11 @@ static INLINE void UpdateEnv(int32_t i)
 		{
 			mix[i].eVal += mix[i].eAdj;
 
-			if (mix[i].eVal <= mix[i].eDest)
+			if (mix[i].eVal < mix[i].eDest)
 				return;
 
-			mix[i].eVal = mix[i].eDest;
+			if (mix[i].eVal > mix[i].eDest)
+				mix[i].eVal = mix[i].eDest;
 		}
 	}
 	else /* Linear decrease (mode 0 or 8) - E_DEC, E_REL */
