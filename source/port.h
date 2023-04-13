@@ -21,26 +21,6 @@
 	#ifndef PATH_MAX
 		#define PATH_MAX 1024
 	#endif
-
-	#ifndef _MAX_DIR
-		#define _MAX_DIR PATH_MAX
-	#endif
-
-	#ifndef _MAX_DRIVE
-		#define _MAX_DRIVE 1
-	#endif
-
-	#ifndef _MAX_FNAME
-		#define _MAX_FNAME PATH_MAX
-	#endif
-
-	#ifndef _MAX_EXT
-		#define _MAX_EXT PATH_MAX
-	#endif
-
-	#ifndef _MAX_PATH
-		#define _MAX_PATH PATH_MAX
-	#endif
 #else /* _WIN32 */
 	#define strcasecmp  stricmp
 	#define strncasecmp strnicmp

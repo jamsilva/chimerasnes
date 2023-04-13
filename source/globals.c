@@ -17,10 +17,10 @@
 #include "srtc.h"
 
 SCPUState CPU;
-SICPU ICPU;
+SICPU     ICPU;
 
-SAPU APU;
-SIAPU IAPU;
+SAPU      APU;
+SIAPU     IAPU;
 SEXTState EXT;
 int32_t   apu_one_c;
 
@@ -193,24 +193,6 @@ uint8_t Depths[8][4] =
 };
 
 uint16_t DirectColourMaps[8][256];
-
-uint32_t HeadMask[4] =
-{
-#ifdef MSB_FIRST
-    0xffffffff, 0x00ffffff, 0x0000ffff, 0x000000ff
-#else
-    0xffffffff, 0xffffff00, 0xffff0000, 0xff000000
-#endif
-};
-
-uint32_t TailMask[5] =
-{
-#ifdef MSB_FIRST
-    0x00000000, 0xff000000, 0xffff0000, 0xffffff00, 0xffffffff
-#else
-    0x00000000, 0x000000ff, 0x0000ffff, 0x00ffffff, 0xffffffff
-#endif
-};
 
 uint8_t APUCycleLengths[256] = /* Raw SPC700 instruction cycle lengths */
 {

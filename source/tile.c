@@ -5,9 +5,6 @@
 #include "gfx.h"
 #include "tile.h"
 
-extern uint32_t HeadMask[4];
-extern uint32_t TailMask[5];
-
 static uint8_t ConvertTile(uint8_t* pCache, uint32_t TileAddr)
 {
 	uint8_t*  tp       = &Memory.VRAM[TileAddr];
