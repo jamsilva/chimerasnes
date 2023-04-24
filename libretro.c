@@ -20,6 +20,7 @@
 #include "sa1.h"
 #include "libretro_core_options.h"
 
+static retro_log_printf_t         log_cb         = NULL;
 static retro_video_refresh_t      video_cb       = NULL;
 static retro_input_poll_t         poll_cb        = NULL;
 static retro_input_state_t        input_cb       = NULL;
@@ -48,11 +49,21 @@ static uint8_t  frameskip_threshold        = 0;
 static bool     retro_audio_buff_active    = false;
 static uint8_t  retro_audio_buff_occupancy = 0;
 static bool     retro_audio_buff_underrun  = false;
+
+static uint16_t retro_audio_latency        = 0;
+static bool     update_audio_latency       = false;
 static bool     mute_audio                 = false;
 
 void retro_set_environment(retro_environment_t cb)
 {
+	struct retro_log_callback log;
 	environ_cb = cb;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
+		log_cb = log.log;
+	else
+		log_cb = NULL;
+
 	libretro_supports_option_categories = false;
 	libretro_set_core_options(environ_cb, &libretro_supports_option_categories);
 }
@@ -109,13 +120,33 @@ static void retro_set_audio_buff_status_cb()
 
 		if (!environ_cb(RETRO_ENVIRONMENT_SET_AUDIO_BUFFER_STATUS_CALLBACK, &buf_status_cb))
 		{
+			if (log_cb)
+				log_cb(RETRO_LOG_WARN, "Frameskip disabled - frontend does not support audio buffer status monitoring.\n");
+
 			retro_audio_buff_active    = false;
 			retro_audio_buff_occupancy = 0;
 			retro_audio_buff_underrun  = false;
+			retro_audio_latency        = 0;
+		}
+		else
+		{
+			/* Frameskip is enabled - increase frontend
+			 * audio latency to minimise potential
+			 * buffer underruns */
+			uint32_t frame_time_usec = FRAME_TIME;
+			/* Set latency to 6x current frame time... */
+			retro_audio_latency = (uint16_t) (6 * frame_time_usec / 1000);
+			/* ...then round up to nearest multiple of 32 */
+			retro_audio_latency = (retro_audio_latency + 0x1F) & ~0x1F;
 		}
 	}
 	else
+	{
 		environ_cb(RETRO_ENVIRONMENT_SET_AUDIO_BUFFER_STATUS_CALLBACK, NULL);
+		retro_audio_latency = 0;
+	}
+
+	update_audio_latency = true;
 }
 
 const char* GetBIOSDir()
@@ -215,10 +246,22 @@ static void audio_upload_samples()
 
 void retro_init()
 {
-	enum retro_pixel_format rgb565 = RETRO_PIXEL_FORMAT_RGB565;
-	bool achievements = true;	
-	environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements); /* State that the core supports achievements. */
-	environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &rgb565);
+	struct retro_log_callback log;
+	enum retro_pixel_format rgb565;
+	bool achievements = true;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
+		log_cb = log.log;
+	else
+		log_cb = NULL;
+
+	/* State that the core supports achievements. */
+	environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements);
+	rgb565 = RETRO_PIXEL_FORMAT_RGB565;
+
+	if (environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &rgb565) && log_cb)
+		log_cb(RETRO_LOG_INFO, "Frontend supports RGB565 - will use that instead of XRGB1555.\n");
+
 	init_sfc_setting();
 	InitMemory();
 	InitAPU();
@@ -249,6 +292,8 @@ void retro_deinit()
 	retro_audio_buff_active             = false;
 	retro_audio_buff_occupancy          = 0;
 	retro_audio_buff_underrun           = false;
+	retro_audio_latency                 = 0;
+	update_audio_latency                = false;
 	mute_audio                          = false;
 }
 
@@ -382,7 +427,6 @@ static void check_variables(bool first_run)
 
 void retro_run()
 {
-	static bool update_audio_latency = true;
 	bool updated = false;
 	int result;
 	bool okay;
@@ -436,11 +480,13 @@ void retro_run()
 			IPPU.RenderThisFrame = false;
 	}
 
+	/* If frameskip/timing settings have changed,
+	 * update frontend audio latency
+	 * > Can do this before or after the frameskip
+	 *   check, but doing it after means we at least
+	 *   retain the current frame's audio output */
 	if (update_audio_latency)
 	{
-		/* Set latency to 6x current frame time rounded up to nearest multiple of 32 */
-		uint32_t retro_audio_latency = (uint16_t) (6 * FRAME_TIME / 1000);
-		retro_audio_latency = (retro_audio_latency + 0x1F) & ~0x1F;
 		environ_cb(RETRO_ENVIRONMENT_SET_MINIMUM_AUDIO_LATENCY, &retro_audio_latency);
 		update_audio_latency = false;
 	}
@@ -448,7 +494,11 @@ void retro_run()
 	poll_cb();
 	MainLoop();
 
-#ifndef NO_VIDEO_OUTPUT
+#ifdef NO_VIDEO_OUTPUT
+	audio_upload_samples();
+	return;
+#endif
+
 	if (IPPU.RenderThisFrame)
 	{
 	#ifdef PSP
@@ -470,7 +520,6 @@ void retro_run()
 	}
 	else
 		video_cb(NULL, IPPU.RenderedScreenWidth, IPPU.RenderedScreenHeight, GFX.Pitch);
-#endif
 
 	audio_upload_samples();
 }
@@ -752,7 +801,7 @@ size_t retro_get_memory_size(unsigned type)
 	switch (type)
 	{
 		case RETRO_MEMORY_SAVE_RAM:
-			size = (uint32_t) (Memory.SRAMSize ? (1 << (Memory.SRAMSize + 3)) * 128 : 0);
+			size = (uint32_t)(Memory.SRAMSize ? (1 << (Memory.SRAMSize + 3)) * 128 : 0);
 
 			if (size > 0x20000)
 				size = 0x20000;
