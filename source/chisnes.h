@@ -30,12 +30,6 @@
 #define DEFAULT_SLOW_ONE_CYCLE 8u
 #define DEFAULT_TWO_CYCLES     12u
 
-#define ONE_CYCLE      one_c
-#define SLOW_ONE_CYCLE slow_one_c
-#define TWO_CYCLES     two_c
-
-extern int32_t one_c, slow_one_c, two_c;
-
 /* NTSC master clock signal 21.47727MHz
  * PPU: master clock / 4
  * 1 / PPU clock * 342 -> 63.695us
@@ -184,13 +178,17 @@ typedef struct
 	bool     APUEnabled           : 1;
 	bool     PAL                  : 1;
 	bool     Shutdown             : 1;
+	bool     OverclockCycles      : 1;
+	bool     ReduceSpriteFlicker  : 1;
 	bool     StarfoxHack          : 1;
 	bool     WinterGold           : 1;
 	bool     SecretOfEvermoreHack : 1;
-	int8_t   _SSettings_PAD1      : 2;
-	int8_t   _SSettings_PAD2      : 8;
+	uint8_t  OneCycle;
+	uint8_t  SlowOneCycle;
+	uint8_t  TwoCycles;
 	uint8_t  ControllerOption;
 	uint8_t  Chip;
+	uint16_t SuperFXSpeedPerLine;
 	int32_t  H_Max;
 	int32_t  HBlankStart;
 } SSettings;

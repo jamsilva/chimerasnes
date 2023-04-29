@@ -22,7 +22,6 @@ SICPU     ICPU;
 SAPU      APU;
 SIAPU     IAPU;
 SEXTState EXT;
-int32_t   apu_one_c;
 
 SSettings Settings;
 SDSP0     DSP0;

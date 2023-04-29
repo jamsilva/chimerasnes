@@ -44,7 +44,7 @@ void DoDMA(uint8_t Channel)
 		/* Does an invalid DMA actually take time?
 		 * I'd say yes, since 'invalid' is probably just the WRAM chip
 		 * not being able to read and write itself at the same time */
-		CPU.Cycles += (d->TransferBytes + 1) * SLOW_ONE_CYCLE;
+		CPU.Cycles += (d->TransferBytes + 1) * Settings.SlowOneCycle;
 		goto update_address;
 	}
 
@@ -222,7 +222,7 @@ void DoDMA(uint8_t Channel)
 	{
 		uint16_t p    = d->AAddress;
 		uint8_t* base = GetBasePointer((d->ABank << 16) + d->AAddress);
-		CPU.Cycles += SLOW_ONE_CYCLE * (count + 1); /* reflects extra cycle used by DMA */
+		CPU.Cycles += Settings.SlowOneCycle * (count + 1); /* reflects extra cycle used by DMA */
 
 		if (!base)
 			base = Memory.ROM;
@@ -592,19 +592,19 @@ void StartHDMA()
 	IPPU.HDMA = Memory.FillRAM[0x420c];
 
 	if (IPPU.HDMA != 0)
-		CPU.Cycles += ONE_CYCLE * 3;
+		CPU.Cycles += Settings.OneCycle * 3;
 
 	for (i = 0; i < 8; i++)
 	{
 		if (IPPU.HDMA & (1 << i))
 		{
-			CPU.Cycles += SLOW_ONE_CYCLE;
+			CPU.Cycles += Settings.SlowOneCycle;
 			DMA[i].LineCount = 0;
 			DMA[i].FirstLine = true;
 			DMA[i].Address   = DMA[i].AAddress;
 
 			if (DMA[i].HDMAIndirectAddressing)
-				CPU.Cycles += SLOW_ONE_CYCLE << 2;
+				CPU.Cycles += Settings.SlowOneCycle << 2;
 		}
 
 		HDMAMemPointers[i] = NULL;
@@ -617,7 +617,7 @@ uint8_t DoHDMA(uint8_t byte)
 	SDMA* p = &DMA[0];
 	int32_t d = 0;
 	CPU.InDMA = true;
-	CPU.Cycles += ONE_CYCLE * 3;
+	CPU.Cycles += Settings.OneCycle * 3;
 
 	for (mask = 1; mask; mask <<= 1, p++, d++)
 	{
@@ -628,7 +628,7 @@ uint8_t DoHDMA(uint8_t byte)
 		{
 			uint8_t line;
 			/* remember, InDMA is set. Get/Set incur no charges! */
-			CPU.Cycles += SLOW_ONE_CYCLE;
+			CPU.Cycles += Settings.SlowOneCycle;
 			line = GetByte((p->ABank << 16) + p->Address);
 
 			if (line == 0x80)
@@ -662,7 +662,7 @@ uint8_t DoHDMA(uint8_t byte)
 			{
 				p->IndirectBank = Memory.FillRAM[0x4307 + (d << 4)];
 				/* again, no cycle charges while InDMA is set! */
-				CPU.Cycles += SLOW_ONE_CYCLE << 2;
+				CPU.Cycles += Settings.SlowOneCycle << 2;
 				p->IndirectAddress = GetWord((p->ABank << 16) + p->Address);
 				p->Address += 2;
 			}
@@ -675,7 +675,7 @@ uint8_t DoHDMA(uint8_t byte)
 			HDMABasePointers[d] = HDMAMemPointers[d] = GetMemPointer((p->IndirectBank << 16) + p->IndirectAddress);
 		}
 		else
-			CPU.Cycles += SLOW_ONE_CYCLE;
+			CPU.Cycles += Settings.SlowOneCycle;
 
 		if (!HDMAMemPointers[d])
 		{
@@ -705,17 +705,17 @@ uint8_t DoHDMA(uint8_t byte)
 		switch (p->TransferMode)
 		{
 			case 0:
-				CPU.Cycles += SLOW_ONE_CYCLE;
+				CPU.Cycles += Settings.SlowOneCycle;
 				SetPPU(*HDMAMemPointers[d]++, 0x2100 + p->BAddress);
 				break;
 			case 5:
-				CPU.Cycles += 2 * SLOW_ONE_CYCLE;
+				CPU.Cycles += 2 * Settings.SlowOneCycle;
 				SetPPU(HDMAMemPointers[d][0], 0x2100 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][1], 0x2101 + p->BAddress);
 				HDMAMemPointers[d] += 2;
 				/* fall through */
 			case 1:
-				CPU.Cycles += 2 * SLOW_ONE_CYCLE;
+				CPU.Cycles += 2 * Settings.SlowOneCycle;
 				SetPPU(HDMAMemPointers[d][0], 0x2100 + p->BAddress);
 				ICPU.OpenBus = HDMAMemPointers[d][1];
 				SetPPU(HDMAMemPointers[d][1], 0x2101 + p->BAddress);
@@ -723,14 +723,14 @@ uint8_t DoHDMA(uint8_t byte)
 				break;
 			case 2:
 			case 6:
-				CPU.Cycles += 2 * SLOW_ONE_CYCLE;
+				CPU.Cycles += 2 * Settings.SlowOneCycle;
 				SetPPU(HDMAMemPointers[d][0], 0x2100 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][1], 0x2100 + p->BAddress);
 				HDMAMemPointers[d] += 2;
 				break;
 			case 3:
 			case 7:
-				CPU.Cycles += 4 * SLOW_ONE_CYCLE;
+				CPU.Cycles += 4 * Settings.SlowOneCycle;
 				SetPPU(HDMAMemPointers[d][0], 0x2100 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][1], 0x2100 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][2], 0x2101 + p->BAddress);
@@ -738,7 +738,7 @@ uint8_t DoHDMA(uint8_t byte)
 				HDMAMemPointers[d] += 4;
 				break;
 			case 4:
-				CPU.Cycles += 4 * SLOW_ONE_CYCLE;
+				CPU.Cycles += 4 * Settings.SlowOneCycle;
 				SetPPU(HDMAMemPointers[d][0], 0x2100 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][1], 0x2101 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][2], 0x2102 + p->BAddress);

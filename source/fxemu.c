@@ -9,7 +9,6 @@
 /* The FX chip emulator's internal variables */
 extern FXRegs_s FXRegs; /* This will be initialized when loading a ROM */
 extern FXInfo_s SuperFX;
-extern uint32_t superfx_speed_per_line;
 
 extern void ClearIRQSource(uint32_t source);
 extern void SetIRQSource(uint32_t source);
@@ -78,7 +77,7 @@ void SuperFXExec()
 	if ((Memory.FillRAM[0x3000 + GSU_SFR] & FLG_G) && (Memory.FillRAM[0x3000 + GSU_SCMR] & 0x18) == 0x18)
 	{
 		uint16_t GSUStatus;
-		FxEmulate((Memory.FillRAM[0x3000 + GSU_CLSR] & 1) ? superfx_speed_per_line * 2 : superfx_speed_per_line);
+		FxEmulate((Memory.FillRAM[0x3000 + GSU_CLSR] & 1) ? Settings.SuperFXSpeedPerLine * 2 : Settings.SuperFXSpeedPerLine);
 		GSUStatus = Memory.FillRAM[0x3000 + GSU_SFR] | (Memory.FillRAM[0x3000 + GSU_SFR + 1] << 8);
 
 		if ((GSUStatus & (FLG_G | FLG_IRQ)) == FLG_IRQ)

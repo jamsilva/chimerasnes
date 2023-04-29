@@ -2017,7 +2017,7 @@ static void Op81M1()
 
 #ifndef SA1_OPCODES
 	if (CheckIndex())
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 #endif
 }
 
@@ -2028,7 +2028,7 @@ static void Op81M0()
 
 #ifndef SA1_OPCODES
 	if (CheckIndex())
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 #endif
 }
 
@@ -2399,7 +2399,7 @@ static void Op90() /* BCC */
 	if (!CheckCarry())
 	{
 		CPU.PC = CPU.PCBase + OpAddress;
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
 }
@@ -2412,7 +2412,7 @@ static void OpB0() /* BCS */
 	if (CheckCarry())
 	{
 		CPU.PC = CPU.PCBase + OpAddress;
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
 }
@@ -2425,7 +2425,7 @@ static void OpF0() /* BEQ */
 	if (CheckZero())
 	{
 		CPU.PC = CPU.PCBase + OpAddress;
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
 }
@@ -2438,7 +2438,7 @@ static void Op30() /* BMI */
 	if (CheckNegative())
 	{
 		CPU.PC = CPU.PCBase + OpAddress;
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
 }
@@ -2451,7 +2451,7 @@ static void OpD0() /* BNE */
 	if (!CheckZero())
 	{
 		CPU.PC = CPU.PCBase + OpAddress;
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
 }
@@ -2464,7 +2464,7 @@ static void Op10() /* BPL */
 	if (!CheckNegative())
 	{
 		CPU.PC = CPU.PCBase + OpAddress;
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
 }
@@ -2473,7 +2473,7 @@ static void Op80() /* BRA */
 {
 	Relative();
 	CPU.PC = CPU.PCBase + OpAddress;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	CPUShutdown();
 }
 
@@ -2485,7 +2485,7 @@ static void Op50() /* BVC */
 	if (!CheckOverflow())
 	{
 		CPU.PC = CPU.PCBase + OpAddress;
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
 }
@@ -2498,7 +2498,7 @@ static void Op70() /* BVS */
 	if (CheckOverflow())
 	{
 		CPU.PC = CPU.PCBase + OpAddress;
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
 }
@@ -2507,32 +2507,32 @@ static void Op70() /* BVS */
 static void Op18() /* CLC */
 {
 	ClearCarry();
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void OpD8() /* CLD */
 {
 	ClearDecimal();
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op58() /* CLI */
 {
 	ClearIRQ();
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* CLV */
 static void OpB8()
 {
 	ClearOverflow();
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* DEX/DEY */
 static void OpCAX1()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.XL--;
 	SetZN8(ICPU.Registers.XL);
@@ -2540,7 +2540,7 @@ static void OpCAX1()
 
 static void OpCAX0()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.X.W--;
 	SetZN16(ICPU.Registers.X.W);
@@ -2548,7 +2548,7 @@ static void OpCAX0()
 
 static void Op88X1()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.YL--;
 	SetZN8(ICPU.Registers.YL);
@@ -2556,7 +2556,7 @@ static void Op88X1()
 
 static void Op88X0()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.Y.W--;
 	SetZN16(ICPU.Registers.Y.W);
@@ -2565,7 +2565,7 @@ static void Op88X0()
 /* INX/INY */
 static void OpE8X1()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.XL++;
 	SetZN8(ICPU.Registers.XL);
@@ -2573,7 +2573,7 @@ static void OpE8X1()
 
 static void OpE8X0()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.X.W++;
 	SetZN16(ICPU.Registers.X.W);
@@ -2581,7 +2581,7 @@ static void OpE8X0()
 
 static void OpC8X1()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.YL++;
 	SetZN8(ICPU.Registers.YL);
@@ -2589,7 +2589,7 @@ static void OpC8X1()
 
 static void OpC8X0()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.Y.W++;
 	SetZN16(ICPU.Registers.Y.W);
@@ -2597,7 +2597,7 @@ static void OpC8X0()
 
 static void OpEA() /* NOP */
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* PUSH Instructions */
@@ -2660,58 +2660,58 @@ static void Op62()
 static void Op48E1()
 {
 	PushBE(ICPU.Registers.AL);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op48M1()
 {
 	PushB(ICPU.Registers.AL);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op48M0()
 {
 	PushW(ICPU.Registers.A.W);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* PHB */
 static void Op8BE1()
 {
 	PushBE(ICPU.Registers.DB);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op8B()
 {
 	PushB(ICPU.Registers.DB);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* PHD NL */
 static void Op0BE1()
 {
 	PushWE(ICPU.Registers.D.W);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op0B()
 {
 	PushW(ICPU.Registers.D.W);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* PHK */
 static void Op4BE1()
 {
 	PushBE(ICPU.Registers.PB);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op4B()
 {
 	PushB(ICPU.Registers.PB);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* PHP */
@@ -2719,52 +2719,52 @@ static void Op08E1()
 {
 	PackStatus();
 	PushBE(ICPU.Registers.PL);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op08()
 {
 	PackStatus();
 	PushB(ICPU.Registers.PL);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* PHX */
 static void OpDAE1()
 {
 	PushBE(ICPU.Registers.XL);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void OpDAX1()
 {
 	PushB(ICPU.Registers.XL);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void OpDAX0()
 {
 	PushW(ICPU.Registers.X.W);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* PHY */
 static void Op5AE1()
 {
 	PushBE(ICPU.Registers.YL);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op5AX1()
 {
 	PushB(ICPU.Registers.YL);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op5AX0()
 {
 	PushW(ICPU.Registers.Y.W);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* PULL Instructions */
@@ -2786,21 +2786,21 @@ static void Op5AX0()
 /* PLA */
 static void Op68E1()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullBE(ICPU.Registers.AL);
 	SetZN8(ICPU.Registers.AL);
 }
 
 static void Op68M1()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullB(ICPU.Registers.AL);
 	SetZN8(ICPU.Registers.AL);
 }
 
 static void Op68M0()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullW(ICPU.Registers.A.W);
 	SetZN16(ICPU.Registers.A.W);
 }
@@ -2808,7 +2808,7 @@ static void Op68M0()
 /* PLB */
 static void OpABE1()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullBE(ICPU.Registers.DB);
 	SetZN8(ICPU.Registers.DB);
 	ICPU.ShiftedDB = ICPU.Registers.DB << 16;
@@ -2816,7 +2816,7 @@ static void OpABE1()
 
 static void OpAB()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullB(ICPU.Registers.DB);
 	SetZN8(ICPU.Registers.DB);
 	ICPU.ShiftedDB = ICPU.Registers.DB << 16;
@@ -2825,14 +2825,14 @@ static void OpAB()
 /* PLD NL */
 static void Op2BE1()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullWE(ICPU.Registers.D.W);
 	SetZN16(ICPU.Registers.D.W);
 }
 
 static void Op2B()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullW(ICPU.Registers.D.W);
 	SetZN16(ICPU.Registers.D.W);
 }
@@ -2840,7 +2840,7 @@ static void Op2B()
 /* PLP */
 static void Op28E1()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullBE(ICPU.Registers.PL);
 	UnpackStatus();
 
@@ -2855,7 +2855,7 @@ static void Op28E1()
 
 static void Op28()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullB(ICPU.Registers.PL);
 	UnpackStatus();
 
@@ -2871,21 +2871,21 @@ static void Op28()
 /* PLX */
 static void OpFAE1()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullBE(ICPU.Registers.XL);
 	SetZN8(ICPU.Registers.XL);
 }
 
 static void OpFAX1()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullB(ICPU.Registers.XL);
 	SetZN8(ICPU.Registers.XL);
 }
 
 static void OpFAX0()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullW(ICPU.Registers.X.W);
 	SetZN16(ICPU.Registers.X.W);
 }
@@ -2893,21 +2893,21 @@ static void OpFAX0()
 /* PLY */
 static void Op7AE1()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullBE(ICPU.Registers.YL);
 	SetZN8(ICPU.Registers.YL);
 }
 
 static void Op7AX1()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullB(ICPU.Registers.YL);
 	SetZN8(ICPU.Registers.YL);
 }
 
 static void Op7AX0()
 {
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	PullW(ICPU.Registers.Y.W);
 	SetZN16(ICPU.Registers.Y.W);
 }
@@ -2915,59 +2915,59 @@ static void Op7AX0()
 static void Op38() /* SEC */
 {
 	SetCarry();
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void OpF8() /* SED */
 {
 	SetDecimal();
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op78() /* SEI */
 {
 	SetIRQ();
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void OpAAX1() /* TAX8 */
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.XL = ICPU.Registers.AL;
 	SetZN8(ICPU.Registers.XL);
 }
 
 static void OpAAX0() /* TAX16 */
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.X.W = ICPU.Registers.A.W;
 	SetZN16(ICPU.Registers.X.W);
 }
 
 static void OpA8X1() /* TAY8 */
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.YL = ICPU.Registers.AL;
 	SetZN8(ICPU.Registers.YL);
 }
 
 static void OpA8X0() /* TAY16 */
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.Y.W = ICPU.Registers.A.W;
 	SetZN16(ICPU.Registers.Y.W);
 }
 
 static void Op5B()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.D.W = ICPU.Registers.A.W;
 	SetZN16(ICPU.Registers.D.W);
 }
 
 static void Op1B()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.S.W = ICPU.Registers.A.W;
 
 	if (CheckEmulation())
@@ -2976,49 +2976,49 @@ static void Op1B()
 
 static void Op7B()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.A.W = ICPU.Registers.D.W;
 	SetZN16(ICPU.Registers.A.W);
 }
 
 static void Op3B()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.A.W = ICPU.Registers.S.W;
 	SetZN16(ICPU.Registers.A.W);
 }
 
 static void OpBAX1()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.XL = ICPU.Registers.SL;
 	SetZN8(ICPU.Registers.XL);
 }
 
 static void OpBAX0()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.X.W = ICPU.Registers.S.W;
 	SetZN16(ICPU.Registers.X.W);
 }
 
 static void Op8AM1()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.AL = ICPU.Registers.XL;
 	SetZN8(ICPU.Registers.AL);
 }
 
 static void Op8AM0()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.A.W = ICPU.Registers.X.W;
 	SetZN16(ICPU.Registers.A.W);
 }
 
 static void Op9A()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.S.W = ICPU.Registers.X.W;
 
 	if (CheckEmulation())
@@ -3027,42 +3027,42 @@ static void Op9A()
 
 static void Op9BX1()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.YL = ICPU.Registers.XL;
 	SetZN8(ICPU.Registers.YL);
 }
 
 static void Op9BX0()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.Y.W = ICPU.Registers.X.W;
 	SetZN16(ICPU.Registers.Y.W);
 }
 
 static void Op98M1()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.AL = ICPU.Registers.YL;
 	SetZN8(ICPU.Registers.AL);
 }
 
 static void Op98M0()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.A.W = ICPU.Registers.Y.W;
 	SetZN16(ICPU.Registers.A.W);
 }
 
 static void OpBBX1()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.XL = ICPU.Registers.YL;
 	SetZN8(ICPU.Registers.XL);
 }
 
 static void OpBBX0()
 {
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	ICPU.Registers.X.W = ICPU.Registers.Y.W;
 	SetZN16(ICPU.Registers.X.W);
 }
@@ -3070,7 +3070,7 @@ static void OpBBX0()
 static void OpFB() /* XCE */
 {
 	uint8_t A1, A2;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	A1                = ICPU.Carry;
 	A2                = ICPU.Registers.PH;
 	ICPU.Carry        = A2 & 1;
@@ -3105,7 +3105,7 @@ static void Op00() /* BRK */
 		ICPU.Registers.PB = 0;
 		ICPU.ShiftedPB    = 0;
 		SetPCBase(GetWord(0xFFE6));
-		AddCycles(TWO_CYCLES);
+		AddCycles(Settings.TwoCycles);
 	}
 	else
 	{
@@ -3118,7 +3118,7 @@ static void Op00() /* BRK */
 		ICPU.Registers.PB = 0;
 		ICPU.ShiftedPB    = 0;
 		SetPCBase(GetWord(0xFFFE));
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 	}
 }
 
@@ -3150,7 +3150,7 @@ void OpcodeIRQ() /* IRQ */
 		else
 			SetPCBase(GetWord(0xFFEE));
 
-		AddCycles(TWO_CYCLES);
+		AddCycles(Settings.TwoCycles);
 	#endif
 	}
 	else
@@ -3172,7 +3172,7 @@ void OpcodeIRQ() /* IRQ */
 		else
 			SetPCBase(GetWord(0xFFFE));
 
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 	#endif
 	}
 }
@@ -3199,7 +3199,7 @@ void OpcodeNMI() /* NMI */
 		else
 			SetPCBase(GetWord(0xFFEA));
 
-		AddCycles(TWO_CYCLES);
+		AddCycles(Settings.TwoCycles);
 	#endif
 	}
 	else
@@ -3221,7 +3221,7 @@ void OpcodeNMI() /* NMI */
 		else
 			SetPCBase(GetWord(0xFFFA));
 
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 	#endif
 	}
 }
@@ -3240,7 +3240,7 @@ static void Op02() /* COP */
 		ICPU.Registers.PB = 0;
 		ICPU.ShiftedPB    = 0;
 		SetPCBase(GetWord(0xFFE4));
-		AddCycles(TWO_CYCLES);
+		AddCycles(Settings.TwoCycles);
 	}
 	else
 	{
@@ -3253,7 +3253,7 @@ static void Op02() /* COP */
 		ICPU.Registers.PB = 0;
 		ICPU.ShiftedPB    = 0;
 		SetPCBase(GetWord(0xFFF4));
-		AddCycles(ONE_CYCLE);
+		AddCycles(Settings.OneCycle);
 	}
 }
 
@@ -3264,7 +3264,7 @@ static void OpDC()
 	ICPU.Registers.PB = (uint8_t) (OpAddress >> 16);
 	ICPU.ShiftedPB    = OpAddress & 0xff0000;
 	SetPCBase(OpAddress);
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 }
 
 static void Op5C()
@@ -3296,7 +3296,7 @@ static void Op7C()
 {
 	AbsoluteIndexedIndirect(false);
 	SetPCBase(ICPU.ShiftedPB + OpAddress);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* JSL/RTL */
@@ -3326,7 +3326,7 @@ static void Op6BE1()
 	PullB(ICPU.Registers.PB);
 	ICPU.ShiftedPB = ICPU.Registers.PB << 16;
 	SetPCBase(ICPU.ShiftedPB + ((ICPU.Registers.PC + 1) & 0xffff));
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 }
 
 static void Op6B()
@@ -3335,7 +3335,7 @@ static void Op6B()
 	PullB(ICPU.Registers.PB);
 	ICPU.ShiftedPB = ICPU.Registers.PB << 16;
 	SetPCBase(ICPU.ShiftedPB + ((ICPU.Registers.PC + 1) & 0xffff));
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 }
 
 static void Op20() /* JSR/RTS */
@@ -3343,7 +3343,7 @@ static void Op20() /* JSR/RTS */
 	Absolute(false);
 	PushW(CPU.PC - CPU.PCBase - 1);
 	SetPCBase(ICPU.ShiftedPB + (OpAddress & 0xffff));
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 /* JSR a,x */
@@ -3352,7 +3352,7 @@ static void OpFCE1()
 	AbsoluteIndexedIndirect(false);
 	PushWE(CPU.PC - CPU.PCBase - 1);
 	SetPCBase(ICPU.ShiftedPB + OpAddress);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void OpFC()
@@ -3360,20 +3360,20 @@ static void OpFC()
 	AbsoluteIndexedIndirect(false);
 	PushW(CPU.PC - CPU.PCBase - 1);
 	SetPCBase(ICPU.ShiftedPB + OpAddress);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op60()
 {
 	PullW(ICPU.Registers.PC);
 	SetPCBase(ICPU.ShiftedPB + ((ICPU.Registers.PC + 1) & 0xffff));
-	AddCycles(ONE_CYCLE * 3);
+	AddCycles(Settings.OneCycle * 3);
 }
 
 /* MVN/MVP */
 static void Op54X1()
 {
-	AddCycles(CPU.MemSpeedx2 + TWO_CYCLES);
+	AddCycles(CPU.MemSpeedx2 + Settings.TwoCycles);
 	ICPU.Registers.DB = *CPU.PC++;
 	ICPU.ShiftedDB    = ICPU.Registers.DB << 16;
 	ICPU.OpenBus      = *CPU.PC++;
@@ -3388,7 +3388,7 @@ static void Op54X1()
 
 static void Op54X0()
 {
-	AddCycles(CPU.MemSpeedx2 + TWO_CYCLES);
+	AddCycles(CPU.MemSpeedx2 + Settings.TwoCycles);
 	ICPU.Registers.DB = *CPU.PC++;
 	ICPU.ShiftedDB    = ICPU.Registers.DB << 16;
 	ICPU.OpenBus      = *CPU.PC++;
@@ -3403,7 +3403,7 @@ static void Op54X0()
 
 static void Op44X1()
 {
-	AddCycles(CPU.MemSpeedx2 + TWO_CYCLES);
+	AddCycles(CPU.MemSpeedx2 + Settings.TwoCycles);
 	ICPU.Registers.DB = *CPU.PC++;
 	ICPU.ShiftedDB    = ICPU.Registers.DB << 16;
 	ICPU.OpenBus      = *CPU.PC++;
@@ -3418,7 +3418,7 @@ static void Op44X1()
 
 static void Op44X0()
 {
-	AddCycles(CPU.MemSpeedx2 + TWO_CYCLES);
+	AddCycles(CPU.MemSpeedx2 + Settings.TwoCycles);
 	ICPU.Registers.DB = *CPU.PC++;
 	ICPU.ShiftedDB    = ICPU.Registers.DB << 16;
 	ICPU.OpenBus      = *CPU.PC++;
@@ -3440,7 +3440,7 @@ static void OpC2()
 	ICPU.Overflow &= (Work8 >> 6);
 	ICPU.Negative &= Work8;
 	ICPU.Zero |= ~Work8 & ZERO;
-	AddCycles(CPU.MemSpeed + ONE_CYCLE);
+	AddCycles(CPU.MemSpeed + Settings.OneCycle);
 
 	if (CheckEmulation())
 		SetFlags(MEMORY_FLAG | INDEX_FLAG);
@@ -3465,7 +3465,7 @@ static void OpE2()
 	if (Work8 & ZERO)
 		ICPU.Zero = 0;
 
-	AddCycles(CPU.MemSpeed + ONE_CYCLE);
+	AddCycles(CPU.MemSpeed + Settings.OneCycle);
 
 	if (CheckEmulation())
 		SetFlags(MEMORY_FLAG | INDEX_FLAG);
@@ -3485,7 +3485,7 @@ static void OpEB() /* XBA */
 	ICPU.Registers.AL = ICPU.Registers.AH;
 	ICPU.Registers.AH = Work8;
 	SetZN8(ICPU.Registers.AL);
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 }
 
 static void Op40()/* RTI */
@@ -3510,7 +3510,7 @@ static void Op40()/* RTI */
 		ICPU.Registers.YH = 0;
 	}
 
-	AddCycles(TWO_CYCLES);
+	AddCycles(Settings.TwoCycles);
 	FixCycles();
 }
 
@@ -3547,7 +3547,7 @@ static void OpDB() /* Usually an STP opcode; SNESAdvance speed hack, not impleme
 			if (!CheckZero())
 			{
 				CPU.PC = CPU.PCBase + OpAddress;
-				AddCycles(ONE_CYCLE);
+				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
 
@@ -3558,7 +3558,7 @@ static void OpDB() /* Usually an STP opcode; SNESAdvance speed hack, not impleme
 			if (CheckZero())
 			{
 				CPU.PC = CPU.PCBase + OpAddress;
-				AddCycles(ONE_CYCLE);
+				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
 
@@ -3582,7 +3582,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 			if (!CheckNegative())
 			{
 				CPU.PC = CPU.PCBase + OpAddress;
-				AddCycles(ONE_CYCLE);
+				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
 
@@ -3593,7 +3593,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 			if (CheckNegative())
 			{
 				CPU.PC = CPU.PCBase + OpAddress;
-				AddCycles(ONE_CYCLE);
+				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
 
@@ -3604,7 +3604,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 			if (!CheckOverflow())
 			{
 				CPU.PC = CPU.PCBase + OpAddress;
-				AddCycles(ONE_CYCLE);
+				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
 
@@ -3615,14 +3615,14 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 			if (CheckOverflow())
 			{
 				CPU.PC = CPU.PCBase + OpAddress;
-				AddCycles(ONE_CYCLE);
+				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
 
 			return;
 		case 0x80: /* BRA */
 			CPU.PC = CPU.PCBase + OpAddress;
-			AddCycles(ONE_CYCLE);
+			AddCycles(Settings.OneCycle);
 			CPUShutdown();
 			return;
 		case 0x90: /* BCC */
@@ -3631,7 +3631,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 			if (!CheckCarry())
 			{
 				CPU.PC = CPU.PCBase + OpAddress;
-				AddCycles(ONE_CYCLE);
+				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
 
@@ -3642,7 +3642,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 			if (CheckCarry())
 			{
 				CPU.PC = CPU.PCBase + OpAddress;
-				AddCycles(ONE_CYCLE);
+				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
 
@@ -3653,7 +3653,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 			if (!CheckZero())
 			{
 				CPU.PC = CPU.PCBase + OpAddress;
-				AddCycles(ONE_CYCLE);
+				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
 
@@ -3664,7 +3664,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 			if (CheckZero())
 			{
 				CPU.PC = CPU.PCBase + OpAddress;
-				AddCycles(ONE_CYCLE);
+				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
 

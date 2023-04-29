@@ -1005,14 +1005,14 @@ void FixROMSpeed(int32_t FastROMSpeed)
 void ResetSpeedMap()
 {
 	int32_t i;
-	memset(Memory.MemorySpeed, SLOW_ONE_CYCLE, 0x1000);
+	memset(Memory.MemorySpeed, Settings.SlowOneCycle, 0x1000);
 
 	for (i = 0; i < 0x400; i += 0x10)
 	{
-		Memory.MemorySpeed[i + 2] = Memory.MemorySpeed[0x800 + i + 2] = ONE_CYCLE;
-		Memory.MemorySpeed[i + 3] = Memory.MemorySpeed[0x800 + i + 3] = ONE_CYCLE;
-		Memory.MemorySpeed[i + 4] = Memory.MemorySpeed[0x800 + i + 4] = ONE_CYCLE;
-		Memory.MemorySpeed[i + 5] = Memory.MemorySpeed[0x800 + i + 5] = ONE_CYCLE;
+		Memory.MemorySpeed[i + 2] = Memory.MemorySpeed[0x800 + i + 2] = Settings.OneCycle;
+		Memory.MemorySpeed[i + 3] = Memory.MemorySpeed[0x800 + i + 3] = Settings.OneCycle;
+		Memory.MemorySpeed[i + 4] = Memory.MemorySpeed[0x800 + i + 4] = Settings.OneCycle;
+		Memory.MemorySpeed[i + 5] = Memory.MemorySpeed[0x800 + i + 5] = Settings.OneCycle;
 	}
 }
 

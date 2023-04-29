@@ -42,8 +42,8 @@ void ResetCPU()
 	CPU.Cycles = 182; /* This is the cycle count just after the jump to the Reset Vector. */
 	CPU.WhichEvent = HBLANK_START_EVENT;
 	CPU.NextEvent = Settings.HBlankStart;
-	CPU.MemSpeed = SLOW_ONE_CYCLE;
-	CPU.MemSpeedx2 = SLOW_ONE_CYCLE * 2;
+	CPU.MemSpeed = Settings.SlowOneCycle;
+	CPU.MemSpeedx2 = Settings.SlowOneCycle * 2;
 	CPU.SRAMModified = false;
 	SetPCBase(ICPU.Registers.PC);
 	ICPU.Opcodes = OpcodesE1;

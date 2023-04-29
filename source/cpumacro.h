@@ -173,7 +173,7 @@ static INLINE void A_ASL16()
 {
 	ICPU.Carry = (ICPU.Registers.AH & 0x80) != 0;
 	ICPU.Registers.A.W <<= 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN16(ICPU.Registers.A.W);
 }
 
@@ -181,7 +181,7 @@ static INLINE void A_ASL8()
 {
 	ICPU.Carry = (ICPU.Registers.AL & 0x80) != 0;
 	ICPU.Registers.AL <<= 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN8(ICPU.Registers.AL);
 }
 
@@ -190,7 +190,7 @@ static INLINE void ASL16()
 	uint16_t Work16 = GetWord(OpAddress);
 	ICPU.Carry = (bool) (Work16 & 0x8000);
 	Work16 <<= 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work16 >> 8, OpAddress + 1);
 	ICPU.OpenBus = Work16 & 0xff;
 	SetByte(ICPU.OpenBus, OpAddress);
@@ -202,7 +202,7 @@ static INLINE void ASL8()
 	uint8_t Work8 = GetByte(OpAddress);
 	ICPU.Carry = (bool) (Work8 & 0x80);
 	Work8 <<= 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work8, OpAddress);
 	ICPU.OpenBus = Work8;
 	SetZN8(Work8);
@@ -270,7 +270,7 @@ static INLINE void A_DEC16()
 {
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.A.W--;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN16(ICPU.Registers.A.W);
 }
 
@@ -278,7 +278,7 @@ static INLINE void A_DEC8()
 {
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.AL--;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN8(ICPU.Registers.AL);
 }
 
@@ -287,7 +287,7 @@ static INLINE void DEC16()
 	uint16_t Work16;
 	CPU.WaitAddress = NULL;
 	Work16 = GetWord(OpAddress) - 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work16 >> 8, OpAddress + 1);
 	ICPU.OpenBus = Work16 & 0xff;
 	SetByte(ICPU.OpenBus, OpAddress);
@@ -299,7 +299,7 @@ static INLINE void DEC8()
 	uint8_t Work8;
 	CPU.WaitAddress = NULL;
 	Work8 = GetByte(OpAddress) - 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work8, OpAddress);
 	ICPU.OpenBus = Work8;
 	SetZN8(Work8);
@@ -321,7 +321,7 @@ static INLINE void A_INC16()
 {
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.A.W++;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN16(ICPU.Registers.A.W);
 }
 
@@ -329,7 +329,7 @@ static INLINE void A_INC8()
 {
 	CPU.WaitAddress = NULL;
 	ICPU.Registers.AL++;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN8(ICPU.Registers.AL);
 }
 
@@ -338,7 +338,7 @@ static INLINE void INC16()
 	uint16_t Work16;
 	CPU.WaitAddress = NULL;
 	Work16 = GetWord(OpAddress) + 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work16 >> 8, OpAddress + 1);
 	ICPU.OpenBus = Work16 & 0xff;
 	SetByte(ICPU.OpenBus, OpAddress);
@@ -350,7 +350,7 @@ static INLINE void INC8()
 	uint8_t Work8;
 	CPU.WaitAddress = NULL;
 	Work8 = GetByte(OpAddress) + 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work8, OpAddress);
 	ICPU.OpenBus = Work8;
 	SetZN8(Work8);
@@ -396,7 +396,7 @@ static INLINE void A_LSR16()
 {
 	ICPU.Carry = ICPU.Registers.AL & 1;
 	ICPU.Registers.A.W >>= 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN16(ICPU.Registers.A.W);
 }
 
@@ -404,7 +404,7 @@ static INLINE void A_LSR8()
 {
 	ICPU.Carry = ICPU.Registers.AL & 1;
 	ICPU.Registers.AL >>= 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN8(ICPU.Registers.AL);
 }
 
@@ -413,7 +413,7 @@ static INLINE void LSR16()
 	uint16_t Work16 = GetWord(OpAddress);
 	ICPU.Carry = Work16 & 1;
 	Work16 >>= 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work16 >> 8, OpAddress + 1);
 	ICPU.OpenBus = Work16 & 0xff;
 	SetByte(ICPU.OpenBus, OpAddress);
@@ -425,7 +425,7 @@ static INLINE void LSR8()
 	uint8_t Work8 = GetByte(OpAddress);
 	ICPU.Carry = Work8 & 1;
 	Work8 >>= 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work8, OpAddress);
 	ICPU.OpenBus = Work8;
 	SetZN8(Work8);
@@ -448,7 +448,7 @@ static INLINE void A_ROL16()
 	uint32_t Work32 = (ICPU.Registers.A.W << 1) | CheckCarry();
 	ICPU.Carry = (Work32 > 0xffff);
 	ICPU.Registers.A.W = (uint16_t) Work32;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN16((uint16_t) Work32);
 }
 
@@ -459,7 +459,7 @@ static INLINE void A_ROL8()
 	Work16 |= CheckCarry();
 	ICPU.Carry = (Work16 > 0xff);
 	ICPU.Registers.AL = (uint8_t) Work16;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN8((uint8_t) Work16);
 }
 
@@ -469,7 +469,7 @@ static INLINE void ROL16()
 	Work32 <<= 1;
 	Work32 |= CheckCarry();
 	ICPU.Carry = (Work32 > 0xffff);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte((Work32 >> 8) & 0xff, OpAddress + 1);
 	ICPU.OpenBus = Work32 & 0xff;
 	SetByte(ICPU.OpenBus, OpAddress);
@@ -482,7 +482,7 @@ static INLINE void ROL8()
 	Work16 <<= 1;
 	Work16 |= CheckCarry();
 	ICPU.Carry = (Work16 > 0xff);
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte((uint8_t) Work16, OpAddress);
 	ICPU.OpenBus = Work16 & 0xff;
 	SetZN8((uint8_t) Work16);
@@ -495,7 +495,7 @@ static INLINE void A_ROR16()
 	ICPU.Carry = (uint8_t) (Work32 & 1);
 	Work32 >>= 1;
 	ICPU.Registers.A.W = (uint16_t) Work32;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN16((uint16_t) Work32);
 }
 
@@ -505,7 +505,7 @@ static INLINE void A_ROR8()
 	ICPU.Carry = (uint8_t) Work16 & 1;
 	Work16 >>= 1;
 	ICPU.Registers.AL = (uint8_t) Work16;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetZN8((uint8_t) Work16);
 }
 
@@ -515,7 +515,7 @@ static INLINE void ROR16()
 	Work32 |= (int32_t) CheckCarry() << 16;
 	ICPU.Carry = (uint8_t) (Work32 & 1);
 	Work32 >>= 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte((Work32 >> 8) & 0xff, OpAddress + 1);
 	ICPU.OpenBus = Work32 & 0xff;
 	SetByte(ICPU.OpenBus, OpAddress);
@@ -528,7 +528,7 @@ static INLINE void ROR8()
 	Work16 |= (int32_t) CheckCarry() << 8;
 	ICPU.Carry = (uint8_t) (Work16 & 1);
 	Work16 >>= 1;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte((uint8_t) Work16, OpAddress);
 	ICPU.OpenBus = Work16 & 0xff;
 	SetZN8((uint8_t) Work16);
@@ -710,7 +710,7 @@ static INLINE void TSB16()
 	uint16_t Work16 = GetWord(OpAddress);
 	ICPU.Zero = (bool) (Work16 & ICPU.Registers.A.W);
 	Work16 |= ICPU.Registers.A.W;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work16 >> 8, OpAddress + 1);
 	ICPU.OpenBus = Work16 & 0xff;
 	SetByte(ICPU.OpenBus, OpAddress);
@@ -721,7 +721,7 @@ static INLINE void TSB8()
 	uint8_t Work8 = GetByte(OpAddress);
 	ICPU.Zero = Work8 & ICPU.Registers.AL;
 	Work8 |= ICPU.Registers.AL;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work8, OpAddress);
 	ICPU.OpenBus = Work8;
 }
@@ -731,7 +731,7 @@ static INLINE void TRB16()
 	uint16_t Work16 = GetWord(OpAddress);
 	ICPU.Zero = (bool) (Work16 & ICPU.Registers.A.W);
 	Work16 &= ~ICPU.Registers.A.W;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work16 >> 8, OpAddress + 1);
 	ICPU.OpenBus = Work16 & 0xff;
 	SetByte(ICPU.OpenBus, OpAddress);
@@ -742,7 +742,7 @@ static INLINE void TRB8()
 	uint8_t Work8 = GetByte(OpAddress);
 	ICPU.Zero = Work8 & ICPU.Registers.AL;
 	Work8 &= ~ICPU.Registers.AL;
-	AddCycles(ONE_CYCLE);
+	AddCycles(Settings.OneCycle);
 	SetByte(Work8, OpAddress);
 	ICPU.OpenBus = Work8;
 }

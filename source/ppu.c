@@ -937,7 +937,7 @@ void SetCPU(uint8_t byte, uint16_t Address)
 
 	if (Address < 0x4200)
 	{
-		CPU.Cycles += ONE_CYCLE;
+		CPU.Cycles += Settings.OneCycle;
 
 		switch (Address)
 		{
@@ -1006,7 +1006,7 @@ void SetCPU(uint8_t byte, uint16_t Address)
 			{
 				CPU.Flags |= NMI_FLAG;
 				CPU.NMIActive = true;
-				CPU.NMICycleCount = CPU.Cycles + TWO_CYCLES;
+				CPU.NMICycleCount = CPU.Cycles + Settings.TwoCycles;
 			}
 
 			break;
@@ -1135,7 +1135,7 @@ void SetCPU(uint8_t byte, uint16_t Address)
 			if ((byte & 1) == (Memory.FillRAM[0x420d] & 1))
 				break;
 
-			FixROMSpeed((byte & 1) ? ONE_CYCLE : SLOW_ONE_CYCLE);
+			FixROMSpeed((byte & 1) ? Settings.OneCycle : Settings.SlowOneCycle);
 			break;
 		case 0x420e:
 		case 0x420f: /* --->>> Unknown */
@@ -1392,7 +1392,7 @@ uint8_t GetCPU(uint16_t Address)
 
 	if (Address < 0x4200)
 	{
-		CPU.Cycles += ONE_CYCLE;
+		CPU.Cycles += Settings.OneCycle;
 
 		switch (Address)
 		{

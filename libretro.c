@@ -30,11 +30,6 @@ static retro_environment_t        environ_cb     = NULL;
 static bool libretro_supports_option_categories = false;
 static bool libretro_supports_bitmasks = false;
 
-bool overclock_cycles = false;
-bool reduce_sprite_flicker = false;
-int32_t one_c, slow_one_c, two_c;
-uint32_t superfx_speed_per_line;
-
 #define FRAME_TIME         (Settings.PAL ? 20000 : 16667)
 #define FRAMES_PER_SECOND  (Settings.PAL ? 50    : 60)
 #define VIDEO_REFRESH_RATE (SNES_CLOCK_SPEED * 6.0 / (SNES_CYCLES_PER_SCANLINE * SNES_MAX_VCOUNTER))
@@ -338,6 +333,8 @@ static void check_variables(bool first_run)
 {
 	struct retro_variable var;
 	bool prev_frameskip_type;
+	char* endptr;
+	double freq = 10.0;
 
 	var.key = "chimerasnes_frameskip";
 	var.value = NULL;
@@ -361,38 +358,38 @@ static void check_variables(bool first_run)
 
 	var.key = "chimerasnes_overclock_cycles";
 	var.value = NULL;
-	overclock_cycles = false;
+	Settings.OverclockCycles = false;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
 		if (strcmp(var.value, "compatible") == 0)
 		{
-			overclock_cycles = true;
-			one_c            = DEFAULT_ONE_CYCLE - 2;
-			slow_one_c       = DEFAULT_ONE_CYCLE - 1;
-			two_c            = DEFAULT_ONE_CYCLE;
+			Settings.OverclockCycles = true;
+			Settings.OneCycle            = DEFAULT_ONE_CYCLE - 2;
+			Settings.SlowOneCycle       = DEFAULT_ONE_CYCLE - 1;
+			Settings.TwoCycles            = DEFAULT_ONE_CYCLE;
 		}
 		else if (strcmp(var.value, "max") == 0)
 		{
-			overclock_cycles = true;
-			one_c            = DEFAULT_ONE_CYCLE / 2;
-			slow_one_c       = DEFAULT_ONE_CYCLE / 2;
-			two_c            = DEFAULT_ONE_CYCLE / 2;
+			Settings.OverclockCycles = true;
+			Settings.OneCycle            = DEFAULT_ONE_CYCLE / 2;
+			Settings.SlowOneCycle       = DEFAULT_ONE_CYCLE / 2;
+			Settings.TwoCycles            = DEFAULT_ONE_CYCLE / 2;
 		}
 		else if (strcmp(var.value, "light") == 0)
 		{
-			overclock_cycles = true;
-			one_c            = DEFAULT_ONE_CYCLE;
-			slow_one_c       = DEFAULT_ONE_CYCLE;
-			two_c            = DEFAULT_TWO_CYCLES;
+			Settings.OverclockCycles = true;
+			Settings.OneCycle            = DEFAULT_ONE_CYCLE;
+			Settings.SlowOneCycle       = DEFAULT_ONE_CYCLE;
+			Settings.TwoCycles            = DEFAULT_TWO_CYCLES;
 		}
 	}
 
-	if (!overclock_cycles)
+	if (!Settings.OverclockCycles)
 	{
-		one_c      = DEFAULT_ONE_CYCLE;
-		slow_one_c = DEFAULT_SLOW_ONE_CYCLE;
-		two_c      = DEFAULT_TWO_CYCLES;
+		Settings.OneCycle      = DEFAULT_ONE_CYCLE;
+		Settings.SlowOneCycle = DEFAULT_SLOW_ONE_CYCLE;
+		Settings.TwoCycles      = DEFAULT_TWO_CYCLES;
 	}
 
 	var.key = "chimerasnes_overclock_superfx";
@@ -400,25 +397,24 @@ static void check_variables(bool first_run)
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
-		char* endptr;
-		double freq = strtod(var.value, &endptr);
+		freq = strtod(var.value, &endptr);
 
 		/* There must be a space between the value and the unit. Therefore, we
 		 * check that the character after the converter integer is a space. */
 		if (*endptr != ' ' || freq == 0.0)
 			freq = 10.0;
-
-		/* Convert MHz value to Hz and multiply by required factors. */
-		superfx_speed_per_line = (uint32_t) ((582340.5 * freq) * ((1.0f / FRAMES_PER_SECOND) / ((float) SNES_MAX_VCOUNTER)));
 	}
+
+	/* Convert MHz value to Hz and multiply by required factors. */
+	Settings.SuperFXSpeedPerLine = (uint32_t) ((582340.5 * freq) * ((1.0f / FRAMES_PER_SECOND) / ((float) SNES_MAX_VCOUNTER)));
 
 	var.key = "chimerasnes_reduce_sprite_flicker";
 	var.value = NULL;
-	reduce_sprite_flicker = false;
+	Settings.ReduceSpriteFlicker = false;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 		if (strcmp(var.value, "enabled") == 0)
-			reduce_sprite_flicker = true;
+			Settings.ReduceSpriteFlicker = true;
 
 	/* Reinitialise frameskipping, if required */
 	if (!first_run && (frameskip_type != prev_frameskip_type))
@@ -676,7 +672,7 @@ bool retro_unserialize(const void* data, size_t size)
 	memcpy(&s7r, buffer, sizeof(s7r));
 	buffer += sizeof(s7r);
 	memcpy(&rtc_f9, buffer, sizeof(rtc_f9));
-	FixROMSpeed(SLOW_ONE_CYCLE);
+	FixROMSpeed(Settings.SlowOneCycle);
 	IPPU.ColorsChanged = true;
 	IPPU.OBJChanged = true;
 	CPU.InDMA = false;
