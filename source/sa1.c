@@ -542,7 +542,7 @@ void SetSA1(uint8_t byte, uint32_t address)
 					break;
 				default: /* cumulative sum */
 					SA1.sum += (int16_t) SA1.op1 * (int16_t) SA1.op2;
-					SA1.CumulativeOverflow = (SA1.sum >= (((uint64_t) 1) << 40));
+					SA1.CumulativeOverflow = (SA1.sum >= (((int64_t) 1) << 40));
 					SA1.sum &= (((uint64_t) 1) << 40) - 1;
 					SA1.op2 = 0;
 					break;

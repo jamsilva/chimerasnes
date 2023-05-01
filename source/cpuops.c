@@ -3716,7 +3716,7 @@ SOpcodes OpcodesE1[256] =
 	{Op10},   {Op11M1}, {Op12M1}, {Op13M1}, {Op14M1}, {Op15M1}, {Op16M1}, {Op17M1},
 	{Op18},   {Op19M1}, {Op1AM1}, {Op1B},   {Op1CM1}, {Op1DM1}, {Op1EM1}, {Op1FM1},
 	{Op20},   {Op21M1}, {Op22E1}, {Op23M1}, {Op24M1}, {Op25M1}, {Op26M1}, {Op27M1},
-	{Op28},   {Op29M1}, {Op2AM1}, {Op2BE1}, {Op2CM1}, {Op2DM1}, {Op2EM1}, {Op2FM1},
+	{Op28E1}, {Op29M1}, {Op2AM1}, {Op2BE1}, {Op2CM1}, {Op2DM1}, {Op2EM1}, {Op2FM1},
 	{Op30},   {Op31M1}, {Op32M1}, {Op33M1}, {Op34M1}, {Op35M1}, {Op36M1}, {Op37M1},
 	{Op38},   {Op39M1}, {Op3AM1}, {Op3B},   {Op3CM1}, {Op3DM1}, {Op3EM1}, {Op3FM1},
 	{Op40},   {Op41M1}, {Op42},   {Op43M1}, {Op44X1}, {Op45M1}, {Op46M1}, {Op47M1},

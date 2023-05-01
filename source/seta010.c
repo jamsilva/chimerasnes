@@ -413,7 +413,10 @@ void SetST010(uint8_t Byte, uint32_t Address)
 			 0x0010-0x0011 : Angle (signed) */
 		case 0x01:
 		{
+		#ifdef MSB_FIRST
 			int16_t x1, y1, Quadrant, Theta;
+		#endif
+
 			Memory.SRAM[0x0006] = Memory.SRAM[0x0002];
 			Memory.SRAM[0x0007] = Memory.SRAM[0x0003];
 
@@ -593,5 +596,13 @@ void SetST010(uint8_t Byte, uint32_t Address)
 	ST010.execute = 0;
 }
 
-uint8_t NullGet(uint32_t Address)               { return 0; }
-void    NullSet(uint8_t Byte, uint32_t Address) {}
+uint8_t NullGet(uint32_t _1)
+{
+	(void) _1;
+	return 0;
+}
+void NullSet(uint8_t _1, uint32_t _2)
+{
+	(void) _1;
+	(void) _2;
+}

@@ -333,7 +333,6 @@ static bool fx_checkStartAddress()
 
 void FxEmulate(uint32_t nInstructions) /* Execute until the next stop instruction */
 {
-	uint32_t vCount;
 	fx_readRegisterSpaceForCheck(); /* Read registers and initialize GSU session */
 
 	if (!fx_checkStartAddress()) /* Check if the start address is valid */

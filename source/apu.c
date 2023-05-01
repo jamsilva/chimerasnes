@@ -42,7 +42,7 @@ void DeinitAPU()
 
 void ResetAPU()
 {
-	int32_t i, j;
+	int32_t i;
 	Settings.APUEnabled = true;
 	memset(IAPU.RAM, 0, 0x100);
 	memset(IAPU.RAM + 0x20, 0xFF, 0x20);

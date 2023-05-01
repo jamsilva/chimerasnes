@@ -196,14 +196,6 @@ static void (*dspRegs[0x80])(int32_t, uint8_t) = /* Jump table for DSP register 
 	RNull, RNull, RNull,  RNull,  REndX,  REDl,   RNull,  RFCI
 };
 
-static const uint32_t freqTab[32] = /* Frequency table; number of samples between updates. Used to determine envelope rates and noise frequencies */
-{
-	0,   2048, 1536, 1280, 1024, 768, 640, 512,
-	384, 320,  256,  192,  160,  128, 96,  80,
-	64,  48,   40,   32,   24,   20,  16,  12,
-	10,  8,    6,    5,    4,    3,   2,   1
-};
-
 static const uint16_t rateTab[32] =
 {
 	0x0000, 0x000F, 0x0014, 0x0018, 0x001E, 0x0028, 0x0030, 0x003C,
@@ -449,7 +441,7 @@ void InitAPUDSP()
 void SetPlaybackRate(int32_t rate)
 {
 	int32_t i;
-	uint64_t r, rr;
+	uint64_t r;
 	rate = (rate >= 8000 && rate <= 192000) ? rate : SNES_SAMPLE_RATE;
 	disEcho = disEcho & ~DSP_NOECHO; /* Disable echo */
 	SetAPUDSPAmp(FIXED_POINT); /* Save option flags */

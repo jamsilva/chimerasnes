@@ -541,25 +541,17 @@ else
         -Wall \
         -Wextra \
         -pedantic \
-        -Wno-implicit-function-declaration \
-        -Wno-implicit-fallthrough \
         -Wno-sign-compare \
-        -Wno-unused-variable \
-        -Wno-unused-function \
-        -Wno-unused-parameter \
-        -Wno-uninitialized \
-        -Wno-strict-aliasing \
-        -Wno-overflow \
-        -fno-strict-overflow
+        -Wno-unused-parameter
 
     ifeq ($(DEBUG), 1)
         FLAGS += -O0 -g
     else
         FLAGS += \
             -Ofast -DNDEBUG -fomit-frame-pointer \
-            -fno-stack-protector -fno-ident \
-            -fmerge-all-constants -fno-math-errno \
-            -ffast-math -fno-exceptions -fno-unwind-tables \
+            -fno-stack-protector -fvisibility=protected \
+            -fno-ident -fmerge-all-constants -ffast-math \
+            -fno-math-errno -fno-exceptions -fno-unwind-tables \
             -fno-asynchronous-unwind-tables -fdata-sections \
             -ffunction-sections -Wl,--gc-sections
 

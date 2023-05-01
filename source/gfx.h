@@ -57,8 +57,11 @@ typedef struct
 
 	struct
 	{
-		int8_t _OBJLines_PAD1 : 8;
 		uint8_t RTOFlags;
+		/* With _OBJLines_PAD1 above RTOFlags graphical glitches are more common...
+		 * There may be some non-obvious memory corruption here... This order
+		 * shouldn't fix things but seems to make the glitches less likely. */
+		int8_t _OBJLines_PAD1 : 8;
 		int16_t Tiles;
 
 		struct

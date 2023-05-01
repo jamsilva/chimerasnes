@@ -469,7 +469,7 @@ static int16_t DSP1_ShiftR(int16_t C, int16_t E)
 static void DSP1_Project(int16_t X, int16_t Y, int16_t Z, int16_t* H, int16_t* V, int16_t* M)
 {
 	int32_t aux, aux4;
-	int16_t E = 0, E2 = 0, E3 = 0, E4 = 0, E5 = 0, refE, E6, E7;
+	int16_t E = 0, E2 = 0, E3 = 0, E4 = 0, E5 = 0, E6 = 0, refE;
 	int16_t C2, C4, C6, C8, C9, C10, C11, C12, C16, C17, C18, C19, C20, C21, C22, C23, C24, C25, C26;
 	int16_t Px, Py, Pz;
 	DSP1_NormalizeDouble((int32_t) X - DSP1.Gx, &Px, &E4);
@@ -509,23 +509,21 @@ static void DSP1_Project(int16_t X, int16_t Y, int16_t Z, int16_t* H, int16_t* V
 	C2 = C4 * DSP1.C_Les >> 15; /* scale factor */
 
 	/* H */
-	E7 = 0;
 	C16 = Px * (DSP1.CosAas * 0x7fff >> 15) >> 15;
 	C20 = Py * (DSP1.SinAas * 0x7fff >> 15) >> 15;
 	C17 = C16 + C20; /* scalar product of P with the normalized horizontal vector of the screen... */
 	C18 = C17 * C2 >> 15; /* ... multiplied by the scale factor */
-	DSP1_Normalize(C18, &C19, &E7);
-	*H = DSP1_Truncate(C19, DSP1.E_Les - E2 + refE + E7);
+	DSP1_Normalize(C18, &C19, &E6);
+	*H = DSP1_Truncate(C19, DSP1.E_Les - E2 + refE + E6);
 
 	/* V */
-	E6 = 0;
 	C21 = Px * (DSP1.CosAzs * -DSP1.SinAas >> 15) >> 15;
 	C22 = Py * (DSP1.CosAzs * DSP1.CosAas >> 15) >> 15;
 	C23 = Pz * (-DSP1.SinAzs * 0x7fff >> 15) >> 15;
 	C24 = C21 + C22 + C23; /* scalar product of P with the normalized vertical vector of the screen... */
 	C26 = C24 * C2 >> 15; /* ... multiplied by the scale factor */
-	DSP1_Normalize(C26, &C25, &E6);
-	*V = DSP1_Truncate(C25, DSP1.E_Les - E2 + refE + E6);
+	DSP1_Normalize(C26, &C25, &E5);
+	*V = DSP1_Truncate(C25, DSP1.E_Les - E2 + refE + E5);
 
 	/* M */
 	DSP1_Normalize(C2, &C6, &E4);

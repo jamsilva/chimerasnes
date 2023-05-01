@@ -115,7 +115,7 @@ static bool GoldFingerToRaw(const char* code, uint32_t* address, uint32_t* num_b
 
 	for (i = 0; i < 3; i++)
 	{
-		int32_t byte;
+		uint32_t byte;
 		strncpy(tmp, code + 5 + i * 2, 2);
 		tmp[2] = 0;
 

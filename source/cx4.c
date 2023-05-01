@@ -739,8 +739,8 @@ void SetCX4(uint8_t byte, uint16_t Address)
 			int16_t y, left, right;
 			angleS1 >>= 1;
 			angleS2 >>= 1;
-			tan1 = (SinTable[angleC1] != 0) ? ((((int32_t) SinTable[angleS1]) << 16) / SinTable[angleC1]) : 0x80000000;
-			tan2 = (SinTable[angleC2] != 0) ? ((((int32_t) SinTable[angleS2]) << 16) / SinTable[angleC2]) : 0x80000000;
+			tan1 = (SinTable[angleC1] != 0) ? ((((int32_t) SinTable[angleS1]) << 16) / SinTable[angleC1]) : (int32_t) 0x80000000;
+			tan2 = (SinTable[angleC2] != 0) ? ((((int32_t) SinTable[angleS2]) << 16) / SinTable[angleC2]) : (int32_t) 0x80000000;
 			y = READ_WORD(Memory.CX4RAM + 0x1f83) - READ_WORD(Memory.CX4RAM + 0x1f89);
 
 			for (j = 0; j < 225; j++)

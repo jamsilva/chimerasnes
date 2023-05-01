@@ -1778,7 +1778,6 @@ void SoftResetPPU()
 
 void ResetPPU()
 {
-	int32_t c;
 	SoftResetPPU();
 	PPU.Joypad1ButtonReadPos                = 0;
 	PPU.Joypad2ButtonReadPos                = 0;

@@ -930,7 +930,7 @@ void DrawLargePixel16Add(uint32_t Tile, int32_t Offset, uint32_t StartPixel, uin
 
 #define LARGE_ADD_PIXEL(s, p)                                       \
 	(Depth[z + GFX.DepthDelta] ? (Depth [z + GFX.DepthDelta] != 1 ? \
-	COLOR_ADD(p, *(s + GFX.Delta)) :                                \
+	COLOR_ADD(p, GFX.Delta[s]) :                                    \
 	COLOR_ADD(p, GFX.FixedColour)) : p)
 
 	RENDER_TILE_LARGE(ScreenColors[pixel], LARGE_ADD_PIXEL);
@@ -946,7 +946,7 @@ void DrawLargePixel16Add1_2(uint32_t Tile, int32_t Offset, uint32_t StartPixel, 
 
 #define LARGE_ADD_PIXEL1_2(s, p)                                                \
 	((uint16_t) (Depth[z + GFX.DepthDelta] ? (Depth [z + GFX.DepthDelta] != 1 ? \
-	COLOR_ADD1_2(p, *(s + GFX.Delta)) :                                         \
+	COLOR_ADD1_2(p, GFX.Delta[s]) :                                             \
 	COLOR_ADD(p, GFX.FixedColour)) : p))
 
 	RENDER_TILE_LARGE(ScreenColors[pixel], LARGE_ADD_PIXEL1_2);
@@ -962,7 +962,7 @@ void DrawLargePixel16Sub(uint32_t Tile, int32_t Offset, uint32_t StartPixel, uin
 
 #define LARGE_SUB_PIXEL(s, p)                                       \
 	(Depth[z + GFX.DepthDelta] ? (Depth [z + GFX.DepthDelta] != 1 ? \
-	COLOR_SUB(p, *(s + GFX.Delta)) :                                \
+	COLOR_SUB(p, GFX.Delta[s]) :                                    \
 	COLOR_SUB(p, GFX.FixedColour)) : p)
 
 	RENDER_TILE_LARGE(ScreenColors[pixel], LARGE_SUB_PIXEL);
@@ -978,7 +978,7 @@ void DrawLargePixel16Sub1_2(uint32_t Tile, int32_t Offset, uint32_t StartPixel, 
 
 #define LARGE_SUB_PIXEL1_2(s, p)                                    \
 	(Depth[z + GFX.DepthDelta] ? (Depth [z + GFX.DepthDelta] != 1 ? \
-	COLOR_SUB1_2(p, *(s + GFX.Delta)) :                             \
+	COLOR_SUB1_2(p, GFX.Delta[s]) :                                 \
 	COLOR_SUB(p, GFX.FixedColour)) : p)
 
 	RENDER_TILE_LARGE(ScreenColors[pixel], LARGE_SUB_PIXEL1_2);

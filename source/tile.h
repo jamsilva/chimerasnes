@@ -180,8 +180,8 @@
 	{                                                                             \
 		case H_FLIP:                                                              \
 			StartPixel = 7 - StartPixel;                                          \
-			/* fallthrough for no-flip case - above was a horizontal flip */      \
-		case 0:                                                                   \
+			/* fall through */                                                    \
+		case 0: /* no-flip case - above was a horizontal flip */                  \
 			if ((pixel = pCache[StartLine + StartPixel]))                         \
 			{                                                                     \
 				pixel = PIXEL;                                                    \
@@ -204,8 +204,8 @@
 			break;                                                                \
 		case H_FLIP | V_FLIP:                                                     \
 			StartPixel = 7 - StartPixel;                                          \
-			/* fallthrough for V_FLIP-only case - above was a horizontal flip */  \
-		case V_FLIP:                                                              \
+			/* fall through */                                                    \
+		case V_FLIP: /* V_FLIP-only case - above was a horizontal flip */         \
 			if ((pixel = pCache[56 - StartLine + StartPixel]))                    \
 			{                                                                     \
 				pixel = PIXEL;                                                    \
@@ -235,8 +235,8 @@
 	{                                                                             \
 		case H_FLIP:                                                              \
 			StartPixel = 7 - StartPixel;                                          \
-			/* fallthrough for no-flip case - above was a horizontal flip */      \
-		case 0:                                                                   \
+			/* fall through */                                                    \
+		case 0: /* no-flip case - above was a horizontal flip */                  \
 			if ((pixel = pCache[StartLine + StartPixel]))                         \
 			{                                                                     \
 				pixel = PIXEL;                                                    \
@@ -259,8 +259,8 @@
 			break;                                                                \
 		case H_FLIP | V_FLIP:                                                     \
 			StartPixel = 7 - StartPixel;                                          \
-			/* fallthrough for V_FLIP-only case - above was a horizontal flip */  \
-		case V_FLIP:                                                              \
+			/* fall through */                                                    \
+		case V_FLIP: /* V_FLIP-only case - above was a horizontal flip */         \
 			if ((pixel = pCache[56 - StartLine + StartPixel]))                    \
 			{                                                                     \
 				pixel = PIXEL;                                                    \

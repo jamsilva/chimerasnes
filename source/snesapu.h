@@ -24,6 +24,6 @@ void SetPlaybackRate(int32_t rate);
 void StoreAPUDSP();
 void RestoreAPUDSP();
 void SetAPUDSPAmp(int32_t amp);
-void MixSamples(int16_t* pBuf, int32_t size);
+void MixSamples(int16_t* pBuf, int32_t num);
 void APUDSPIn(uint8_t address, uint8_t data);
 #endif
