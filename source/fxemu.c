@@ -33,7 +33,7 @@ void SetSuperFX(uint8_t Byte, uint16_t Address)
 {
 	uint8_t old_fill_ram;
 
-	if ((Settings.Chip & GSU) != GSU)
+	if (Settings.Chip != GSU)
 		return;
 
 	old_fill_ram = Memory.FillRAM[Address];

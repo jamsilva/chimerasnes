@@ -101,7 +101,7 @@ void SetPPU(uint8_t Byte, uint16_t Address)
 {
 	if (Address >= 0x2188)
 	{
-		if ((Settings.Chip & GSU) == GSU && Address >= 0x3000 && Address <= 0x32ff)
+		if (Settings.Chip == GSU && Address >= 0x3000 && Address <= 0x32ff)
 		{
 			SetSuperFX(Byte, Address);
 			return;
@@ -660,7 +660,7 @@ uint8_t GetPPU(uint16_t Address)
 
 	if (Address >= 0x2188)
 	{
-		if (((Settings.Chip & GSU) == GSU) && Address >= 0x3000 && Address <= 0x32ff)
+		if (Settings.Chip == GSU && Address >= 0x3000 && Address <= 0x32ff)
 			return GetSuperFX(Address);
 		else if (Settings.Chip == SA_1 && Address >= 0x2200)
 			return GetSA1(Address);

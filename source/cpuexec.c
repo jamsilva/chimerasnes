@@ -90,7 +90,7 @@
 
 /* This is a CatSFC modification inspired by a Snes9x-Euphoria modification.
  * The emulator selects a main loop based on the chips used in an entire frame.
- * This avoids the constant SA1.Executing and Settings.Chip & GSU checks. */
+ * This avoids the constant SA1.Executing and Settings.Chip == GSU checks. */
 void MainLoop()
 {
 	if (Settings.Chip == SA_1)
@@ -98,7 +98,7 @@ void MainLoop()
 			if (SA1.Executing)
 				SA1MainLoop()
 		)
-	else if ((Settings.Chip & GSU) == GSU)
+	else if (Settings.Chip == GSU)
 		MAIN_LOOP(DoHBlankProcessing_SFX(), )
 	else
 		MAIN_LOOP(DoHBlankProcessing_NoSFX(), )
@@ -128,7 +128,7 @@ void ClearIRQSource(uint32_t source)
 
 /* This is a CatSFC modification inspired by a Snes9x-Euphoria modification.
  * The emulator selects an HBlank processor based on the chips used in an
- * entire frame. This avoids the constant Settings.Chip & GSU checks. */
+ * entire frame. This avoids the constant Settings.Chip == GSU checks. */
 #define DO_HBLANK_PROCESSING(SUPERFX_EXEC)                                                                                            \
 {                                                                                                                                     \
 	int32_t i;                                                                                                                        \

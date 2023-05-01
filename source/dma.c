@@ -562,7 +562,7 @@ void DoDMA(uint8_t Channel)
 	IAPU.Executing = Settings.APUEnabled;
 	APU_EXECUTE();
 
-	if ((Settings.Chip & GSU) == GSU)
+	if (Settings.Chip == GSU)
 		while (CPU.Cycles > CPU.NextEvent)
 			DoHBlankProcessing_SFX();
 	else

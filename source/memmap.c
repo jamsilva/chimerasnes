@@ -684,8 +684,7 @@ static char* CartType(char* buf)
 		[DSP_2]      = "+DSP-2",
 		[DSP_3]      = "+DSP-3",
 		[DSP_4]      = "+DSP-4",
-		[GSU_1]      = "+SuperFX 1",
-		[GSU_2]      = "+SuperFX 2",
+		[GSU]        = "+SuperFX",
 		[ST_010]     = "+ST-010",
 		[ST_011]     = "+ST-011",
 		[ST_018]     = "+ST-018",
@@ -1273,7 +1272,7 @@ void InitROM()
 			Map_BSLoROMMap();
 		else if (Settings.Chip == ST_010 || Settings.Chip == ST_011)
 			Map_SetaDSPLoROMMap();
-		else if ((Settings.Chip & GSU) == GSU)
+		else if (Settings.Chip == GSU)
 			Map_SuperFXLoROMMap();
 		else if (Settings.Chip == SA_1)
 			Map_SA1LoROMMap();

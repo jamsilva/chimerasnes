@@ -62,7 +62,7 @@ static void CommonReset()
 
 	if ((Settings.Chip & DSP) == DSP)
 		ResetDSP();
-	else if ((Settings.Chip & GSU) == GSU)
+	else if (Settings.Chip == GSU)
 		FxReset(&SuperFX);
 	else if (Settings.Chip == SA_1)
 		SA1Init();

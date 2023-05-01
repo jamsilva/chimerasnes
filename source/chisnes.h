@@ -137,11 +137,11 @@ enum
 
 	/* Generic chips */
 	DSP        = 1 << 2,
-	GSU        = 1 << 3,
-	SETA       = 1 << 4,
-	PERIPHERAL = 1 << 5,
-	OPTRTC     = 1 << 6,
-	OTHERCHIP  = 1 << 7,
+	GSU_SETA   = 1 << 3,
+	PERIPHERAL = 1 << 4,
+	OPTRTC     = 1 << 5,
+	OTHERCHIP  = 1 << 6,
+	RESERVED   = 1 << 7,
 
 	/* Actual chips */
 	DSP_1      = DSP | V0,
@@ -149,12 +149,10 @@ enum
 	DSP_3      = DSP | V2,
 	DSP_4      = DSP | V3,
 
-	GSU_1      = GSU | V1,
-	GSU_2      = GSU | V2,
-
-	ST_010     = SETA | V1,
-	ST_011     = SETA | V2, /* Unsupported */
-	ST_018     = SETA | V3, /* Unsupported */
+	GSU        = GSU_SETA | V0,
+	ST_010     = GSU_SETA | V1,
+	ST_011     = GSU_SETA | V2, /* Unsupported */
+	ST_018     = GSU_SETA | V3, /* Unsupported */
 
 	SFT        = PERIPHERAL | V0,
 	XBAND      = PERIPHERAL | V1,
