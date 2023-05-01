@@ -318,19 +318,366 @@ static void LoadSFTBIOS()
 	filestream_close(fp);
 }
 
-static const char* MapType()
+static char* ROMName(char* buf)
 {
-	return Memory.LoROM ? "LoROM" : "HiROM";
+	return buf + sprintf(buf, "\"%s\"", Memory.ROMName);
 }
 
-const char* CartType()
+static char* ROMId(char* buf)
 {
-	static const char* Contents[3] = {
-		"ROM",
-		"ROM+RAM",
-		"ROM+RAM+BAT"
+	return buf + sprintf(buf, "(%s)", Memory.ROMId);
+}
+
+static char* CompanyName(char* buf)
+{
+	static const char* nintendo_licensees[] =
+	{
+		[0x000] = "Unlicensed",
+		[0x001] = "Nintendo",
+		[0x002] = "Rocket Games/Ajinomoto",
+		[0x003] = "Imagineer-Zoom",
+		[0x004] = "Gray Matter",
+		[0x005] = "Zamuse",
+		[0x006] = "Falcom",
+		[0x008] = "Capcom",
+		[0x009] = "Hot B Co.",
+		[0x00A] = "Jaleco",
+		[0x00B] = "Coconuts Japan",
+		[0x00C] = "Coconuts Japan/G.X.Media",
+		[0x00D] = "Micronet",
+		[0x00E] = "Technos",
+		[0x00F] = "Mebio Software",
+		[0x010] = "Shouei System",
+		[0x011] = "Starfish",
+		[0x013] = "Mitsui Fudosan/Dentsu",
+		[0x015] = "Warashi Inc.",
+		[0x017] = "Nowpro",
+		[0x019] = "Game Village",
+		[0x01A] = "IE Institute",
+		[0x024] = "Banarex",
+		[0x025] = "Starfish",
+		[0x026] = "Infocom",
+		[0x027] = "Electronic Arts Japan",
+		[0x029] = "Cobra Team",
+		[0x02A] = "Human/Field",
+		[0x02B] = "KOEI",
+		[0x02C] = "Hudson Soft",
+		[0x02D] = "S.C.P./Game Village",
+		[0x02E] = "Yanoman",
+		[0x030] = "Tecmo Products",
+		[0x031] = "Japan Glary Business",
+		[0x032] = "Forum/OpenSystem",
+		[0x033] = "Virgin Games (Japan)",
+		[0x034] = "SMDE",
+		[0x035] = "Yojigen",
+		[0x037] = "Daikokudenki",
+		[0x03D] = "Creatures Inc.",
+		[0x03E] = "TDK Deep Impresion",
+		[0x048] = "Destination Software/KSS",
+		[0x049] = "Sunsoft/Tokai Engineering",
+		[0x04A] = "POW (Planning Office Wada)/VR 1 Japan",
+		[0x04B] = "Micro World",
+		[0x04D] = "San-X",
+		[0x04E] = "Enix",
+		[0x04F] = "Loriciel/Electro Brain",
+		[0x050] = "Kemco Japan",
+		[0x051] = "Seta Co.,Ltd.",
+		[0x052] = "Culture Brain",
+		[0x053] = "Irem Corp.",
+		[0x054] = "Palsoft",
+		[0x055] = "Visit Co., Ltd.",
+		[0x056] = "Intec",
+		[0x057] = "System Sacom",
+		[0x058] = "Poppo",
+		[0x059] = "Ubisoft Japan",
+		[0x05B] = "Media Works",
+		[0x05C] = "NEC InterChannel",
+		[0x05D] = "Tam",
+		[0x05E] = "Gajin/Jordan",
+		[0x05F] = "Smilesoft",
+		[0x062] = "Mediakite",
+		[0x06C] = "Viacom",
+		[0x06D] = "Carrozzeria",
+		[0x06E] = "Dynamic",
+		[0x070] = "Magifact",
+		[0x071] = "Hect",
+		[0x072] = "Codemasters",
+		[0x073] = "Taito/GAGA Communications",
+		[0x074] = "Laguna",
+		[0x075] = "Telstar Fun & Games/Event/Taito",
+		[0x077] = "Arcade Zone Ltd.",
+		[0x078] = "Entertainment International/Empire Software",
+		[0x079] = "Loriciel",
+		[0x07A] = "Gremlin Graphics",
+		[0x090] = "Seika Corp.",
+		[0x091] = "UBI SOFT Entertainment Software",
+		[0x092] = "Sunsoft US",
+		[0x094] = "Life Fitness",
+		[0x096] = "System 3",
+		[0x097] = "Spectrum Holobyte",
+		[0x099] = "Irem",
+		[0x09B] = "Raya Systems",
+		[0x09C] = "Renovation Products",
+		[0x09D] = "Malibu Games",
+		[0x09F] = "Eidos/U.S. Gold",
+		[0x0A0] = "Playmates Interactive",
+		[0x0A3] = "Fox Interactive",
+		[0x0A4] = "Time Warner Interactive",
+		[0x0AA] = "Disney Interactive",
+		[0x0AC] = "Black Pearl",
+		[0x0AE] = "Advanced Productions",
+		[0x0B1] = "GT Interactive",
+		[0x0B2] = "RARE",
+		[0x0B3] = "Crave Entertainment",
+		[0x0B4] = "Absolute Entertainment",
+		[0x0B5] = "Acclaim",
+		[0x0B6] = "Activision",
+		[0x0B7] = "American Sammy",
+		[0x0B8] = "Take 2/GameTek",
+		[0x0B9] = "Hi Tech",
+		[0x0BA] = "LJN Ltd.",
+		[0x0BC] = "Mattel",
+		[0x0BE] = "Mindscape/Red Orb Entertainment",
+		[0x0BF] = "Romstar",
+		[0x0C0] = "Taxan",
+		[0x0C1] = "Midway/Tradewest",
+		[0x0C3] = "American Softworks Corp.",
+		[0x0C4] = "Majesco Sales Inc.",
+		[0x0C5] = "3DO",
+		[0x0C8] = "Hasbro",
+		[0x0C9] = "NewKidCo",
+		[0x0CA] = "Telegames",
+		[0x0CB] = "Metro3D",
+		[0x0CD] = "Vatical Entertainment",
+		[0x0CE] = "LEGO Media",
+		[0x0D0] = "Xicat Interactive",
+		[0x0D1] = "Cryo Interactive",
+		[0x0D4] = "Red Storm Entertainment",
+		[0x0D5] = "Microids",
+		[0x0D7] = "Conspiracy/Swing",
+		[0x0D8] = "Titus",
+		[0x0D9] = "Virgin Interactive",
+		[0x0DA] = "Maxis",
+		[0x0DC] = "LucasArts Entertainment",
+		[0x0DF] = "Ocean",
+		[0x0E1] = "Electronic Arts",
+		[0x0E3] = "Laser Beam",
+		[0x0E6] = "Elite Systems",
+		[0x0E7] = "Electro Brain",
+		[0x0E8] = "The Learning Company",
+		[0x0E9] = "BBC",
+		[0x0EB] = "Software 2000",
+		[0x0ED] = "BAM! Entertainment",
+		[0x0EE] = "Studio 3",
+		[0x0F2] = "Classified Games",
+		[0x0F4] = "TDK Mediactive",
+		[0x0F6] = "DreamCatcher",
+		[0x0F7] = "JoWood Produtions",
+		[0x0F8] = "SEGA",
+		[0x0F9] = "Wannado Edition",
+		[0x0FA] = "LSP (Light & Shadow Prod.)",
+		[0x0FB] = "ITE Media",
+		[0x0FC] = "Infogrames",
+		[0x0FD] = "Interplay",
+		[0x0FE] = "JVC (US)",
+		[0x0FF] = "Parker Brothers",
+		[0x101] = "SCI (Sales Curve Interactive)/Storm",
+		[0x104] = "THQ Software",
+		[0x105] = "Accolade Inc.",
+		[0x106] = "Triffix Entertainment",
+		[0x108] = "Microprose Software",
+		[0x109] = "Universal Interactive/Sierra/Simon & Schuster",
+		[0x10B] = "Kemco",
+		[0x10C] = "Rage Software",
+		[0x10D] = "Encore",
+		[0x10F] = "Zoo",
+		[0x110] = "Kiddinx",
+		[0x111] = "Simon & Schuster Interactive",
+		[0x112] = "Asmik Ace Entertainment Inc./AIA",
+		[0x113] = "Empire Interactive",
+		[0x116] = "Jester Interactive",
+		[0x118] = "Rockstar Games",
+		[0x119] = "Scholastic",
+		[0x11A] = "Ignition Entertainment",
+		[0x11B] = "Summitsoft",
+		[0x11C] = "Stadlbauer",
+		[0x120] = "Misawa",
+		[0x121] = "Teichiku",
+		[0x122] = "Namco Ltd.",
+		[0x123] = "LOZC",
+		[0x124] = "KOEI",
+		[0x126] = "Tokuma Shoten Intermedia",
+		[0x127] = "Tsukuda Original",
+		[0x128] = "DATAM-Polystar",
+		[0x12B] = "Bullet-Proof Software",
+		[0x12C] = "Vic Tokai Inc.",
+		[0x12E] = "Character Soft",
+		[0x12F] = "I'Max",
+		[0x130] = "Saurus",
+		[0x133] = "General Entertainment",
+		[0x136] = "I'Max",
+		[0x137] = "Success",
+		[0x139] = "SEGA Japan",
+		[0x144] = "Takara",
+		[0x145] = "Chun Soft",
+		[0x146] = "Video System Co., Ltd./McO'River",
+		[0x147] = "BEC",
+		[0x149] = "Varie",
+		[0x14A] = "Yonezawa/S'pal",
+		[0x14B] = "Kaneko",
+		[0x14D] = "Victor Interactive Software/Pack-in-Video",
+		[0x14E] = "Nichibutsu/Nihon Bussan",
+		[0x14F] = "Tecmo",
+		[0x150] = "Imagineer",
+		[0x153] = "Nova",
+		[0x154] = "Den'Z",
+		[0x155] = "Bottom Up",
+		[0x157] = "TGL (Technical Group Laboratory)",
+		[0x159] = "Hasbro Japan",
+		[0x15B] = "Marvelous Entertainment",
+		[0x15D] = "Keynet Inc.",
+		[0x15E] = "Hands-On Entertainment",
+		[0x168] = "Telenet",
+		[0x169] = "Hori",
+		[0x16C] = "Konami",
+		[0x16D] = "K.Amusement Leasing Co.",
+		[0x16E] = "Kawada",
+		[0x16F] = "Takara",
+		[0x171] = "Technos Japan Corp.",
+		[0x172] = "JVC (Europe/Japan)/Victor Musical Industries",
+		[0x174] = "Toei Animation",
+		[0x175] = "Toho",
+		[0x177] = "Namco",
+		[0x178] = "Media Rings Corp.",
+		[0x179] = "J-Wing",
+		[0x17B] = "Pioneer LDC",
+		[0x17C] = "KID",
+		[0x17D] = "Mediafactory",
+		[0x181] = "Infogrames Hudson",
+		[0x18C] = "Acclaim Japan",
+		[0x18D] = "ASCII Co./Nexoft",
+		[0x18E] = "Bandai",
+		[0x190] = "Enix",
+		[0x192] = "HAL Laboratory/Halken",
+		[0x193] = "SNK",
+		[0x195] = "Pony Canyon Hanbai",
+		[0x196] = "Culture Brain",
+		[0x197] = "Sunsoft",
+		[0x198] = "Toshiba EMI",
+		[0x199] = "Sony Imagesoft",
+		[0x19B] = "Sammy",
+		[0x19C] = "Magical",
+		[0x19D] = "Visco",
+		[0x19F] = "Compile",
+		[0x1A1] = "MTO Inc.",
+		[0x1A3] = "Sunrise Interactive",
+		[0x1A5] = "Global A Entertainment",
+		[0x1A6] = "Fuuki",
+		[0x1B0] = "Taito",
+		[0x1B2] = "Kemco",
+		[0x1B3] = "Square",
+		[0x1B4] = "Tokuma Shoten",
+		[0x1B5] = "Data East",
+		[0x1B6] = "Tonkin House",
+		[0x1B8] = "KOEI",
+		[0x1BA] = "Konami/Ultra/Palcom",
+		[0x1BB] = "NTVIC/VAP",
+		[0x1BC] = "Use Co., Ltd.",
+		[0x1BD] = "Meldac",
+		[0x1BE] = "Pony Canyon (Japan)/FCI (US)",
+		[0x1BF] = "Angel/Sotsu Agency/Sunrise",
+		[0x1C0] = "Yumedia/Aroma Co., Ltd.",
+		[0x1C3] = "Boss",
+		[0x1C4] = "Axela/Crea-Tech",
+		[0x1C5] = "Sekaibunka-Sha/Sumire kobo/Marigul Management Inc.",
+		[0x1C6] = "Konami Computer Entertainment Osaka",
+		[0x1C9] = "Enterbrain",
+		[0x1D4] = "Taito/Disco",
+		[0x1D5] = "Sofel",
+		[0x1D6] = "Quest Corp.",
+		[0x1D7] = "Sigma",
+		[0x1D8] = "Ask Kodansha",
+		[0x1DA] = "Naxat",
+		[0x1DB] = "Copya System",
+		[0x1DC] = "Capcom Co., Ltd.",
+		[0x1DD] = "Banpresto",
+		[0x1DE] = "TOMY",
+		[0x1DF] = "Acclaim/LJN Japan",
+		[0x1E1] = "NCS",
+		[0x1E2] = "Human Entertainment",
+		[0x1E3] = "Altron",
+		[0x1E4] = "Jaleco",
+		[0x1E5] = "Gaps Inc.",
+		[0x1EB] = "Elf",
+		[0x1F8] = "Jaleco",
+		[0x1FA] = "Yutaka",
+		[0x1FB] = "Varie",
+		[0x1FC] = "T&ESoft",
+		[0x1FD] = "Epoch Co., Ltd.",
+		[0x1FF] = "Athena",
+		[0x200] = "Asmik",
+		[0x201] = "Natsume",
+		[0x202] = "King Records",
+		[0x203] = "Atlus",
+		[0x204] = "Epic/Sony Records (Japan)",
+		[0x206] = "IGS (Information Global Service)",
+		[0x208] = "Chatnoir",
+		[0x209] = "Right Stuff",
+		[0x20B] = "NTT COMWARE",
+		[0x20D] = "Spike",
+		[0x20E] = "Konami Computer Entertainment Tokyo",
+		[0x20F] = "Alphadream Corp.",
+		[0x211] = "Sting",
+		[0x21C] = "A Wave",
+		[0x21D] = "Motown Software",
+		[0x21E] = "Left Field Entertainment",
+		[0x21F] = "Extreme Entertainment Group",
+		[0x220] = "TecMagik",
+		[0x225] = "Cybersoft",
+		[0x227] = "Psygnosis",
+		[0x22A] = "Davidson/Western Tech.",
+		[0x22B] = "Unlicensed",
+		[0x230] = "The Game Factory Europe",
+		[0x231] = "Hip Games",
+		[0x232] = "Aspyr",
+		[0x235] = "Mastiff",
+		[0x236] = "iQue",
+		[0x237] = "Digital Tainment Pool",
+		[0x238] = "XS Games",
+		[0x239] = "Daiwon",
+		[0x241] = "PCCW Japan",
+		[0x244] = "KiKi Co. Ltd.",
+		[0x245] = "Open Sesame Inc.",
+		[0x246] = "Sims",
+		[0x247] = "Broccoli",
+		[0x248] = "Avex",
+		[0x249] = "D3 Publisher",
+		[0x24B] = "Konami Computer Entertainment Japan",
+		[0x24D] = "Square-Enix",
+		[0x24E] = "KSG",
+		[0x24F] = "Micott & Basara Inc.",
+		[0x251] = "Orbital Media",
+		[0x262] = "The Game Factory USA",
+		[0x265] = "Treasure",
+		[0x266] = "Aruze",
+		[0x267] = "Ertain",
+		[0x268] = "SNK Playmore",
+		[0x299] = "Yojigen"
 	};
 
+	if (nintendo_licensees[Memory.CompanyId] != NULL)
+		return buf + sprintf(buf, "%s", nintendo_licensees[Memory.CompanyId]);
+	else
+		return buf + sprintf(buf, "Unknown company 0x%x", Memory.CompanyId);
+}
+
+static char* MapType(char* buf)
+{
+	return buf + sprintf(buf, Memory.LoROM ? "LoROM" : "HiROM");
+}
+
+static char* CartType(char* buf)
+{
 	static const char* EnhancementChips[NUMCHIPS] = {
 		[NOCHIP]     = "",
 		[DSP_1]      = "+DSP-1",
@@ -355,68 +702,61 @@ const char* CartType()
 		[OBC_1]      = "+OBC-1"
 	};
 
-	static char tmp[33];
-	char* tmpPtr = tmp;
-	uint8_t contentCategory = (Memory.ROMType & 0xf) % 3;
 	const char* chip = EnhancementChips[Settings.Chip] ? EnhancementChips[Settings.Chip] : "+bad chip";
-	sprintf(tmp, "%s%s", (contentCategory == 0 && chip[0] == '\0') ? "ROM-only" : Contents[contentCategory], chip);
-	return tmp;
+	return buf + sprintf(buf, "%s", chip);
 }
 
-static const char* CartSize()
+static char* CartSize(char* buf)
 {
-	static char tmp[20];
-
 	if(Memory.ROMSize < 7 || Memory.ROMSize - 7 > 23)
-		return "with corrupted size";
-
-	sprintf(tmp, "%dMbit cartridge", 1 << (Memory.ROMSize - 7));
-	return tmp;
+		return buf + sprintf(buf, "with corrupted size");
+	else
+		return buf + sprintf(buf, "%dMbit cartridge", 1 << (Memory.ROMSize - 7));
 }
 
-const char* SRAMSize()
+static char* SRAMSize(char* buf)
 {
-	static char tmp[20];
-
 	if (Memory.SRAMSize == 0)
-		return "";
+		return buf;
 
 	if(Memory.SRAMSize > 16)
-		return ", SRAM Error";
-
-	sprintf(tmp, " with %dKB SRAM", (Memory.SRAMMask + 1) / 1024);
-	return tmp;
+		return buf + sprintf(buf, ", SRAM Error");
+	else
+		return buf + sprintf(buf, " with %dKB SRAM", (Memory.SRAMMask + 1) / 1024);
 }
 
-const char* MapMode()
+static char* ROMSpeed(char* buf)
 {
-	static char tmp[4];
-	sprintf(tmp, "%02x", Memory.ROMSpeed & ~0x10);
-	return tmp;
+	return buf + sprintf(buf, "%s (0x%02x)", (Memory.ROMSpeed & 0x10) ? "FastROM" : "SlowROM", Memory.ROMSpeed);
 }
 
-const char* TVStandard()
+static char* TVStandard(char* buf)
 {
-	return Settings.PAL ? "PAL" : "NTSC";
+	return buf + sprintf(buf, Settings.PAL ? "PAL" : "NTSC");
 }
 
-static void PrintROMInfo()
+static char* ROMInfo(char* buf)
 {
-	fprintf(stderr,
-		"\"%s\" (%s) by company 0x%s, %s, %s %s%s, mode 0x%s, %s\n",
-		Memory.ROMName,
-		Memory.ROMId,
-		Memory.CompanyId,
-		MapType(),
-		CartType(),
-		CartSize(),
-		SRAMSize(),
-		MapMode(),
-		TVStandard()
-	);
+	char* at = ROMName(buf);
+	*at++ = ' ';
+	at =  ROMId(at);
+	at += sprintf(at, " by ");
+	at =  CompanyName(at);
+	at += sprintf(at, ", ");
+	at =  MapType(at);
+	at =  CartType(at);
+	*at++ = ' ';
+	at =  CartSize(at);
+	at =  SRAMSize(at);
+	at += sprintf(at, ", ");
+	at =  ROMSpeed	(at);
+	at += sprintf(at, ", ");
+	at =  TVStandard(at);
+	sprintf(at, "\n");
+	return buf;
 }
 
-bool LoadROM(const struct retro_game_info* game)
+bool LoadROM(const struct retro_game_info* game, char* info_buf)
 {
 	int32_t TotalFileSize = 0;
 	bool Interleaved = false;
@@ -476,8 +816,6 @@ bool LoadROM(const struct retro_game_info* game)
 			RomHeader             = Memory.ROM;
 		}
 	}
-
-	Interleaved = false;
 
 	if (lo_score >= hi_score)
 	{
@@ -606,13 +944,10 @@ bool LoadROM(const struct retro_game_info* game)
 		}
 	}
 
-	if (Memory.ExtendedFormat == SMALLFIRST)
-		Tales = true;
-
-	InitROM(Tales);
+	InitROM();
 	ApplyCheats();
 	Reset();
-	PrintROMInfo();
+	ROMInfo(info_buf);
 	return true;
 }
 
@@ -641,13 +976,21 @@ void ParseSNESHeader(uint8_t* RomHeader)
 
 	Memory.ROMRegion = RomHeader[0x29];
 	/* memmove converted: Different mallocs [Neb] */
-	memcpy(Memory.ROMId, &RomHeader[0x2], 4);
+	memcpy(Memory.ROMId, &RomHeader[0x02], 4);
 
-	if (RomHeader[0x2A] == 0x33)
-		/* memmove converted: Different mallocs [Neb] */
-		memcpy(Memory.CompanyId, &RomHeader[0], 2);
-	else
-		sprintf(Memory.CompanyId, "%02X", RomHeader[0x2A]);
+	if (RomHeader[0x2A] != 0x33)
+	{
+		Memory.CompanyId = ((RomHeader[0x2A] >> 4) & 0x0F) * 36 + (RomHeader[0x2A] & 0x0F);
+	}
+	else if (isalnum(RomHeader[0x00]) && isalnum(RomHeader[0x01]))
+	{
+		int	l, r, l2, r2;
+		l = toupper(RomHeader[0x00]);
+		r = toupper(RomHeader[0x01]);
+		l2 = (l > '9') ? l - '7' : l - '0';
+		r2 = (r > '9') ? r - '7' : r - '0';
+		Memory.CompanyId = l2 * 36 + r2;
+	}
 }
 
 static bool bs_name(uint8_t* p)
@@ -752,7 +1095,7 @@ static bool is_bsx(uint8_t *p) /* p == "0xFFC0" or "0x7FC0" ROM offset pointer *
 	return bs_name(p);
 }
 
-void InitROM(bool Interleaved)
+void InitROM()
 {
 	uint8_t* RomHeader = Memory.ROM + 0x7FB0;
 	Settings.Chip      = NOCHIP;
@@ -781,7 +1124,7 @@ void InitROM(bool Interleaved)
 	memset(Memory.BlockIsRAM, 0, MEMMAP_NUM_BLOCKS);
 	memset(Memory.BlockIsROM, 0, MEMMAP_NUM_BLOCKS);
 	memset(Memory.ROMId, 0, 5);
-	memset(Memory.CompanyId, 0, 3);
+	Memory.CompanyId = 0;
 	ParseSNESHeader(RomHeader);
 
 	/* Detect and initialize chips - detection codes are compatible with NSRT */
@@ -990,7 +1333,6 @@ void InitROM(bool Interleaved)
 	ApplyROMFixes();
 	sprintf(Memory.ROMName,   "%s", Safe(Memory.ROMName));
 	sprintf(Memory.ROMId,     "%s", Safe(Memory.ROMId));
-	sprintf(Memory.CompanyId, "%s", Safe(Memory.CompanyId));
 }
 
 void FixROMSpeed(int32_t FastROMSpeed)
@@ -1713,7 +2055,7 @@ void APUTimingHacks()
 	         ((!strncmp(Memory.ROMName, "Parlor", 6) ||
 	            match_na("HEIWA Parlor!Mini8") ||
 	            match_na("SANKYO Fever! \xCC\xA8\xB0\xCA\xDE\xB0!")) &&
-	            !strcmp(Memory.CompanyId, "A0")) ||
+	            Memory.CompanyId == 0x168) ||
 	         match_na("DARK KINGDOM") ||
 	         match_na("ZAN3 SFC") ||
 	         match_na("HIOUDEN") ||

@@ -9,8 +9,8 @@
 #define MEMMAP_SHIFT           12
 #define MEMMAP_MASK            (MEMMAP_BLOCK_SIZE - 1)
 
-bool     LoadROM(const struct retro_game_info* game);
-void     InitROM(bool);
+bool     LoadROM(const struct retro_game_info* game, char* info_buf);
+void     InitROM();
 bool     InitMemory();
 void     DeinitMemory();
 void     FixROMSpeed(int32_t FastROMSpeed);
@@ -116,7 +116,9 @@ typedef struct
 {
 	bool     LoROM         : 1;
 	int8_t   _CMemory_PAD1 : 7;
-	char     CompanyId[3];
+	int8_t   _CMemory_PAD2 : 8;
+	int8_t   _CMemory_PAD3 : 8;
+	int8_t   _CMemory_PAD4 : 8;
 	char     ROMId[5];
 	char     ROMName[ROM_NAME_LEN];
 	uint8_t  ExtendedFormat;
@@ -128,8 +130,7 @@ typedef struct
 	uint8_t  MemorySpeed[MEMMAP_NUM_BLOCKS];
 	uint8_t  BlockIsRAM[MEMMAP_NUM_BLOCKS];
 	uint8_t  BlockIsROM[MEMMAP_NUM_BLOCKS];
-	int16_t  _CMemory_PAD2 : 16;
-	int32_t  _CMemory_PAD3 : 32;
+	uint16_t CompanyId;
 	int32_t  HeaderCount;
 	uint32_t CalculatedSize;
 	uint32_t SRAMMask;

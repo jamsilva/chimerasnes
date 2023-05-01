@@ -737,14 +737,26 @@ static void init_descriptors()
 
 bool retro_load_game(const struct retro_game_info* game)
 {
+	char info_buf[256];
+
 	if (!game)
 		return false;
 
 	init_descriptors();
 	check_variables(true);
 
-	if (!LoadROM(game))
+	if (!LoadROM(game, info_buf))
 		return false;
+
+	if (environ_cb)
+	{
+		struct retro_message msg;
+		msg.frames = FRAMES_PER_SECOND * 3;
+		msg.msg = info_buf;
+		environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, (void*) &msg);
+	}
+	else if (log_cb)
+		log_cb(RETRO_LOG_INFO, info_buf);
 
 	retro_set_audio_buff_status_cb();
 	audio_out_buffer_init();
