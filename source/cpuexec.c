@@ -9,9 +9,13 @@
 #include "fxemu.h"
 #include "sa1.h"
 #include "spc7110.h"
+#include "cpumacro.h"
+#include "cpuaddr.h"
 
 #define MAIN_LOOP(HBLANK_PROCESSING, SA1_MAIN_LOOP)                  \
 {                                                                    \
+	uint8_t Work8;                                                   \
+	                                                                 \
 	do                                                               \
 	{                                                                \
 		do                                                           \
@@ -27,7 +31,7 @@
 						if (CPU.WaitingForInterrupt)                 \
 						{                                            \
 							CPU.WaitingForInterrupt = false;         \
-							CPU.PC++;                                \
+							ICPU.Registers.PCw++;                    \
 						}                                            \
 						                                             \
 						OpcodeNMI();                                 \
@@ -41,7 +45,7 @@
 						if (CPU.WaitingForInterrupt)                 \
 						{                                            \
 							CPU.WaitingForInterrupt = false;         \
-							CPU.PC++;                                \
+							ICPU.Registers.PCw++;                    \
 						}                                            \
 						                                             \
 						if (!CPU.IRQActive)                          \
@@ -57,9 +61,10 @@
 					break;                                           \
 			}                                                        \
 			                                                         \
-			CPU.PCAtOpcodeStart = CPU.PC;                            \
+			CPU.PCAtOpcodeStart = ICPU.Registers.PCw;                \
 			CPU.Cycles += CPU.MemSpeed;                              \
-			(*ICPU.Opcodes[*CPU.PC++].Opcode)();                     \
+			READ_PC_BYTE(Work8);                                     \
+			(*ICPU.Opcodes[Work8].Opcode)();                         \
 			SA1_MAIN_LOOP;                                           \
 			                                                         \
 			if (CPU.Cycles >= CPU.NextEvent)                         \
@@ -71,7 +76,6 @@
 				break;                                               \
 		} while (true);                                              \
 		                                                             \
-		ICPU.Registers.PC = CPU.PC - CPU.PCBase;                     \
 		IAPU.Registers.PC = IAPU.PC - IAPU.RAM;                      \
 		                                                             \
 		if (!finishedFrame)                                          \
@@ -114,7 +118,7 @@ void SetIRQSource(uint32_t source)
 	{
 		CPU.IRQCycleCount = 0;
 		CPU.WaitingForInterrupt = false;
-		CPU.PC++;
+		ICPU.Registers.PCw++;
 	}
 }
 
@@ -145,7 +149,7 @@ void ClearIRQSource(uint32_t source)
 			SUPERFX_EXEC;                                                                                                             \
 			CPU.Cycles -= Settings.H_Max;                                                                                             \
 			                                                                                                                          \
-			if (IAPU.Executing)                                                                                                    \
+			if (IAPU.Executing)                                                                                                       \
 				APU.Cycles -= Settings.H_Max;                                                                                         \
 			else                                                                                                                      \
 				APU.Cycles = 0;                                                                                                       \
@@ -158,7 +162,6 @@ void ClearIRQSource(uint32_t source)
 				Memory.FillRAM[0x213F] ^= 0x80;                                                                                       \
 				PPU.RangeTimeOver = 0;                                                                                                \
 				CPU.NMIActive = false;                                                                                                \
-				ICPU.Frame++;                                                                                                         \
 				CPU.Flags |= SCAN_KEYS_FLAG;                                                                                          \
 				StartHDMA();                                                                                                          \
 			}                                                                                                                         \
@@ -220,7 +223,7 @@ void ClearIRQSource(uint32_t source)
 					IAPU.RAM[0xff] = (IAPU.RAM[0xff] + 1) & 0xf;                                                                      \
 					APU.Timer[2] -= APU.TimerTarget[2];                                                                               \
 					IAPU.WaitCounter++;                                                                                               \
-					IAPU.Executing = Settings.APUEnabled;                                                                          \
+					IAPU.Executing = Settings.APUEnabled;                                                                             \
 				}                                                                                                                     \
 			}                                                                                                                         \
 			                                                                                                                          \
@@ -238,7 +241,7 @@ void ClearIRQSource(uint32_t source)
 						IAPU.RAM[0xfd + i] = (IAPU.RAM[0xfd + i] + 1) & 0xf;                                                          \
 						APU.Timer[i] = 0;                                                                                             \
 						IAPU.WaitCounter++;                                                                                           \
-						IAPU.Executing = Settings.APUEnabled;                                                                      \
+						IAPU.Executing = Settings.APUEnabled;                                                                         \
 					}                                                                                                                 \
 				}                                                                                                                     \
 			}                                                                                                                         \

@@ -2099,141 +2099,141 @@ void HDMATimingHacks()
 void SA1ShutdownAddressHacks()
 {
 	/* SA-1 Speedup settings */
-	SA1.WaitAddress = NULL;
+	SA1.WaitPC = 0;
 	SA1.WaitByteAddress1 = NULL;
 	SA1.WaitByteAddress2 = NULL;
 
 	if (match_id("ZBPJ")) /* Itoi Shigesato no Bass Tsuri No.1 (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0x0093f1 >> MEMMAP_SHIFT] + 0x93f1;
+		SA1.WaitPC = 0x93f1;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x304a;
 	}
 	else if (match_id("AEVJ")) /* Daisenryaku Expert WWII (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0x0ed18d >> MEMMAP_SHIFT] + 0xd18d;
+		SA1.WaitPC = 0xd18d;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3000;
 	}
 	else if (match_id("A2DJ")) /* Derby Jockey 2 (J) */
-		SA1.WaitAddress = SA1.Map[0x008b62 >> MEMMAP_SHIFT] + 0x8b62;
+		SA1.WaitPC = 0x8b62;
 	else if (match_id("AZIJ")) /* Dragon Ball Z - Hyper Dimension (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0x008083 >> MEMMAP_SHIFT] + 0x8083;
+		SA1.WaitPC = 0x8083;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3020;
 	}
 	else if (match_id("ZX3J")) /* SD Gundam G NEXT (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0x0087f2 >> MEMMAP_SHIFT] + 0x87f2;
+		SA1.WaitPC = 0x87f2;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x30c4;
 	}
 	else if (match_id("AARJ")) /* Shougi no Hanamichi (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0xc1f85a >> MEMMAP_SHIFT] + 0xf85a;
+		SA1.WaitPC = 0xf85a;
 		SA1.WaitByteAddress1 = Memory.SRAM + 0x0c64;
 		SA1.WaitByteAddress2 = Memory.SRAM + 0x0c66;
 	}
 	if (match_id("A23J")) /* Asahi Shinbun Rensai Katou Hifumi Kudan Shougi Shingiryu (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0xc25037 >> MEMMAP_SHIFT] + 0x5037;
+		SA1.WaitPC = 0x5037;
 		SA1.WaitByteAddress1 = Memory.SRAM + 0x0c06;
 		SA1.WaitByteAddress2 = Memory.SRAM + 0x0c08;
 	}
 	else if (match_id("AIIJ")) /* Taikyoku Igo - Idaten (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0xc100be >> MEMMAP_SHIFT] + 0x00be;
+		SA1.WaitPC = 0x00be;
 		SA1.WaitByteAddress1 = Memory.SRAM + 0x1002;
 		SA1.WaitByteAddress2 = Memory.SRAM + 0x1004;
 	}
 	else if (match_id("AITJ")) /* Takemiya Masaki Kudan no Igo Taishou (J) */
-		SA1.WaitAddress = SA1.Map[0x0080b7 >> MEMMAP_SHIFT] + 0x80b7;
+		SA1.WaitPC = 0x80b7;
 	else if (match_id("AJ6J")) /* J. League '96 Dream Stadium (J) */
-		SA1.WaitAddress = SA1.Map[0xc0f74a >> MEMMAP_SHIFT] + 0xf74a;
+		SA1.WaitPC = 0xf74a;
 	else if (match_id("AJUJ")) /* Jumpin' Derby (J) */
-		SA1.WaitAddress = SA1.Map[0x00d926 >> MEMMAP_SHIFT] + 0xd926;
+		SA1.WaitPC = 0xd926;
 	else if (match_id("AKAJ")) /* Kakinoki Shougi (J) */
-		SA1.WaitAddress = SA1.Map[0x00f070 >> MEMMAP_SHIFT] + 0xf070;
+		SA1.WaitPC = 0xf070;
 	else if (match_id("AFJJ") || match_id("AFJE")) /* Hoshi no Kirby 3 (J), Kirby's Dream Land 3 (U) */
 	{
-		SA1.WaitAddress = SA1.Map[0x0082d4 >> MEMMAP_SHIFT] + 0x82d4;
+		SA1.WaitPC = 0x82d4;
 		SA1.WaitByteAddress1 = Memory.SRAM + 0x72a4;
 	}
 	else if (match_id("AKFJ")) /* Hoshi no Kirby - Super Deluxe (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0x008c93 >> MEMMAP_SHIFT] + 0x8c93;
+		SA1.WaitPC = 0x8c93;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x300a;
 		SA1.WaitByteAddress2 = Memory.FillRAM + 0x300e;
 	}
 	else if (match_id("AKFE")) /* Kirby Super Star (U) */
 	{
-		SA1.WaitAddress = SA1.Map[0x008cb8 >> MEMMAP_SHIFT] + 0x8cb8;
+		SA1.WaitPC = 0x8cb8;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x300a;
 		SA1.WaitByteAddress2 = Memory.FillRAM + 0x300e;
 	}
 	else if (match_id("ARWJ") || match_id("ARWE")) /* Super Mario RPG (J), (U) */
 	{
-		SA1.WaitAddress = SA1.Map[0xc0816f >> MEMMAP_SHIFT] + 0x816f;
+		SA1.WaitPC = 0x816f;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3000;
 	}
 	else if (match_id("AVRJ")) /* Marvelous (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0x0085f2 >> MEMMAP_SHIFT] + 0x85f2;
+		SA1.WaitPC = 0x85f2;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3024;
 	}
 	else if (match_id("AO3J")) /* Harukanaru Augusta 3 - Masters New (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0x00dddb >> MEMMAP_SHIFT] + 0xdddb;
+		SA1.WaitPC = 0xdddb;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x37b4;
 	}
 	else if (match_id("AJOJ")) /* Jikkyou Oshaberi Parodius (J) */
-		SA1.WaitAddress = SA1.Map[0x8084e5 >> MEMMAP_SHIFT] + 0x84e5;
+		SA1.WaitPC = 0x84e5;
 	else if (match_id("APBJ")) /* Super Bomberman - Panic Bomber W (J) */
-		SA1.WaitAddress = SA1.Map[0x00857a >> MEMMAP_SHIFT] + 0x857a;
+		SA1.WaitPC = 0x857a;
 	else if (match_id("AONJ")) /* Pebble Beach no Hatou New - Tournament Edition (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0x00df33 >> MEMMAP_SHIFT] + 0xdf33;
+		SA1.WaitPC = 0xdf33;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x37b4;
 	}
 	else if (match_id("AEPE")) /* PGA European Tour (U) */
 	{
-		SA1.WaitAddress = SA1.Map[0x003700 >> MEMMAP_SHIFT] + 0x3700;
+		SA1.WaitPC = 0x3700;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3102;
 	}
 	else if (match_id("A3GE")) /* PGA Tour 96 (U) */
 	{
-		SA1.WaitAddress = SA1.Map[0x003700 >> MEMMAP_SHIFT] + 0x3700;
+		SA1.WaitPC = 0x3700;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3102;
 	}
 	else if (match_id("A4RE")) /* Power Rangers Zeo - Battle Racers (U) */
 	{
-		SA1.WaitAddress = SA1.Map[0x009899 >> MEMMAP_SHIFT] + 0x9899;
+		SA1.WaitPC = 0x9899;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3000;
 	}
 	else if (match_id("AGFJ")) /* SD F-1 Grand Prix (J) */
-		SA1.WaitAddress = SA1.Map[0x0181bc >> MEMMAP_SHIFT] + 0x81bc;
+		SA1.WaitPC = 0x81bc;
 	else if (match_id("ASYJ")) /* Saikousoku Shikou Shougi Mahjong (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0x00f2cc >> MEMMAP_SHIFT] + 0xf2cc;
+		SA1.WaitPC = 0xf2cc;
 		SA1.WaitByteAddress1 = Memory.SRAM + 0x7ffe;
 		SA1.WaitByteAddress2 = Memory.SRAM + 0x7ffc;
 	}
 	else if (match_id("AX2J")) /* Shougi Saikyou II (J) */
-		SA1.WaitAddress = SA1.Map[0x00d675 >> MEMMAP_SHIFT] + 0xd675;
+		SA1.WaitPC = 0xd675;
 	else if (match_id("A4WJ")) /* Mini Yonku Shining Scorpion - Let's & Go!! (J) */
-		SA1.WaitAddress = SA1.Map[0xc048be >> MEMMAP_SHIFT] + 0x48be;
+		SA1.WaitPC = 0x48be;
 	else if (match_id("AHJJ")) /* Shin Shougi Club (J) */
 	{
-		SA1.WaitAddress = SA1.Map[0xc1002a >> MEMMAP_SHIFT] + 0x002a;
+		SA1.WaitPC = 0x002a;
 		SA1.WaitByteAddress1 = Memory.SRAM + 0x0806;
 		SA1.WaitByteAddress2 = Memory.SRAM + 0x0808;
 	}
 	else if (match_id("AMSJ")) /* ｼｮｳｷﾞｻｲｷｮｳ */
-		SA1.WaitAddress = SA1.Map[0x00CD6A >> MEMMAP_SHIFT] + 0xCD6A;
+		SA1.WaitPC = 0xCD6A;
 	else if (match_id("IL")) /* ﾊﾌﾞﾒｲｼﾞﾝﾉｵﾓｼﾛｼｮｳｷﾞ */
-		SA1.WaitAddress = SA1.Map[0x008549 >> MEMMAP_SHIFT] + 0x8549;
+		SA1.WaitPC = 0x8549;
 	else if (match_id("ALXJ")) /* MASOUKISHIN */
 	{
-		SA1.WaitAddress = SA1.Map[0x00EC9C >> MEMMAP_SHIFT] + 0xEC9C;
+		SA1.WaitPC = 0xEC9C;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3072;
 	}
 	else if (match_id("A3IJ")) /* SUPER SHOGI3 */
-		SA1.WaitAddress = SA1.Map[0x00F669 >> MEMMAP_SHIFT] + 0xF669;
+		SA1.WaitPC = 0xF669;
 }

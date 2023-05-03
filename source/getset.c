@@ -18,7 +18,7 @@ uint8_t GetByte(uint32_t Address)
 	if (GetAddress >= (uint8_t*) MAP_LAST)
 	{
 		if (Memory.BlockIsRAM[block])
-			CPU.WaitAddress = CPU.PCAtOpcodeStart;
+			CPU.WaitPC = CPU.PCAtOpcodeStart;
 
 		return GetAddress[Address & 0xffff];
 	}
@@ -79,7 +79,8 @@ uint16_t GetWord(uint32_t Address)
 	if (GetAddress >= (uint8_t*) MAP_LAST)
 	{
 		if (Memory.BlockIsRAM[block])
-			CPU.WaitAddress = CPU.PCAtOpcodeStart;
+			CPU.WaitPC = CPU.PCAtOpcodeStart;
+
 	#ifdef MSB_FIRST
 		return GetAddress[Address & 0xffff] | (GetAddress[(Address & 0xffff) + 1] << 8);
 	#else
@@ -132,7 +133,7 @@ void SetByte(uint8_t Byte, uint32_t Address)
 {
 	int32_t  block;
 	uint8_t* SetAddress = Memory.WriteMap[block = ((Address >> MEMMAP_SHIFT) & MEMMAP_MASK)];
-	CPU.WaitAddress     = NULL;
+	CPU.WaitPC = 0;
 
 	if (SetAddress >= (uint8_t*) MAP_LAST)
 	{
@@ -143,7 +144,7 @@ void SetByte(uint8_t Byte, uint32_t Address)
 
 		if ((Settings.Chip == SA_1) && (SetAddress == SA1.WaitByteAddress1 || SetAddress == SA1.WaitByteAddress2))
 		{
-			SA1.Executing   = SA1.Opcodes != NULL;
+			SA1.Executing = (SA1.Opcodes != NULL);
 			SA1.WaitCounter = 0;
 		}
 
@@ -215,7 +216,7 @@ void SetWord(uint16_t Word, uint32_t Address)
 		return;
 	}
 
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	SetAddress = Memory.WriteMap[block = ((Address >> MEMMAP_SHIFT) & MEMMAP_MASK)];
 
 	if (SetAddress >= (uint8_t*) MAP_LAST)
@@ -227,7 +228,7 @@ void SetWord(uint16_t Word, uint32_t Address)
 
 		if ((Settings.Chip == SA_1) && (SetAddress == SA1.WaitByteAddress1 || SetAddress == SA1.WaitByteAddress2))
 		{
-			SA1.Executing   = SA1.Opcodes != NULL;
+			SA1.Executing = (SA1.Opcodes != NULL);
 			SA1.WaitCounter = 0;
 		}
 
@@ -397,7 +398,7 @@ void SetPCBase(uint32_t Address)
 	if (GetAddress >= (uint8_t*) MAP_LAST)
 	{
 		CPU.PCBase = GetAddress;
-		CPU.PC = CPU.PCBase + (Address & 0xffff);
+		ICPU.Registers.PCw = Address & 0xffff;
 		return;
 	}
 
@@ -427,5 +428,5 @@ void SetPCBase(uint32_t Address)
 			break;
 	}
 
-	CPU.PC = CPU.PCBase + (Address & 0xffff);
+	ICPU.Registers.PCw = Address & 0xffff;
 }

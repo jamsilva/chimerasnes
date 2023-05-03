@@ -15,8 +15,7 @@
 
 void ResetCPU()
 {
-	ICPU.Registers.PB = 0;
-	ICPU.Registers.PC = GetWord(0xfffc);
+	ICPU.Registers.PBPC = GetWord(0xfffc);
 	ICPU.Registers.D.W = 0;
 	ICPU.Registers.DB = 0;
 	ICPU.Registers.SH = 1;
@@ -33,10 +32,9 @@ void ResetCPU()
 	CPU.IRQActive = false;
 	CPU.WaitingForInterrupt = false;
 	CPU.InDMA = false;
-	CPU.PC = NULL;
 	CPU.PCBase = NULL;
-	CPU.PCAtOpcodeStart = NULL;
-	CPU.WaitAddress = NULL;
+	CPU.PCAtOpcodeStart = 0;
+	CPU.WaitPC = 0;
 	CPU.WaitCounter = 1;
 	CPU.V_Counter = 0;
 	CPU.Cycles = 182; /* This is the cycle count just after the jump to the Reset Vector. */
@@ -45,7 +43,7 @@ void ResetCPU()
 	CPU.MemSpeed = Settings.SlowOneCycle;
 	CPU.MemSpeedx2 = Settings.SlowOneCycle * 2;
 	CPU.SRAMModified = false;
-	SetPCBase(ICPU.Registers.PC);
+	SetPCBase(ICPU.Registers.PCw);
 	ICPU.Opcodes = OpcodesE1;
 	ICPU.Executing = true;
 	CPU.NMICycleCount = 0;

@@ -619,7 +619,6 @@ bool retro_serialize(void* data, size_t size)
 	buffer += sizeof(IAPU);
 	memcpy(buffer, IAPU.RAM, 0x10000);
 	buffer += 0x10000;
-	SA1.Registers.PC = SA1.PC - SA1.PCBase;
 	SA1PackStatus();
 	memcpy(buffer, &SA1, sizeof(SA1));
 	buffer += sizeof(SA1);
@@ -684,7 +683,7 @@ bool retro_unserialize(const void* data, size_t size)
 	RestoreAPUDSP();
 	ICPU.ShiftedPB = ICPU.Registers.PB << 16;
 	ICPU.ShiftedDB = ICPU.Registers.DB << 16;
-	SetPCBase(ICPU.ShiftedPB + ICPU.Registers.PC);
+	SetPCBase(ICPU.Registers.PBPC);
 	UnpackStatus();
 	FixCycles();
 	Reschedule();

@@ -50,6 +50,7 @@
 
 void SA1MainLoop()
 {
+	uint8_t Work8;
 	int32_t i;
 
 	if (SA1.Flags & IRQ_PENDING_FLAG)
@@ -59,7 +60,7 @@ void SA1MainLoop()
 			if (SA1.WaitingForInterrupt)
 			{
 				SA1.WaitingForInterrupt = false;
-				SA1.PC++;
+				SA1.Registers.PCw++;
 			}
 
 			if (!SA1CheckIRQ())
@@ -71,7 +72,8 @@ void SA1MainLoop()
 
 	for (i = 0; i < 3 && SA1.Executing; i++)
 	{
-		SA1.PCAtOpcodeStart = SA1.PC;
-		(*SA1.Opcodes[*SA1.PC++].Opcode)();
+		SA1.PCAtOpcodeStart = SA1.Registers.PCw;
+		READ_PC_BYTE(Work8);
+		(*SA1.Opcodes[Work8].Opcode)();
 	}
 }

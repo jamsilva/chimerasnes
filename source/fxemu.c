@@ -18,7 +18,7 @@ uint8_t GetSuperFX(uint16_t address)
 	uint8_t byte = Memory.FillRAM[address];
 
 	if (address == 0x3030)
-		CPU.WaitAddress = CPU.PCAtOpcodeStart;
+		CPU.WaitPC = CPU.PCAtOpcodeStart;
 
 	if (address == 0x3031)
 	{

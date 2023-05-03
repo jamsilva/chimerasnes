@@ -268,7 +268,7 @@ static INLINE void CMY8()
 
 static INLINE void A_DEC16()
 {
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.A.W--;
 	AddCycles(Settings.OneCycle);
 	SetZN16(ICPU.Registers.A.W);
@@ -276,7 +276,7 @@ static INLINE void A_DEC16()
 
 static INLINE void A_DEC8()
 {
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.AL--;
 	AddCycles(Settings.OneCycle);
 	SetZN8(ICPU.Registers.AL);
@@ -285,7 +285,7 @@ static INLINE void A_DEC8()
 static INLINE void DEC16()
 {
 	uint16_t Work16;
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	Work16 = GetWord(OpAddress) - 1;
 	AddCycles(Settings.OneCycle);
 	SetByte(Work16 >> 8, OpAddress + 1);
@@ -297,7 +297,7 @@ static INLINE void DEC16()
 static INLINE void DEC8()
 {
 	uint8_t Work8;
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	Work8 = GetByte(OpAddress) - 1;
 	AddCycles(Settings.OneCycle);
 	SetByte(Work8, OpAddress);
@@ -319,7 +319,7 @@ static INLINE void EOR8()
 
 static INLINE void A_INC16()
 {
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.A.W++;
 	AddCycles(Settings.OneCycle);
 	SetZN16(ICPU.Registers.A.W);
@@ -327,7 +327,7 @@ static INLINE void A_INC16()
 
 static INLINE void A_INC8()
 {
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.AL++;
 	AddCycles(Settings.OneCycle);
 	SetZN8(ICPU.Registers.AL);
@@ -336,7 +336,7 @@ static INLINE void A_INC8()
 static INLINE void INC16()
 {
 	uint16_t Work16;
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	Work16 = GetWord(OpAddress) + 1;
 	AddCycles(Settings.OneCycle);
 	SetByte(Work16 >> 8, OpAddress + 1);
@@ -348,7 +348,7 @@ static INLINE void INC16()
 static INLINE void INC8()
 {
 	uint8_t Work8;
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	Work8 = GetByte(OpAddress) + 1;
 	AddCycles(Settings.OneCycle);
 	SetByte(Work8, OpAddress);

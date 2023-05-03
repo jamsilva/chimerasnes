@@ -26,9 +26,9 @@ SCheatData Cheat;
 static INLINE uint8_t GetByteFree(uint32_t address)
 {
 	uint32_t Cycles = CPU.Cycles;
-	uint8_t* WaitAddress = CPU.WaitAddress;
+	uint16_t WaitPC = CPU.WaitPC;
 	uint8_t byte = GetByte(address);
-	CPU.WaitAddress = WaitAddress;
+	CPU.WaitPC = WaitPC;
 	CPU.Cycles = Cycles;
 	return byte;
 }
@@ -36,9 +36,9 @@ static INLINE uint8_t GetByteFree(uint32_t address)
 static INLINE void SetByteFree(uint8_t byte, uint32_t address)
 {
 	uint32_t Cycles = CPU.Cycles;
-	uint8_t* WaitAddress = CPU.WaitAddress;
+	uint16_t WaitPC = CPU.WaitPC;
 	SetByte(byte, address);
-	CPU.WaitAddress = WaitAddress;
+	CPU.WaitPC = WaitPC;
 	CPU.Cycles = Cycles;
 }
 

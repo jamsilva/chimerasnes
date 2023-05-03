@@ -34,23 +34,21 @@ void SA1Init()
 
 static void SA1Reset()
 {
-	SA1.Registers.PB  = 0;
-	SA1.Registers.PC  = Memory.FillRAM[0x2203] | (Memory.FillRAM[0x2204] << 8);
-	SA1.Registers.D.W = 0;
-	SA1.Registers.DB  = 0;
-	SA1.Registers.SH  = 1;
-	SA1.Registers.SL  = 0xFF;
-	SA1.Registers.XH  = 0;
-	SA1.Registers.YH  = 0;
-	SA1.Registers.P.W = 0;
-	SA1.ShiftedPB     = 0;
-	SA1.ShiftedDB     = 0;
+	SA1.Registers.PBPC  = Memory.FillRAM[0x2203] | (Memory.FillRAM[0x2204] << 8);
+	SA1.Registers.D.W   = 0;
+	SA1.Registers.DB    = 0;
+	SA1.Registers.SH    = 1;
+	SA1.Registers.SL    = 0xFF;
+	SA1.Registers.XH    = 0;
+	SA1.Registers.YH    = 0;
+	SA1.Registers.P.W   = 0;
+	SA1.ShiftedPB       = 0;
+	SA1.ShiftedDB       = 0;
 	SA1SetFlags(MEMORY_FLAG | INDEX_FLAG | IRQ | EMULATION);
 	SA1ClearFlags(DECIMAL);
 	SA1.WaitingForInterrupt = false;
-	SA1.PC                  = NULL;
-	SA1.PCBase              = NULL;
-	SA1SetPCBase(SA1.Registers.PC);
+	SA1.PCBase = NULL;
+	SA1SetPCBase(SA1.Registers.PCw);
 	SA1.Opcodes = SA1OpcodesM1X1;
 	SA1UnpackStatus();
 	SA1FixCycles();
@@ -132,7 +130,7 @@ uint16_t SA1GetWord(uint32_t address)
 
 void SA1SetByte(uint8_t byte, uint32_t address)
 {
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	CPU.WaitCounter = 1;
 	uint8_t* SetAddress = SA1.WriteMap[(address & 0xffffff) >> MEMMAP_SHIFT];
 
@@ -203,8 +201,8 @@ void SA1SetPCBase(uint32_t address)
 
 	if (GetAddress >= (uint8_t*) MAP_LAST)
 	{
-		SA1.PCBase = GetAddress;
-		SA1.PC     = GetAddress + (address & 0x00ffff);
+		SA1.PCBase        = GetAddress;
+		SA1.Registers.PCw = address & 0x00ffff;
 		return;
 	}
 

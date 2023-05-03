@@ -9,52 +9,64 @@
 	#define AddCycles(cycles) CPU.Cycles += cycles
 #endif
 
+#define READ_PC_BYTE(v)                     \
+	do                                      \
+	{                                       \
+		v = CPU.PCBase[ICPU.Registers.PCw]; \
+		ICPU.Registers.PCw++;               \
+	} while (0)
+
+#define READ_PC_WORD(v)                                 \
+	do                                                  \
+	{                                                   \
+		v = READ_WORD(CPU.PCBase + ICPU.Registers.PCw); \
+		ICPU.Registers.PCw += 2;                        \
+	} while (0)
+
+#define READ_PC_3WORD(v)                                 \
+	do                                                   \
+	{                                                    \
+		v = READ_3WORD(CPU.PCBase + ICPU.Registers.PCw); \
+		ICPU.Registers.PCw += 3;                         \
+	} while (0)
+
 extern int32_t OpAddress;
 
 static INLINE void Immediate8()
 {
-	OpAddress = ICPU.ShiftedPB + CPU.PC - CPU.PCBase;
-	CPU.PC++;
+	OpAddress = ICPU.Registers.PBPC;
+	ICPU.Registers.PCw++;
 }
 
 static INLINE void Immediate16()
 {
-	OpAddress = ICPU.ShiftedPB + CPU.PC - CPU.PCBase;
-	CPU.PC += 2;
+	OpAddress = ICPU.Registers.PBPC;
+	ICPU.Registers.PCw += 2;
 }
 
 static INLINE void Relative()
 {
-	int8_t Int8 = *CPU.PC++;
+	int8_t Int8;
+	READ_PC_BYTE(Int8);
 	AddCycles(CPU.MemSpeed);
-	OpAddress = ((int32_t) (CPU.PC - CPU.PCBase) + Int8) & 0xffff;
+	OpAddress = ((int32_t) (ICPU.Registers.PCw) + Int8) & 0xffff;
 }
 
 static INLINE void RelativeLong()
 {
-#ifdef MSB_FIRST
-	OpAddress = CPU.PC[0] + (CPU.PC[1] << 8);
-#else
-	OpAddress = *(uint16_t*) CPU.PC;
-#endif
-
+	READ_PC_WORD(OpAddress);
 	AddCycles(CPU.MemSpeedx2 + Settings.OneCycle);
-	CPU.PC += 2;
-	OpAddress += (CPU.PC - CPU.PCBase);
+	OpAddress += ICPU.Registers.PCw;
 	OpAddress &= 0xffff;
 }
 
 static INLINE void AbsoluteIndexedIndirect(bool read)
 {
-#ifdef MSB_FIRST
-	OpAddress = (ICPU.Registers.X.W + CPU.PC[0] + (CPU.PC[1] << 8)) & 0xffff;
-#else
-	OpAddress = (ICPU.Registers.X.W + *(uint16_t*) CPU.PC) & 0xffff;
-#endif
-
+	uint16_t Work16;
+	READ_PC_WORD(Work16);
+	OpAddress = (ICPU.Registers.X.W + Work16) & 0xffff;
 	AddCycles(CPU.MemSpeedx2 + Settings.OneCycle);
-	ICPU.OpenBus = CPU.PC[1];
-	CPU.PC += 2;
+	ICPU.OpenBus = (uint8_t) (Work16 >> 8);
 	OpAddress = GetWord(ICPU.ShiftedPB + OpAddress);
 
 	if (read)
@@ -63,15 +75,9 @@ static INLINE void AbsoluteIndexedIndirect(bool read)
 
 static INLINE void AbsoluteIndirectLong(bool read)
 {
-#ifdef MSB_FIRST
-	OpAddress = CPU.PC[0] + (CPU.PC[1] << 8);
-#else
-	OpAddress = *(uint16_t*) CPU.PC;
-#endif
-
+	READ_PC_WORD(OpAddress);
 	AddCycles(CPU.MemSpeedx2);
-	ICPU.OpenBus = CPU.PC[1];
-	CPU.PC += 2;
+	ICPU.OpenBus = (uint8_t) (OpAddress >> 8);
 
 	if (read)
 		OpAddress = GetWord(OpAddress) | ((ICPU.OpenBus = GetByte(OpAddress + 2)) << 16);
@@ -81,15 +87,9 @@ static INLINE void AbsoluteIndirectLong(bool read)
 
 static INLINE void AbsoluteIndirect(bool read)
 {
-#ifdef MSB_FIRST
-	OpAddress = CPU.PC[0] + (CPU.PC[1] << 8);
-#else
-	OpAddress = *(uint16_t*) CPU.PC;
-#endif
-
+	READ_PC_WORD(OpAddress);
 	AddCycles(CPU.MemSpeedx2);
-	ICPU.OpenBus = CPU.PC[1];
-	CPU.PC += 2;
+	ICPU.OpenBus = (uint8_t) (OpAddress >> 8);
 	OpAddress = GetWord(OpAddress);
 
 	if (read)
@@ -100,47 +100,42 @@ static INLINE void AbsoluteIndirect(bool read)
 
 static INLINE void Absolute(bool read)
 {
-#ifdef MSB_FIRST
-	OpAddress = CPU.PC[0] + (CPU.PC[1] << 8) + ICPU.ShiftedDB;
-#else
-	OpAddress = *(uint16_t*) CPU.PC + ICPU.ShiftedDB;
-#endif
+	uint16_t Work16;
+	READ_PC_WORD(Work16);
+	OpAddress = Work16 + ICPU.ShiftedDB;
 
 	if (read)
-		ICPU.OpenBus = CPU.PC[1];
+		ICPU.OpenBus = (uint8_t) (Work16 >> 8);
 
-	CPU.PC += 2;
 	AddCycles(CPU.MemSpeedx2);
 }
 
 static INLINE void AbsoluteLong(bool read)
 {
-#ifdef MSB_FIRST
-	OpAddress = CPU.PC[0] + (CPU.PC[1] << 8) + (CPU.PC[2] << 16);
-#else
-	OpAddress = (*(uint32_t*) CPU.PC) & 0xffffff;
-#endif
+	READ_PC_3WORD(OpAddress);
 
 	if (read)
-		ICPU.OpenBus = CPU.PC[2];
+		ICPU.OpenBus = (uint8_t) (OpAddress >> 16);
 
-	CPU.PC += 3;
 	AddCycles(CPU.MemSpeedx2 + CPU.MemSpeed);
 }
 
 static INLINE void Direct(bool read)
 {
-	if (read)
-		ICPU.OpenBus = *CPU.PC;
+	uint8_t Work8;
+	READ_PC_BYTE(Work8);
 
-	OpAddress = (*CPU.PC++ + ICPU.Registers.D.W) & 0xffff;
+	if (read)
+		ICPU.OpenBus = Work8;
+
+	OpAddress = (Work8 + ICPU.Registers.D.W) & 0xffff;
 	AddCycles(CPU.MemSpeed);
 }
 
 static INLINE void DirectIndirectIndexed(bool read)
 {
-	ICPU.OpenBus   = *CPU.PC;
-	OpAddress = (*CPU.PC++ + ICPU.Registers.D.W) & 0xffff;
+	READ_PC_BYTE(ICPU.OpenBus);
+	OpAddress = (ICPU.OpenBus + ICPU.Registers.D.W) & 0xffff;
 	AddCycles(CPU.MemSpeed);
 	OpAddress = GetWord(OpAddress);
 
@@ -152,8 +147,8 @@ static INLINE void DirectIndirectIndexed(bool read)
 
 static INLINE void DirectIndirectIndexedLong(bool read)
 {
-	ICPU.OpenBus   = *CPU.PC;
-	OpAddress = (*CPU.PC++ + ICPU.Registers.D.W) & 0xffff;
+	READ_PC_BYTE(ICPU.OpenBus);
+	OpAddress = (ICPU.OpenBus + ICPU.Registers.D.W) & 0xffff;
 	AddCycles(CPU.MemSpeed);
 
 	if (read)
@@ -164,8 +159,8 @@ static INLINE void DirectIndirectIndexedLong(bool read)
 
 static INLINE void DirectIndexedIndirect(bool read)
 {
-	ICPU.OpenBus   = *CPU.PC;
-	OpAddress = (*CPU.PC++ + ICPU.Registers.D.W + ICPU.Registers.X.W) & 0xffff;
+	READ_PC_BYTE(ICPU.OpenBus);
+	OpAddress = (ICPU.OpenBus + ICPU.Registers.D.W + ICPU.Registers.X.W) & 0xffff;
 	AddCycles(CPU.MemSpeed);
 	OpAddress = GetWord(OpAddress);
 
@@ -178,73 +173,70 @@ static INLINE void DirectIndexedIndirect(bool read)
 
 static INLINE void DirectIndexedX(bool read)
 {
-	if (read)
-		ICPU.OpenBus = *CPU.PC;
+	uint8_t Work8;
+	READ_PC_BYTE(Work8);
 
-	OpAddress = (*CPU.PC++ + ICPU.Registers.D.W + ICPU.Registers.X.W);
+	if (read)
+		ICPU.OpenBus = Work8;
+
+	OpAddress = (Work8 + ICPU.Registers.D.W + ICPU.Registers.X.W);
 	OpAddress &= CheckEmulation() ? 0xff : 0xffff;
 	AddCycles(CPU.MemSpeed + Settings.OneCycle);
 }
 
 static INLINE void DirectIndexedY(bool read)
 {
-	if (read)
-		ICPU.OpenBus = *CPU.PC;
+	uint8_t Work8;
+	READ_PC_BYTE(Work8);
 
-	OpAddress = (*CPU.PC++ + ICPU.Registers.D.W + ICPU.Registers.Y.W);
+	if (read)
+		ICPU.OpenBus = Work8;
+
+	OpAddress = (Work8 + ICPU.Registers.D.W + ICPU.Registers.Y.W);
 	OpAddress &= CheckEmulation() ? 0xff : 0xffff;
 	AddCycles(CPU.MemSpeed + Settings.OneCycle);
 }
 
 static INLINE void AbsoluteIndexedX(bool read)
 {
-#ifdef MSB_FIRST
-	OpAddress = ICPU.ShiftedDB + CPU.PC[0] + (CPU.PC[1] << 8) + ICPU.Registers.X.W;
-#else
-	OpAddress = ICPU.ShiftedDB + *(uint16_t*) CPU.PC + ICPU.Registers.X.W;
-#endif
+	uint16_t Work16;
+	READ_PC_WORD(Work16);
+	OpAddress = ICPU.ShiftedDB + Work16 + ICPU.Registers.X.W;
 
 	if (read)
-		ICPU.OpenBus = CPU.PC[1];
+		ICPU.OpenBus = (uint8_t) (Work16 >> 8);
 
-	CPU.PC += 2;
 	AddCycles(CPU.MemSpeedx2);
 }
 
 static INLINE void AbsoluteIndexedY(bool read)
 {
-#ifdef MSB_FIRST
-	OpAddress = ICPU.ShiftedDB + CPU.PC[0] + (CPU.PC[1] << 8) + ICPU.Registers.Y.W;
-#else
-	OpAddress = ICPU.ShiftedDB + *(uint16_t*) CPU.PC + ICPU.Registers.Y.W;
-#endif
+	uint16_t Work16;
+	READ_PC_WORD(Work16);
+	OpAddress = ICPU.ShiftedDB + Work16 + ICPU.Registers.Y.W;
 
 	if (read)
-		ICPU.OpenBus = CPU.PC[1];
+		ICPU.OpenBus = (uint8_t) (Work16 >> 8);
 
-	CPU.PC += 2;
 	AddCycles(CPU.MemSpeedx2);
 }
 
 static INLINE void AbsoluteLongIndexedX(bool read)
 {
-#ifdef MSB_FIRST
-	OpAddress = (CPU.PC[0] + (CPU.PC[1] << 8) + (CPU.PC[2] << 16) + ICPU.Registers.X.W) & 0xffffff;
-#else
-	OpAddress = (*(uint32_t*) CPU.PC + ICPU.Registers.X.W) & 0xffffff;
-#endif
+	uint32_t Work32;
+	READ_PC_3WORD(Work32);
+	OpAddress = (Work32 + ICPU.Registers.X.W) & 0xffffff;
 
 	if (read)
-		ICPU.OpenBus = CPU.PC[2];
+		ICPU.OpenBus = (uint8_t) (Work32 >> 16);
 
-	CPU.PC += 3;
 	AddCycles(CPU.MemSpeedx2 + CPU.MemSpeed);
 }
 
 static INLINE void DirectIndirect(bool read)
 {
-	ICPU.OpenBus   = *CPU.PC;
-	OpAddress = (*CPU.PC++ + ICPU.Registers.D.W) & 0xffff;
+	READ_PC_BYTE(ICPU.OpenBus);
+	OpAddress = (ICPU.OpenBus + ICPU.Registers.D.W) & 0xffff;
 	AddCycles(CPU.MemSpeed);
 	OpAddress = GetWord(OpAddress);
 
@@ -256,8 +248,8 @@ static INLINE void DirectIndirect(bool read)
 
 static INLINE void DirectIndirectLong(bool read)
 {
-	ICPU.OpenBus   = *CPU.PC;
-	OpAddress = (*CPU.PC++ + ICPU.Registers.D.W) & 0xffff;
+	READ_PC_BYTE(ICPU.OpenBus);
+	OpAddress = (ICPU.OpenBus + ICPU.Registers.D.W) & 0xffff;
 	AddCycles(CPU.MemSpeed);
 
 	if (read)
@@ -268,17 +260,20 @@ static INLINE void DirectIndirectLong(bool read)
 
 static INLINE void StackRelative(bool read)
 {
-	if (read)
-		ICPU.OpenBus = *CPU.PC;
+	uint8_t Work8;
+	READ_PC_BYTE(Work8);
 
-	OpAddress = (*CPU.PC++ + ICPU.Registers.S.W) & 0xffff;
+	if (read)
+		ICPU.OpenBus = Work8;
+
+	OpAddress = (Work8 + ICPU.Registers.S.W) & 0xffff;
 	AddCycles(CPU.MemSpeed + Settings.OneCycle);
 }
 
 static INLINE void StackRelativeIndirectIndexed(bool read)
 {
-	ICPU.OpenBus   = *CPU.PC;
-	OpAddress = (*CPU.PC++ + ICPU.Registers.S.W) & 0xffff;
+	READ_PC_BYTE(ICPU.OpenBus);
+	OpAddress = (ICPU.OpenBus + ICPU.Registers.S.W) & 0xffff;
 	AddCycles(CPU.MemSpeed + Settings.TwoCycles);
 	OpAddress = GetWord(OpAddress);
 

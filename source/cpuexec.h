@@ -20,7 +20,6 @@ typedef struct
 	uint8_t    OpenBus;
 	uint32_t   ShiftedDB;
 	uint32_t   ShiftedPB;
-	uint32_t   Frame;
 	SRegisters Registers;
 	SOpcodes*  Opcodes;
 } SICPU;

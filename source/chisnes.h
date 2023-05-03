@@ -99,6 +99,8 @@ typedef struct
 	int16_t  _SCPUState_PAD1     : 11;
 	uint8_t  IRQActive;
 	uint8_t  WhichEvent;
+	uint16_t PCAtOpcodeStart;
+	uint16_t WaitPC;
 	int32_t  Cycles;
 	int32_t  FastROMSpeed;
 	int32_t  MemSpeed;
@@ -110,10 +112,7 @@ typedef struct
 	uint32_t NMICycleCount;
 	uint32_t NMITriggerPoint;
 	uint32_t WaitCounter;
-	uint8_t* PC;
 	uint8_t* PCBase;
-	uint8_t* PCAtOpcodeStart;
-	uint8_t* WaitAddress;
 } SCPUState;
 
 enum

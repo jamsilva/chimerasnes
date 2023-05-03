@@ -6,14 +6,14 @@
 typedef struct
 {
 	uint8_t  DB;
-	uint8_t  PB;
-	uint16_t PC;
+	uint8_t  _SSA1Registers_PAD1;
 	pair     A;
 	pair     D;
 	pair     P;
 	pair     S;
 	pair     X;
 	pair     Y;
+	PC_t     PC;
 } SSA1Registers;
 
 typedef struct
@@ -36,18 +36,15 @@ typedef struct
 	uint8_t       OpenBus;
 	int16_t       op1;
 	int16_t       op2;
-	int16_t       _SSA1_PAD2              : 16;
-	int32_t       _SSA1_PAD3              : 32;
+	uint16_t      PCAtOpcodeStart;
+	uint16_t      WaitPC;
 	uint32_t      Flags;
 	uint32_t      ShiftedPB;
 	uint32_t      ShiftedDB;
 	uint32_t      WaitCounter;
 	int64_t       sum;
 	uint8_t*      BWRAM;
-	uint8_t*      PC;
-	uint8_t*      PCAtOpcodeStart;
 	uint8_t*      PCBase;
-	uint8_t*      WaitAddress;
 	uint8_t*      WaitByteAddress1;
 	uint8_t*      WaitByteAddress2;
 	SOpcodes*     Opcodes;

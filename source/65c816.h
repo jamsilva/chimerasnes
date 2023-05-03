@@ -1,18 +1,23 @@
 #ifndef CHIMERASNES_65C816_H_
 #define CHIMERASNES_65C816_H_
 
-#define AL  A.B.l
-#define AH  A.B.h
-#define XL  X.B.l
-#define XH  X.B.h
-#define YL  Y.B.l
-#define YH  Y.B.h
-#define SL  S.B.l
-#define SH  S.B.h
-#define DL  D.B.l
-#define DH  D.B.h
-#define PL  P.B.l
-#define PH  P.B.h
+#define AL   A.B.l
+#define AH   A.B.h
+#define XL   X.B.l
+#define XH   X.B.h
+#define YL   Y.B.l
+#define YH   Y.B.h
+#define SL   S.B.l
+#define SH   S.B.h
+#define DL   D.B.l
+#define DH   D.B.h
+#define PL   P.B.l
+#define PH   P.B.h
+#define PBPC PC.xPBPC
+#define PCw  PC.W.xPC
+#define PCh  PC.B.xPCh
+#define PCl  PC.B.xPCl
+#define PB   PC.B.xPB
 
 enum
 {
@@ -69,16 +74,39 @@ typedef union
 	uint16_t W;
 } pair;
 
+typedef union
+{
+	struct
+	{
+	#ifdef MSB_FIRST
+		uint8_t z, xPB, xPCh, xPCl;
+	#else
+		uint8_t xPCl, xPCh, xPB, z;
+	#endif
+	} B;
+
+	struct
+	{
+	#ifdef MSB_FIRST
+		uint16_t d, xPC;
+	#else
+		uint16_t xPC, d;
+	#endif
+	} W;
+
+	uint32_t xPBPC;
+} PC_t;
+
 typedef struct
 {
 	uint8_t  DB;
-	uint8_t  PB;
-	uint16_t PC;
+	uint8_t  _SRegisters_PAD1;
 	pair     A;
 	pair     D;
 	pair     P;
 	pair     S;
 	pair     X;
 	pair     Y;
+	PC_t     PC;
 } SRegisters;
 #endif

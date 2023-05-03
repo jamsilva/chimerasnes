@@ -1470,7 +1470,7 @@ uint8_t GetCPU(uint16_t Address)
 			case 0x420f:
 				return ICPU.OpenBus;
 			case 0x4210: /* RDNMI */
-				CPU.WaitAddress = CPU.PCAtOpcodeStart;
+				CPU.WaitPC = CPU.PCAtOpcodeStart;
 				byte = Memory.FillRAM[0x4210];
 				Memory.FillRAM[0x4210] = Model->_5A22;
 				return (byte & 0x80) | (ICPU.OpenBus & 0x70) | Model->_5A22;
@@ -1479,7 +1479,7 @@ uint8_t GetCPU(uint16_t Address)
 				ClearIRQSource(PPU_V_BEAM_IRQ_SOURCE | PPU_H_BEAM_IRQ_SOURCE);
 				return byte | (ICPU.OpenBus & 0x7f);
 			case 0x4212: /* HVBJOY */
-				CPU.WaitAddress = CPU.PCAtOpcodeStart;
+				CPU.WaitPC = CPU.PCAtOpcodeStart;
 				return REGISTER_4212() | (ICPU.OpenBus & 0x3e);
 			case 0x4213: /* RDIO */
 			case 0x4214: /* RDDIVL */

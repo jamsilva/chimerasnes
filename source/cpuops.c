@@ -195,20 +195,18 @@ static void Op73M0()
 /* AND */
 static void Op29M1()
 {
-	ICPU.Registers.AL &= *CPU.PC++;
+	uint8_t Work8;
+	READ_PC_BYTE(Work8);
+	ICPU.Registers.AL &= Work8;
 	AddCycles(CPU.MemSpeed);
 	SetZN8(ICPU.Registers.AL);
 }
 
 static void Op29M0()
 {
-#ifdef MSB_FIRST
-	ICPU.Registers.A.W &= CPU.PC[0] + (CPU.PC[1] << 8);
-#else
-	ICPU.Registers.A.W &= *(uint16_t*) CPU.PC;
-#endif
-
-	CPU.PC += 2;
+	uint16_t Work16;
+	READ_PC_WORD(Work16);
+	ICPU.Registers.A.W &= Work16;
 	AddCycles(CPU.MemSpeedx2);
 	SetZN16(ICPU.Registers.A.W);
 }
@@ -443,20 +441,18 @@ static void Op1EM0()
 /* BIT */
 static void Op89M1()
 {
-	ICPU.Zero = ICPU.Registers.AL & *CPU.PC++;
+	uint8_t Work8;
+	READ_PC_BYTE(Work8);
+	ICPU.Zero = ICPU.Registers.AL & Work8;
 	AddCycles(CPU.MemSpeed);
 }
 
 static void Op89M0()
 {
-#ifdef MSB_FIRST
-	ICPU.Zero = (bool) (ICPU.Registers.A.W & (CPU.PC[0] + (CPU.PC[1] << 8)));
-#else
-	ICPU.Zero = (bool) (ICPU.Registers.A.W & *(uint16_t*) CPU.PC);
-#endif
-
+	uint16_t Work16;
+	READ_PC_WORD(Work16);
+	ICPU.Zero = (bool) (ICPU.Registers.A.W & Work16);
 	AddCycles(CPU.MemSpeedx2);
-	CPU.PC += 2;
 }
 
 static void Op24M1()
@@ -510,23 +506,22 @@ static void Op3CM0()
 /* CMP */
 static void OpC9M1()
 {
-	int32_t Int32 = (int32_t) ICPU.Registers.AL - (int32_t) *CPU.PC++;
-	ICPU.Carry    = Int32 >= 0;
+	uint8_t Work8;
+	int32_t Int32;
+	READ_PC_BYTE(Work8);
+	Int32 = (int32_t) ICPU.Registers.AL - (int32_t) Work8;
+	ICPU.Carry = (Int32 >= 0);
 	SetZN8((uint8_t) Int32);
 	AddCycles(CPU.MemSpeed);
 }
 
 static void OpC9M0()
 {
-#ifdef MSB_FIRST
-	int32_t Int32 = (int32_t) ICPU.Registers.A.W - (int32_t) (CPU.PC[0] + (CPU.PC[1] << 8));
-#else
-	int32_t Int32 = (int32_t) ICPU.Registers.A.W - (int32_t) *(uint16_t*) CPU.PC;
-#endif
-
-	ICPU.Carry = Int32 >= 0;
+	uint16_t Work16;
+	READ_PC_WORD(Work16);
+	int32_t Int32 = (int32_t) ICPU.Registers.A.W - (int32_t) Work16;
+	ICPU.Carry = (Int32 >= 0);
 	SetZN16((uint16_t) Int32);
-	CPU.PC += 2;
 	AddCycles(CPU.MemSpeedx2);
 }
 
@@ -701,7 +696,10 @@ static void OpD3M0()
 /* CMX */
 static void OpE0X1()
 {
-	int32_t Int32 = (int32_t) ICPU.Registers.XL - (int32_t) *CPU.PC++;
+	uint8_t Work8;
+	int32_t Int32;
+	READ_PC_BYTE(Work8);
+	Int32 = (int32_t) ICPU.Registers.XL - (int32_t) Work8;
 	ICPU.Carry = (Int32 >= 0);
 	SetZN8((uint8_t) Int32);
 	AddCycles(CPU.MemSpeed);
@@ -709,15 +707,11 @@ static void OpE0X1()
 
 static void OpE0X0()
 {
-#ifdef MSB_FIRST
-	int32_t Int32 = (int32_t) ICPU.Registers.X.W - (int32_t) (CPU.PC[0] + (CPU.PC[1] << 8));
-#else
-	int32_t Int32 = (int32_t) ICPU.Registers.X.W - (int32_t) *(uint16_t*) CPU.PC;
-#endif
-
+	uint16_t Work16;
+	READ_PC_WORD(Work16);
+	int32_t Int32 = (int32_t) ICPU.Registers.X.W - (int32_t) Work16;
 	ICPU.Carry = (Int32 >= 0);
 	SetZN16((uint16_t) Int32);
-	CPU.PC += 2;
 	AddCycles(CPU.MemSpeedx2);
 }
 
@@ -748,7 +742,10 @@ static void OpECX0()
 /* CMY */
 static void OpC0X1()
 {
-	int32_t Int32 = (int32_t) ICPU.Registers.YL - (int32_t) *CPU.PC++;
+	uint8_t Work8;
+	int32_t Int32;
+	READ_PC_BYTE(Work8);
+	Int32 = (int32_t) ICPU.Registers.YL - (int32_t) Work8;
 	ICPU.Carry = (Int32 >= 0);
 	SetZN8((uint8_t) Int32);
 	AddCycles(CPU.MemSpeed);
@@ -756,15 +753,11 @@ static void OpC0X1()
 
 static void OpC0X0()
 {
-#ifdef MSB_FIRST
-	int32_t Int32 = (int32_t) ICPU.Registers.Y.W - (int32_t) (CPU.PC[0] + (CPU.PC[1] << 8));
-#else
-	int32_t Int32 = (int32_t) ICPU.Registers.Y.W - (int32_t) *(uint16_t*) CPU.PC;
-#endif
-
+	uint16_t Work16;
+	READ_PC_WORD(Work16);
+	int32_t Int32 = (int32_t) ICPU.Registers.Y.W - (int32_t) Work16;
 	ICPU.Carry = (Int32 >= 0);
 	SetZN16((uint16_t) Int32);
-	CPU.PC += 2;
 	AddCycles(CPU.MemSpeedx2);
 }
 
@@ -854,20 +847,18 @@ static void OpDEM0()
 /* EOR */
 static void Op49M1()
 {
-	ICPU.Registers.AL ^= *CPU.PC++;
+	uint8_t Work8;
+	READ_PC_BYTE(Work8);
+	ICPU.Registers.AL ^= Work8;
 	AddCycles(CPU.MemSpeed);
 	SetZN8(ICPU.Registers.AL);
 }
 
 static void Op49M0()
 {
-#ifdef MSB_FIRST
-	ICPU.Registers.A.W ^= CPU.PC[0] + (CPU.PC[1] << 8);
-#else
-	ICPU.Registers.A.W ^= *(uint16_t*) CPU.PC;
-#endif
-
-	CPU.PC += 2;
+	uint16_t Work16;
+	READ_PC_WORD(Work16);
+	ICPU.Registers.A.W ^= Work16;
 	AddCycles(CPU.MemSpeedx2);
 	SetZN16(ICPU.Registers.A.W);
 }
@@ -1102,20 +1093,14 @@ static void OpFEM0()
 /* LDA */
 static void OpA9M1()
 {
-	ICPU.Registers.AL = *CPU.PC++;
+	READ_PC_BYTE(ICPU.Registers.AL);
 	AddCycles(CPU.MemSpeed);
 	SetZN8(ICPU.Registers.AL);
 }
 
 static void OpA9M0()
 {
-#ifdef MSB_FIRST
-	ICPU.Registers.A.W = CPU.PC[0] + (CPU.PC[1] << 8);
-#else
-	ICPU.Registers.A.W = *(uint16_t*) CPU.PC;
-#endif
-
-	CPU.PC += 2;
+	READ_PC_WORD(ICPU.Registers.A.W);
 	AddCycles(CPU.MemSpeedx2);
 	SetZN16(ICPU.Registers.A.W);
 }
@@ -1291,20 +1276,14 @@ static void OpB3M0()
 /* LDX */
 static void OpA2X1()
 {
-	ICPU.Registers.XL = *CPU.PC++;
+	READ_PC_BYTE(ICPU.Registers.XL);
 	AddCycles(CPU.MemSpeed);
 	SetZN8(ICPU.Registers.XL);
 }
 
 static void OpA2X0()
 {
-#ifdef MSB_FIRST
-	ICPU.Registers.X.W = CPU.PC[0] + (CPU.PC[1] << 8);
-#else
-	ICPU.Registers.X.W = *(uint16_t*) CPU.PC;
-#endif
-
-	CPU.PC += 2;
+	READ_PC_WORD(ICPU.Registers.X.W);
 	AddCycles(CPU.MemSpeedx2);
 	SetZN16(ICPU.Registers.X.W);
 }
@@ -1360,20 +1339,14 @@ static void OpBEX0()
 /* LDY */
 static void OpA0X1()
 {
-	ICPU.Registers.YL = *CPU.PC++;
+	READ_PC_BYTE(ICPU.Registers.YL);
 	AddCycles(CPU.MemSpeed);
 	SetZN8(ICPU.Registers.YL);
 }
 
 static void OpA0X0()
 {
-#ifdef MSB_FIRST
-	ICPU.Registers.Y.W = CPU.PC[0] + (CPU.PC[1] << 8);
-#else
-	ICPU.Registers.Y.W = *(uint16_t*) CPU.PC;
-#endif
-
-	CPU.PC += 2;
+	READ_PC_WORD(ICPU.Registers.Y.W);
 	AddCycles(CPU.MemSpeedx2);
 	SetZN16(ICPU.Registers.Y.W);
 }
@@ -1488,20 +1461,18 @@ static void Op5EM0()
 /* ORA */
 static void Op09M1()
 {
-	ICPU.Registers.AL |= *CPU.PC++;
+	uint8_t Work8;
+	READ_PC_BYTE(Work8);
+	ICPU.Registers.AL |= Work8;
 	AddCycles(CPU.MemSpeed);
 	SetZN8(ICPU.Registers.AL);
 }
 
 static void Op09M0()
 {
-#ifdef MSB_FIRST
-	ICPU.Registers.A.W |= CPU.PC[0] + (CPU.PC[1] << 8);
-#else
-	ICPU.Registers.A.W |= *(uint16_t*) CPU.PC;
-#endif
-
-	CPU.PC += 2;
+	uint16_t Work16;
+	READ_PC_WORD(Work16);
+	ICPU.Registers.A.W |= Work16;
 	AddCycles(CPU.MemSpeedx2);
 	SetZN16(ICPU.Registers.A.W);
 }
@@ -2332,7 +2303,7 @@ static void Op0CM0()
 		{                                        \
 			CPU.BranchSkip = false;              \
 			                                     \
-			if (CPU.PC - CPU.PCBase > OpAddress) \
+			if (ICPU.Registers.PCw > OpAddress)  \
 				return;                          \
 		}
 #else
@@ -2361,7 +2332,7 @@ static INLINE void ForceShutdown() /* From the speed-hacks branch of CatSFC */
 #ifdef SA1_OPCODES
 	SA1.Executing = false;
 #else
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	CPU.Cycles = CPU.NextEvent;
 	APUExecute();
 #endif
@@ -2369,7 +2340,7 @@ static INLINE void ForceShutdown() /* From the speed-hacks branch of CatSFC */
 
 static INLINE void CPUShutdown()
 {
-	if (!Settings.Shutdown || CPU.PC != CPU.WaitAddress)
+	if (!Settings.Shutdown || ICPU.Registers.PCw != CPU.WaitPC)
 		return;
 
 #ifdef SA1_OPCODES
@@ -2398,7 +2369,7 @@ static void Op90() /* BCC */
 
 	if (!CheckCarry())
 	{
-		CPU.PC = CPU.PCBase + OpAddress;
+		ICPU.Registers.PCw = OpAddress;
 		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
@@ -2411,7 +2382,7 @@ static void OpB0() /* BCS */
 
 	if (CheckCarry())
 	{
-		CPU.PC = CPU.PCBase + OpAddress;
+		ICPU.Registers.PCw = OpAddress;
 		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
@@ -2424,7 +2395,7 @@ static void OpF0() /* BEQ */
 
 	if (CheckZero())
 	{
-		CPU.PC = CPU.PCBase + OpAddress;
+		ICPU.Registers.PCw = OpAddress;
 		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
@@ -2437,7 +2408,7 @@ static void Op30() /* BMI */
 
 	if (CheckNegative())
 	{
-		CPU.PC = CPU.PCBase + OpAddress;
+		ICPU.Registers.PCw = OpAddress;
 		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
@@ -2450,7 +2421,7 @@ static void OpD0() /* BNE */
 
 	if (!CheckZero())
 	{
-		CPU.PC = CPU.PCBase + OpAddress;
+		ICPU.Registers.PCw = OpAddress;
 		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
@@ -2463,7 +2434,7 @@ static void Op10() /* BPL */
 
 	if (!CheckNegative())
 	{
-		CPU.PC = CPU.PCBase + OpAddress;
+		ICPU.Registers.PCw = OpAddress;
 		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
@@ -2472,7 +2443,7 @@ static void Op10() /* BPL */
 static void Op80() /* BRA */
 {
 	Relative();
-	CPU.PC = CPU.PCBase + OpAddress;
+	ICPU.Registers.PCw = OpAddress;
 	AddCycles(Settings.OneCycle);
 	CPUShutdown();
 }
@@ -2484,7 +2455,7 @@ static void Op50() /* BVC */
 
 	if (!CheckOverflow())
 	{
-		CPU.PC = CPU.PCBase + OpAddress;
+		ICPU.Registers.PCw = OpAddress;
 		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
@@ -2497,7 +2468,7 @@ static void Op70() /* BVS */
 
 	if (CheckOverflow())
 	{
-		CPU.PC = CPU.PCBase + OpAddress;
+		ICPU.Registers.PCw = OpAddress;
 		AddCycles(Settings.OneCycle);
 		CPUShutdown();
 	}
@@ -2533,7 +2504,7 @@ static void OpB8()
 static void OpCAX1()
 {
 	AddCycles(Settings.OneCycle);
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.XL--;
 	SetZN8(ICPU.Registers.XL);
 }
@@ -2541,7 +2512,7 @@ static void OpCAX1()
 static void OpCAX0()
 {
 	AddCycles(Settings.OneCycle);
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.X.W--;
 	SetZN16(ICPU.Registers.X.W);
 }
@@ -2549,7 +2520,7 @@ static void OpCAX0()
 static void Op88X1()
 {
 	AddCycles(Settings.OneCycle);
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.YL--;
 	SetZN8(ICPU.Registers.YL);
 }
@@ -2557,7 +2528,7 @@ static void Op88X1()
 static void Op88X0()
 {
 	AddCycles(Settings.OneCycle);
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.Y.W--;
 	SetZN16(ICPU.Registers.Y.W);
 }
@@ -2566,7 +2537,7 @@ static void Op88X0()
 static void OpE8X1()
 {
 	AddCycles(Settings.OneCycle);
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.XL++;
 	SetZN8(ICPU.Registers.XL);
 }
@@ -2574,7 +2545,7 @@ static void OpE8X1()
 static void OpE8X0()
 {
 	AddCycles(Settings.OneCycle);
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.X.W++;
 	SetZN16(ICPU.Registers.X.W);
 }
@@ -2582,7 +2553,7 @@ static void OpE8X0()
 static void OpC8X1()
 {
 	AddCycles(Settings.OneCycle);
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.YL++;
 	SetZN8(ICPU.Registers.YL);
 }
@@ -2590,7 +2561,7 @@ static void OpC8X1()
 static void OpC8X0()
 {
 	AddCycles(Settings.OneCycle);
-	CPU.WaitAddress = NULL;
+	CPU.WaitPC = 0;
 	ICPU.Registers.Y.W++;
 	SetZN16(ICPU.Registers.Y.W);
 }
@@ -3096,7 +3067,7 @@ static void Op00() /* BRK */
 	if (!CheckEmulation())
 	{
 		PushB(ICPU.Registers.PB);
-		PushW(CPU.PC - CPU.PCBase + 1);
+		PushW(ICPU.Registers.PCw + 1);
 		PackStatus();
 		PushB(ICPU.Registers.PL);
 		ICPU.OpenBus = ICPU.Registers.PL;
@@ -3109,7 +3080,7 @@ static void Op00() /* BRK */
 	}
 	else
 	{
-		PushW(CPU.PC - CPU.PCBase);
+		PushW(ICPU.Registers.PCw);
 		PackStatus();
 		PushB(ICPU.Registers.PL);
 		ICPU.OpenBus = ICPU.Registers.PL;
@@ -3133,7 +3104,7 @@ void OpcodeIRQ() /* IRQ */
 	if (!CheckEmulation())
 	{
 		PushB(ICPU.Registers.PB);
-		PushW(CPU.PC - CPU.PCBase);
+		PushW(ICPU.Registers.PCw);
 		PackStatus();
 		PushB(ICPU.Registers.PL);
 		ICPU.OpenBus = ICPU.Registers.PL;
@@ -3155,7 +3126,7 @@ void OpcodeIRQ() /* IRQ */
 	}
 	else
 	{
-		PushW(CPU.PC - CPU.PCBase);
+		PushW(ICPU.Registers.PCw);
 		PackStatus();
 		PushB(ICPU.Registers.PL);
 		ICPU.OpenBus = ICPU.Registers.PL;
@@ -3182,7 +3153,7 @@ void OpcodeNMI() /* NMI */
 	if (!CheckEmulation())
 	{
 		PushB(ICPU.Registers.PB);
-		PushW(CPU.PC - CPU.PCBase);
+		PushW(ICPU.Registers.PCw);
 		PackStatus();
 		PushB(ICPU.Registers.PL);
 		ICPU.OpenBus = ICPU.Registers.PL;
@@ -3204,7 +3175,7 @@ void OpcodeNMI() /* NMI */
 	}
 	else
 	{
-		PushW(CPU.PC - CPU.PCBase);
+		PushW(ICPU.Registers.PCw);
 		PackStatus();
 		PushB(ICPU.Registers.PL);
 		ICPU.OpenBus = ICPU.Registers.PL;
@@ -3231,7 +3202,7 @@ static void Op02() /* COP */
 	if (!CheckEmulation())
 	{
 		PushB(ICPU.Registers.PB);
-		PushW(CPU.PC - CPU.PCBase + 1);
+		PushW(ICPU.Registers.PCw + 1);
 		PackStatus();
 		PushB(ICPU.Registers.PL);
 		ICPU.OpenBus = ICPU.Registers.PL;
@@ -3244,7 +3215,7 @@ static void Op02() /* COP */
 	}
 	else
 	{
-		PushW(CPU.PC - CPU.PCBase);
+		PushW(ICPU.Registers.PCw);
 		PackStatus();
 		PushB(ICPU.Registers.PL);
 		ICPU.OpenBus = ICPU.Registers.PL;
@@ -3304,9 +3275,9 @@ static void Op22E1()
 {
 	AbsoluteLong(false);
 	PushB(ICPU.Registers.PB);
-	PushWE(CPU.PC - CPU.PCBase - 1);
+	PushWE(ICPU.Registers.PCw - 1);
 	ICPU.Registers.PB = (uint8_t) (OpAddress >> 16);
-	ICPU.ShiftedPB    = OpAddress & 0xff0000;
+	ICPU.ShiftedPB = OpAddress & 0xff0000;
 	SetPCBase(OpAddress);
 }
 
@@ -3314,35 +3285,35 @@ static void Op22()
 {
 	AbsoluteLong(false);
 	PushB(ICPU.Registers.PB);
-	PushW(CPU.PC - CPU.PCBase - 1);
+	PushW(ICPU.Registers.PCw - 1);
 	ICPU.Registers.PB = (uint8_t) (OpAddress >> 16);
-	ICPU.ShiftedPB    = OpAddress & 0xff0000;
+	ICPU.ShiftedPB = OpAddress & 0xff0000;
 	SetPCBase(OpAddress);
 }
 
 static void Op6BE1()
 {
-	PullWE(ICPU.Registers.PC);
+	PullWE(ICPU.Registers.PCw);
 	PullB(ICPU.Registers.PB);
 	ICPU.ShiftedPB = ICPU.Registers.PB << 16;
-	SetPCBase(ICPU.ShiftedPB + ((ICPU.Registers.PC + 1) & 0xffff));
+	SetPCBase(ICPU.ShiftedPB | ((ICPU.Registers.PCw + 1) & 0xffff));
 	AddCycles(Settings.TwoCycles);
 }
 
 static void Op6B()
 {
-	PullW(ICPU.Registers.PC);
+	PullW(ICPU.Registers.PCw);
 	PullB(ICPU.Registers.PB);
 	ICPU.ShiftedPB = ICPU.Registers.PB << 16;
-	SetPCBase(ICPU.ShiftedPB + ((ICPU.Registers.PC + 1) & 0xffff));
+	SetPCBase(ICPU.ShiftedPB | ((ICPU.Registers.PCw + 1) & 0xffff));
 	AddCycles(Settings.TwoCycles);
 }
 
 static void Op20() /* JSR/RTS */
 {
 	Absolute(false);
-	PushW(CPU.PC - CPU.PCBase - 1);
-	SetPCBase(ICPU.ShiftedPB + (OpAddress & 0xffff));
+	PushW(ICPU.Registers.PCw - 1);
+	SetPCBase(ICPU.ShiftedPB | (OpAddress & 0xffff));
 	AddCycles(Settings.OneCycle);
 }
 
@@ -3350,7 +3321,7 @@ static void Op20() /* JSR/RTS */
 static void OpFCE1()
 {
 	AbsoluteIndexedIndirect(false);
-	PushWE(CPU.PC - CPU.PCBase - 1);
+	PushWE(ICPU.Registers.PCw - 1);
 	SetPCBase(ICPU.ShiftedPB + OpAddress);
 	AddCycles(Settings.OneCycle);
 }
@@ -3358,15 +3329,15 @@ static void OpFCE1()
 static void OpFC()
 {
 	AbsoluteIndexedIndirect(false);
-	PushW(CPU.PC - CPU.PCBase - 1);
+	PushW(ICPU.Registers.PCw - 1);
 	SetPCBase(ICPU.ShiftedPB + OpAddress);
 	AddCycles(Settings.OneCycle);
 }
 
 static void Op60()
 {
-	PullW(ICPU.Registers.PC);
-	SetPCBase(ICPU.ShiftedPB + ((ICPU.Registers.PC + 1) & 0xffff));
+	PullW(ICPU.Registers.PCw);
+	SetPCBase(ICPU.ShiftedPB | ((ICPU.Registers.PCw + 1) & 0xffff));
 	AddCycles(Settings.OneCycle * 3);
 }
 
@@ -3374,67 +3345,69 @@ static void Op60()
 static void Op54X1()
 {
 	AddCycles(CPU.MemSpeedx2 + Settings.TwoCycles);
-	ICPU.Registers.DB = *CPU.PC++;
-	ICPU.ShiftedDB    = ICPU.Registers.DB << 16;
-	ICPU.OpenBus      = *CPU.PC++;
+	READ_PC_BYTE(ICPU.Registers.DB);
+	ICPU.ShiftedDB = ICPU.Registers.DB << 16;
+	READ_PC_BYTE(ICPU.OpenBus);
 	SetByte(GetByte((ICPU.OpenBus << 16) + ICPU.Registers.X.W), ICPU.ShiftedDB + ICPU.Registers.Y.W);
 	ICPU.Registers.XL++;
 	ICPU.Registers.YL++;
 	ICPU.Registers.A.W--;
 
 	if (ICPU.Registers.A.W != 0xffff)
-		CPU.PC -= 3;
+		ICPU.Registers.PCw -= 3;
 }
 
 static void Op54X0()
 {
 	AddCycles(CPU.MemSpeedx2 + Settings.TwoCycles);
-	ICPU.Registers.DB = *CPU.PC++;
-	ICPU.ShiftedDB    = ICPU.Registers.DB << 16;
-	ICPU.OpenBus      = *CPU.PC++;
+	READ_PC_BYTE(ICPU.Registers.DB);
+	ICPU.ShiftedDB = ICPU.Registers.DB << 16;
+	READ_PC_BYTE(ICPU.OpenBus);
 	SetByte(GetByte((ICPU.OpenBus << 16) + ICPU.Registers.X.W), ICPU.ShiftedDB + ICPU.Registers.Y.W);
 	ICPU.Registers.X.W++;
 	ICPU.Registers.Y.W++;
 	ICPU.Registers.A.W--;
 
 	if (ICPU.Registers.A.W != 0xffff)
-		CPU.PC -= 3;
+		ICPU.Registers.PCw -= 3;
 }
 
 static void Op44X1()
 {
 	AddCycles(CPU.MemSpeedx2 + Settings.TwoCycles);
-	ICPU.Registers.DB = *CPU.PC++;
-	ICPU.ShiftedDB    = ICPU.Registers.DB << 16;
-	ICPU.OpenBus      = *CPU.PC++;
+	READ_PC_BYTE(ICPU.Registers.DB);
+	ICPU.ShiftedDB = ICPU.Registers.DB << 16;
+	READ_PC_BYTE(ICPU.OpenBus);
 	SetByte(GetByte((ICPU.OpenBus << 16) + ICPU.Registers.X.W), ICPU.ShiftedDB + ICPU.Registers.Y.W);
 	ICPU.Registers.XL--;
 	ICPU.Registers.YL--;
 	ICPU.Registers.A.W--;
 
 	if (ICPU.Registers.A.W != 0xffff)
-		CPU.PC -= 3;
+		ICPU.Registers.PCw -= 3;
 }
 
 static void Op44X0()
 {
 	AddCycles(CPU.MemSpeedx2 + Settings.TwoCycles);
-	ICPU.Registers.DB = *CPU.PC++;
-	ICPU.ShiftedDB    = ICPU.Registers.DB << 16;
-	ICPU.OpenBus      = *CPU.PC++;
+	READ_PC_BYTE(ICPU.Registers.DB);
+	ICPU.ShiftedDB = ICPU.Registers.DB << 16;
+	READ_PC_BYTE(ICPU.OpenBus);
 	SetByte(GetByte((ICPU.OpenBus << 16) + ICPU.Registers.X.W), ICPU.ShiftedDB + ICPU.Registers.Y.W);
 	ICPU.Registers.X.W--;
 	ICPU.Registers.Y.W--;
 	ICPU.Registers.A.W--;
 
 	if (ICPU.Registers.A.W != 0xffff)
-		CPU.PC -= 3;
+		ICPU.Registers.PCw -= 3;
 }
 
 /* REP/SEP */
 static void OpC2()
 {
-	uint8_t Work8 = ~*CPU.PC++;
+	uint8_t Work8;
+	READ_PC_BYTE(Work8);
+	Work8 = ~Work8;
 	ICPU.Registers.PL &= Work8;
 	ICPU.Carry &= Work8;
 	ICPU.Overflow &= (Work8 >> 6);
@@ -3456,7 +3429,8 @@ static void OpC2()
 
 static void OpE2()
 {
-	uint8_t Work8      = *CPU.PC++;
+	uint8_t Work8;
+	READ_PC_BYTE(Work8);
 	ICPU.Registers.PL |= Work8;
 	ICPU.Carry        |= Work8 & 1;
 	ICPU.Overflow     |= (Work8 >> 6) & 1;
@@ -3492,7 +3466,7 @@ static void Op40()/* RTI */
 {
 	PullB(ICPU.Registers.PL);
 	UnpackStatus();
-	PullW(ICPU.Registers.PC);
+	PullW(ICPU.Registers.PCw);
 
 	if (!CheckEmulation())
 	{
@@ -3502,7 +3476,7 @@ static void Op40()/* RTI */
 	else
 		SetFlags(MEMORY_FLAG | INDEX_FLAG);
 
-	SetPCBase(ICPU.ShiftedPB + ICPU.Registers.PC);
+	SetPCBase(ICPU.Registers.PBPC);
 
 	if (CheckIndex())
 	{
@@ -3518,10 +3492,10 @@ static void OpCB() /* WAI */
 {
 #ifdef SA1_OPCODES
 	SA1.WaitingForInterrupt = true;
-	SA1.PC--;
+	SA1.Registers.PCw--;
 #else
 	CPU.WaitingForInterrupt = true;
-	CPU.PC--;
+	ICPU.Registers.PCw--;
 
 	if (!Settings.Shutdown)
 		return;
@@ -3534,10 +3508,11 @@ static void OpCB() /* WAI */
 static void OpDB() /* Usually an STP opcode; SNESAdvance speed hack, not implemented in Snes9xTYL | Snes9x-Euphoria (from the speed-hacks branch of CatSFC) */
 {
 	int8_t  BranchOffset;
-	uint8_t NextByte = *CPU.PC++;
+	uint8_t NextByte;
+	READ_PC_BYTE(NextByte);
 	ForceShutdown();
 	BranchOffset = (NextByte & 0x7F) | ((NextByte & 0x40) << 1);
-	OpAddress = ((int32_t) (CPU.PC - CPU.PCBase) + BranchOffset) & 0xffff;
+	OpAddress = ((int32_t) ICPU.Registers.PCw + BranchOffset) & 0xffff;
 
 	switch (NextByte & 0x80)
 	{
@@ -3546,7 +3521,7 @@ static void OpDB() /* Usually an STP opcode; SNESAdvance speed hack, not impleme
 
 			if (!CheckZero())
 			{
-				CPU.PC = CPU.PCBase + OpAddress;
+				ICPU.Registers.PCw = OpAddress;
 				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
@@ -3557,7 +3532,7 @@ static void OpDB() /* Usually an STP opcode; SNESAdvance speed hack, not impleme
 
 			if (CheckZero())
 			{
-				CPU.PC = CPU.PCBase + OpAddress;
+				ICPU.Registers.PCw = OpAddress;
 				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
@@ -3569,10 +3544,11 @@ static void OpDB() /* Usually an STP opcode; SNESAdvance speed hack, not impleme
 static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes9x-Euphoria (from the speed-hacks branch of CatSFC) */
 {
 	int8_t  BranchOffset;
-	uint8_t NextByte = *CPU.PC++;
+	uint8_t NextByte;
+	READ_PC_BYTE(NextByte);
 	ForceShutdown();
 	BranchOffset = 0xF0 | (NextByte & 0xF); /* always negative */
-	OpAddress    = ((int32_t) (CPU.PC - CPU.PCBase) + BranchOffset) & 0xffff;
+	OpAddress    = ((int32_t) ICPU.Registers.PCw + BranchOffset) & 0xffff;
 
 	switch (NextByte & 0xF0)
 	{
@@ -3581,7 +3557,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 
 			if (!CheckNegative())
 			{
-				CPU.PC = CPU.PCBase + OpAddress;
+				ICPU.Registers.PCw = OpAddress;
 				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
@@ -3592,7 +3568,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 
 			if (CheckNegative())
 			{
-				CPU.PC = CPU.PCBase + OpAddress;
+				ICPU.Registers.PCw = OpAddress;
 				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
@@ -3603,7 +3579,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 
 			if (!CheckOverflow())
 			{
-				CPU.PC = CPU.PCBase + OpAddress;
+				ICPU.Registers.PCw = OpAddress;
 				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
@@ -3614,14 +3590,14 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 
 			if (CheckOverflow())
 			{
-				CPU.PC = CPU.PCBase + OpAddress;
+				ICPU.Registers.PCw = OpAddress;
 				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
 
 			return;
 		case 0x80: /* BRA */
-			CPU.PC = CPU.PCBase + OpAddress;
+			ICPU.Registers.PCw = OpAddress;
 			AddCycles(Settings.OneCycle);
 			CPUShutdown();
 			return;
@@ -3630,7 +3606,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 
 			if (!CheckCarry())
 			{
-				CPU.PC = CPU.PCBase + OpAddress;
+				ICPU.Registers.PCw = OpAddress;
 				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
@@ -3641,7 +3617,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 
 			if (CheckCarry())
 			{
-				CPU.PC = CPU.PCBase + OpAddress;
+				ICPU.Registers.PCw = OpAddress;
 				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
@@ -3652,7 +3628,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 
 			if (!CheckZero())
 			{
-				CPU.PC = CPU.PCBase + OpAddress;
+				ICPU.Registers.PCw = OpAddress;
 				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
@@ -3663,7 +3639,7 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 
 			if (CheckZero())
 			{
-				CPU.PC = CPU.PCBase + OpAddress;
+				ICPU.Registers.PCw = OpAddress;
 				AddCycles(Settings.OneCycle);
 				CPUShutdown();
 			}
