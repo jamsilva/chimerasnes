@@ -24,14 +24,17 @@ typedef struct
 	SOpcodes*  Opcodes;
 } SICPU;
 
-extern SICPU    ICPU;
-extern SOpcodes OpcodesE1[256];
-extern SOpcodes OpcodesM1X1[256];
-extern SOpcodes OpcodesM1X0[256];
-extern SOpcodes OpcodesM0X1[256];
-extern SOpcodes OpcodesM0X0[256];
+typedef void (*MainLoopPtr)();
 
-void MainLoop();
+extern MainLoopPtr MainLoop;
+extern SICPU       ICPU;
+extern SOpcodes    OpcodesE1[256];
+extern SOpcodes    OpcodesM1X1[256];
+extern SOpcodes    OpcodesM1X0[256];
+extern SOpcodes    OpcodesM0X1[256];
+extern SOpcodes    OpcodesM0X0[256];
+
+void SetMainLoop();
 void Reset();
 void SoftReset();
 void DoHBlankProcessing_SFX();

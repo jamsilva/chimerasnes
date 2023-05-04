@@ -1328,6 +1328,7 @@ void InitROM()
 	}
 
 	Memory.SRAMMask = Memory.SRAMSize ? ((1 << (Memory.SRAMSize + 3)) * 128) - 1 : 0;
+	SetMainLoop();
 	ResetSpeedMap();
 	ApplyROMFixes();
 	sprintf(Memory.ROMName,   "%s", Safe(Memory.ROMName));

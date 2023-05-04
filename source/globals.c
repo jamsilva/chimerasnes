@@ -16,8 +16,9 @@
 #include "obc1.h"
 #include "srtc.h"
 
-SCPUState CPU;
-SICPU     ICPU;
+MainLoopPtr MainLoop;
+SCPUState   CPU;
+SICPU       ICPU;
 
 SAPU      APU;
 SIAPU     IAPU;

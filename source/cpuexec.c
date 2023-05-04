@@ -95,17 +95,32 @@
 /* This is a CatSFC modification inspired by a Snes9x-Euphoria modification.
  * The emulator selects a main loop based on the chips used in an entire frame.
  * This avoids the constant SA1.Executing and Settings.Chip == GSU checks. */
-void MainLoop()
+static void MainLoop_SA1()
+{
+	MAIN_LOOP(DoHBlankProcessing_NoSFX(),
+		if (SA1.Executing)
+			SA1MainLoop()
+	)
+}
+
+static void MainLoop_SuperFX()
+{
+	MAIN_LOOP(DoHBlankProcessing_SFX(), )
+}
+
+static void MainLoop_Fast()
+{
+	MAIN_LOOP(DoHBlankProcessing_NoSFX(), )
+}
+
+void SetMainLoop()
 {
 	if (Settings.Chip == SA_1)
-		MAIN_LOOP(DoHBlankProcessing_NoSFX(),
-			if (SA1.Executing)
-				SA1MainLoop()
-		)
+		MainLoop = &MainLoop_SA1;
 	else if (Settings.Chip == GSU)
-		MAIN_LOOP(DoHBlankProcessing_SFX(), )
+		MainLoop = &MainLoop_SuperFX;
 	else
-		MAIN_LOOP(DoHBlankProcessing_NoSFX(), )
+		MainLoop = &MainLoop_Fast;
 }
 
 void SetIRQSource(uint32_t source)
