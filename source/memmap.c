@@ -665,10 +665,10 @@ static char* CompanyName(char* buf)
 		[0x299] = "Yojigen"
 	};
 
-	if (nintendo_licensees[Memory.CompanyId] != NULL)
+	if (Memory.CompanyId <= 0x299 && nintendo_licensees[Memory.CompanyId] != NULL)
 		return buf + sprintf(buf, "%s", nintendo_licensees[Memory.CompanyId]);
 	else
-		return buf + sprintf(buf, "Unknown company 0x%x", Memory.CompanyId);
+		return buf + sprintf(buf, "Unknown company 0x%X", Memory.CompanyId);
 }
 
 static char* MapType(char* buf)

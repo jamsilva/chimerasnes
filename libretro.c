@@ -750,7 +750,7 @@ bool retro_load_game(const struct retro_game_info* game)
 	if (environ_cb)
 	{
 		struct retro_message msg;
-		msg.frames = FRAMES_PER_SECOND * 3;
+		msg.frames = FRAMES_PER_SECOND * 2;
 		msg.msg = info_buf;
 		environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, (void*) &msg);
 	}
