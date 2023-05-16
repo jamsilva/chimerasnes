@@ -84,9 +84,9 @@ enum
 
 enum
 {
-	NMI_FLAG         = (1u << 0),
-	IRQ_PENDING_FLAG = (1u << 1),
-	SCAN_KEYS_FLAG   = (1u << 2)
+	NMI_FLAG       = (1u << 0),
+	IRQ_FLAG       = (1u << 1),
+	SCAN_KEYS_FLAG = (1u << 2)
 };
 
 typedef struct

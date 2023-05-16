@@ -832,3 +832,19 @@ void SetCX4(uint8_t byte, uint16_t Address)
 			break;
 	}
 }
+
+uint8_t* GetBasePointerCX4(uint16_t Address)
+{
+	if (Address >= 0x7f40 && Address <= 0x7f5e)
+		return NULL;
+
+	return &Memory.CX4RAM[-0x6000];
+}
+
+uint8_t* GetMemPointerCX4(uint16_t Address)
+{
+	if (Address >= 0x7f40 && Address <= 0x7f5e)
+		return NULL;
+
+	return &Memory.CX4RAM[(Address & 0xffff) - 0x6000];
+}

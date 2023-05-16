@@ -59,11 +59,11 @@ static void DeinterleaveType1(int32_t size, uint8_t* base)
 			if (blocks[j] != i)
 				continue;
 
-			/* memmove converted: Different mallocs [Neb] */
+			/* memmove converted: Different mallocs[Neb] */
 			memcpy(tmp, &base[blocks[j] * 0x8000], 0x8000);
-			/* memmove converted: Different addresses, or identical for blocks[i] == blocks[j] [Neb] */
+			/* memmove converted: Different addresses, or identical for blocks[i] == blocks[j][Neb] */
 			memcpy(&base[blocks[j] * 0x8000], &base[blocks[i] * 0x8000], 0x8000);
-			/* memmove converted: Different mallocs [Neb] */
+			/* memmove converted: Different mallocs[Neb] */
 			memcpy(&base[blocks[i] * 0x8000], tmp, 0x8000);
 			b = blocks[j];
 			blocks[j] = blocks[i];
@@ -87,13 +87,13 @@ static void DeinterleaveGD24(int32_t size, uint8_t* base)
 	if (!tmp)
 		return;
 
-	/* memmove converted: Different mallocs [Neb] */
+	/* memmove converted: Different mallocs[Neb] */
 	memcpy(tmp, &base[0x180000], 0x80000);
-	/* memmove converted: Different addresses [Neb] */
+	/* memmove converted: Different addresses[Neb] */
 	memcpy(&base[0x180000], &base[0x200000], 0x80000);
-	/* memmove converted: Different addresses [Neb] */
+	/* memmove converted: Different addresses[Neb] */
 	memcpy(&base[0x200000], &base[0x280000], 0x80000);
-	/* memmove converted: Different mallocs [Neb] */
+	/* memmove converted: Different mallocs[Neb] */
 	memcpy(&base[0x280000], tmp, 0x80000);
 	free(tmp);
 	DeinterleaveType1(size, base);
@@ -253,9 +253,9 @@ bool InitMemory()
 	Memory.VRAM  = (uint8_t*) calloc(0x10000, sizeof(uint8_t));
 	Memory.ROM   = (uint8_t*) malloc((MAX_ROM_SIZE + 0x200 + 0x8000) * sizeof(uint8_t)); /* Don't bother initializing ROM, we will load a game anyway. */
 	Memory.FillRAM = Memory.ROM;                                                         /* FillRAM uses first 32K of ROM image area, otherwise space just wasted. Might be read by the SuperFX code. */
-	Memory.CX4RAM  = Memory.FillRAM + 0x400000 + 8192 * 8;                               /* CX4 */
-	Memory.OBC1RAM = Memory.FillRAM + 0x6000;                                            /* OBC1 */
-	Memory.PSRAM   = Memory.FillRAM + 0x400000;                                          /* BS-X */
+	Memory.CX4RAM  = &Memory.FillRAM[0x400000 + 8192 * 8];                               /* CX4 */
+	Memory.OBC1RAM = &Memory.FillRAM[0x6000];                                            /* OBC1 */
+	Memory.PSRAM   = &Memory.FillRAM[0x400000];                                          /* BS-X */
 	IPPU.TileCache[TILE_2BIT]  = (uint8_t*) calloc(MAX_2BIT_TILES, 128);
 	IPPU.TileCache[TILE_4BIT]  = (uint8_t*) calloc(MAX_4BIT_TILES, 128);
 	IPPU.TileCache[TILE_8BIT]  = (uint8_t*) calloc(MAX_8BIT_TILES, 128);
@@ -785,7 +785,7 @@ bool LoadROM(const struct retro_game_info* game, char* info_buf)
 	hi_score = ScoreHiROM(false, 0);
 	lo_score = ScoreLoROM(false, 0);
 	Memory.CalculatedSize = TotalFileSize & ~0x1FFF; /* round down to lower 0x2000 */
-	memset(Memory.ROM + Memory.CalculatedSize, 0, MAX_ROM_SIZE - Memory.CalculatedSize);
+	memset(&Memory.ROM[Memory.CalculatedSize], 0, MAX_ROM_SIZE - Memory.CalculatedSize);
 
 	if (Memory.CalculatedSize > 0x400000 && !(Memory.ROM[0x7fd5] == 0x32 && ((Memory.ROM[0x7fd6] & 0xf0) == 0x40)) && /* exclude S-DD1 */
 	   !(Memory.ROM[0xFFD5] == 0x3A && ((Memory.ROM[0xFFD6] & 0xF0) == 0xF0))) /* exclude SPC7110 */
@@ -805,7 +805,7 @@ bool LoadROM(const struct retro_game_info* game, char* info_buf)
 			Memory.ExtendedFormat = BIGFIRST;
 			hi_score              = swappedhirom;
 			lo_score              = swappedlorom;
-			RomHeader             = Memory.ROM + 0x400000;
+			RomHeader             = &Memory.ROM[0x400000];
 		}
 		else
 		{
@@ -921,12 +921,12 @@ bool LoadROM(const struct retro_game_info* game, char* info_buf)
 			if (Memory.ExtendedFormat == BIGFIRST)
 			{
 				DeinterleaveType1(0x400000, Memory.ROM);
-				DeinterleaveType1(Memory.CalculatedSize - 0x400000, Memory.ROM + 0x400000);
+				DeinterleaveType1(Memory.CalculatedSize - 0x400000, &Memory.ROM[0x400000]);
 			}
 			else
 			{
 				DeinterleaveType1(Memory.CalculatedSize - 0x400000, Memory.ROM);
-				DeinterleaveType1(0x400000, Memory.ROM + Memory.CalculatedSize - 0x400000);
+				DeinterleaveType1(0x400000, &Memory.ROM[Memory.CalculatedSize - 0x400000]);
 			}
 
 			Memory.LoROM = false;
@@ -974,7 +974,7 @@ void ParseSNESHeader(uint8_t* RomHeader)
 	}
 
 	Memory.ROMRegion = RomHeader[0x29];
-	/* memmove converted: Different mallocs [Neb] */
+	/* memmove converted: Different mallocs[Neb] */
 	memcpy(Memory.ROMId, &RomHeader[0x02], 4);
 
 	if (RomHeader[0x2A] != 0x33)
@@ -1096,7 +1096,7 @@ static bool is_bsx(uint8_t *p) /* p == "0xFFC0" or "0x7FC0" ROM offset pointer *
 
 void InitROM()
 {
-	uint8_t* RomHeader = Memory.ROM + 0x7FB0;
+	uint8_t* RomHeader = &Memory.ROM[0x7FB0];
 	Settings.Chip      = NOCHIP;
 	SuperFX.nRomBanks  = Memory.CalculatedSize >> 15;
 
@@ -1108,12 +1108,12 @@ void InitROM()
 
 	if ((Settings.Chip & BS) != BS)
 	{
-		if (is_bsx(Memory.ROM + 0x7FC0))
+		if (is_bsx(&Memory.ROM[0x7FC0]))
 		{
 			Settings.Chip = BS;
 			Memory.LoROM = true;
 		}
-		else if (is_bsx(Memory.ROM + 0xFFC0))
+		else if (is_bsx(&Memory.ROM[0xFFC0]))
 		{
 			Settings.Chip = BS;
 			Memory.LoROM = false;
@@ -1575,7 +1575,7 @@ void map_WriteProtectROM()
 {
 	int32_t c;
 
-	/* memmove converted: Different mallocs [Neb] */
+	/* memmove converted: Different mallocs[Neb] */
 	memcpy(Memory.WriteMap, Memory.Map, sizeof(Memory.Map));
 
 	for (c = 0; c < 0x1000; c++)
@@ -1767,6 +1767,9 @@ void Map_SA1LoROMMap()
 		SA1.WriteMap[c + 1] = SA1.WriteMap[c + 0x801] = (uint8_t*) MAP_NONE;
 	}
 
+	for (int c = 0x400; c < 0x500; c++) /* SA-1 Banks 40->4f */
+		SA1.Map[c] = SA1.WriteMap[c] = (uint8_t*) MAP_HIROM_SRAM;
+
 	for (int c = 0x600; c < 0x700; c++) /* SA-1 Banks 60->6f */
 		SA1.Map[c] = SA1.WriteMap[c] = (uint8_t*) MAP_BWRAM_BITMAP;
 
@@ -1829,32 +1832,32 @@ void Map_BSLoROMMap()
 
 	for (c = 0; c < 0x400; c += 16) /* Banks 00->3f and 80->bf */
 	{
-		Memory.Map [c + 0] = Memory.Map [c + 0x800] = Memory.RAM;
-		Memory.Map [c + 1] = Memory.Map [c + 0x801] = Memory.RAM;
-		Memory.BlockIsRAM [c + 0] = Memory.BlockIsRAM [c + 0x800] = true;
-		Memory.BlockIsRAM [c + 1] = Memory.BlockIsRAM [c + 0x801] = true;
-		Memory.Map [c + 2] = Memory.Map [c + 0x802] = (uint8_t*) MAP_PPU;
-		Memory.Map [c + 3] = Memory.Map [c + 0x803] = (uint8_t*) MAP_PPU;
-		Memory.Map [c + 4] = Memory.Map [c + 0x804] = (uint8_t*) MAP_CPU;
-		Memory.Map [c + 5] = Memory.Map [c + 0x805] = Memory.RAM;
-		Memory.BlockIsRAM [c + 5] = Memory.BlockIsRAM [c + 0x805] = true;
-		Memory.Map [c + 6] = Memory.Map [c + 0x806] = Memory.RAM;
-		Memory.BlockIsRAM [c + 6] = Memory.BlockIsRAM [c + 0x806] = true;
-		Memory.Map [c + 7] = Memory.Map [c + 0x807] = Memory.RAM;
-		Memory.BlockIsRAM [c + 7] = Memory.BlockIsRAM [c + 0x807] = true;
+		Memory.Map[c + 0] = Memory.Map[c + 0x800] = Memory.RAM;
+		Memory.Map[c + 1] = Memory.Map[c + 0x801] = Memory.RAM;
+		Memory.BlockIsRAM[c + 0] = Memory.BlockIsRAM[c + 0x800] = true;
+		Memory.BlockIsRAM[c + 1] = Memory.BlockIsRAM[c + 0x801] = true;
+		Memory.Map[c + 2] = Memory.Map[c + 0x802] = (uint8_t*) MAP_PPU;
+		Memory.Map[c + 3] = Memory.Map[c + 0x803] = (uint8_t*) MAP_PPU;
+		Memory.Map[c + 4] = Memory.Map[c + 0x804] = (uint8_t*) MAP_CPU;
+		Memory.Map[c + 5] = Memory.Map[c + 0x805] = Memory.RAM;
+		Memory.BlockIsRAM[c + 5] = Memory.BlockIsRAM[c + 0x805] = true;
+		Memory.Map[c + 6] = Memory.Map[c + 0x806] = Memory.RAM;
+		Memory.BlockIsRAM[c + 6] = Memory.BlockIsRAM[c + 0x806] = true;
+		Memory.Map[c + 7] = Memory.Map[c + 0x807] = Memory.RAM;
+		Memory.BlockIsRAM[c + 7] = Memory.BlockIsRAM[c + 0x807] = true;
 
 		for (i = c + 8; i < c + 16; i++)
 		{
-			Memory.Map [i] = Memory.Map [i + 0x800] = &Memory.ROM [(c << 11) % Memory.CalculatedSize] - 0x8000;
-			Memory.BlockIsROM [i] = Memory.BlockIsROM [i + 0x800] = true;
+			Memory.Map[i] = Memory.Map[i + 0x800] = Memory.ROM + ((c << 11) % Memory.CalculatedSize) - 0x8000;
+			Memory.BlockIsROM[i] = Memory.BlockIsROM[i + 0x800] = true;
 		}
 	}
 
 	for (c = 0; c < 8; c++)
 	{
 		Memory.Map[(c << 4) + 0x105] = (uint8_t*) MAP_LOROM_SRAM;
-		Memory.BlockIsROM [(c << 4) + 0x105] = false;
-		Memory.BlockIsRAM [(c << 4) + 0x105] = true;
+		Memory.BlockIsROM[(c << 4) + 0x105] = false;
+		Memory.BlockIsRAM[(c << 4) + 0x105] = true;
 	}
 
 	for (c = 1; c <= 4; c++)
@@ -1884,8 +1887,8 @@ void Map_BSLoROMMap()
 	for (c = 0; c < 8; c++)
 	{
 		Memory.Map[(c << 4) + 0x005] = Memory.PSRAM - 0x5000;
-		Memory.BlockIsROM [(c << 4) + 0x005] = false;
-		Memory.BlockIsRAM [(c << 4) + 0x005] = true;
+		Memory.BlockIsROM[(c << 4) + 0x005] = false;
+		Memory.BlockIsRAM[(c << 4) + 0x005] = true;
 	}
 
 	map_WRAM();
@@ -2107,42 +2110,42 @@ void SA1ShutdownAddressHacks()
 	if (match_id("ZBPJ")) /* Itoi Shigesato no Bass Tsuri No.1 (J) */
 	{
 		SA1.WaitPC = 0x93f1;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x304a;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x304a];
 	}
 	else if (match_id("AEVJ")) /* Daisenryaku Expert WWII (J) */
 	{
 		SA1.WaitPC = 0xd18d;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3000;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x3000];
 	}
 	else if (match_id("A2DJ")) /* Derby Jockey 2 (J) */
 		SA1.WaitPC = 0x8b62;
 	else if (match_id("AZIJ")) /* Dragon Ball Z - Hyper Dimension (J) */
 	{
 		SA1.WaitPC = 0x8083;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3020;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x3020];
 	}
 	else if (match_id("ZX3J")) /* SD Gundam G NEXT (J) */
 	{
 		SA1.WaitPC = 0x87f2;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x30c4;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x30c4];
 	}
 	else if (match_id("AARJ")) /* Shougi no Hanamichi (J) */
 	{
 		SA1.WaitPC = 0xf85a;
-		SA1.WaitByteAddress1 = Memory.SRAM + 0x0c64;
-		SA1.WaitByteAddress2 = Memory.SRAM + 0x0c66;
+		SA1.WaitByteAddress1 = &Memory.SRAM[0x0c64];
+		SA1.WaitByteAddress2 = &Memory.SRAM[0x0c66];
 	}
 	if (match_id("A23J")) /* Asahi Shinbun Rensai Katou Hifumi Kudan Shougi Shingiryu (J) */
 	{
 		SA1.WaitPC = 0x5037;
-		SA1.WaitByteAddress1 = Memory.SRAM + 0x0c06;
-		SA1.WaitByteAddress2 = Memory.SRAM + 0x0c08;
+		SA1.WaitByteAddress1 = &Memory.SRAM[0x0c06];
+		SA1.WaitByteAddress2 = &Memory.SRAM[0x0c08];
 	}
 	else if (match_id("AIIJ")) /* Taikyoku Igo - Idaten (J) */
 	{
 		SA1.WaitPC = 0x00be;
-		SA1.WaitByteAddress1 = Memory.SRAM + 0x1002;
-		SA1.WaitByteAddress2 = Memory.SRAM + 0x1004;
+		SA1.WaitByteAddress1 = &Memory.SRAM[0x1002];
+		SA1.WaitByteAddress2 = &Memory.SRAM[0x1004];
 	}
 	else if (match_id("AITJ")) /* Takemiya Masaki Kudan no Igo Taishou (J) */
 		SA1.WaitPC = 0x80b7;
@@ -2155,34 +2158,34 @@ void SA1ShutdownAddressHacks()
 	else if (match_id("AFJJ") || match_id("AFJE")) /* Hoshi no Kirby 3 (J), Kirby's Dream Land 3 (U) */
 	{
 		SA1.WaitPC = 0x82d4;
-		SA1.WaitByteAddress1 = Memory.SRAM + 0x72a4;
+		SA1.WaitByteAddress1 = &Memory.SRAM[0x72a4];
 	}
 	else if (match_id("AKFJ")) /* Hoshi no Kirby - Super Deluxe (J) */
 	{
 		SA1.WaitPC = 0x8c93;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x300a;
-		SA1.WaitByteAddress2 = Memory.FillRAM + 0x300e;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x300a];
+		SA1.WaitByteAddress2 = &Memory.FillRAM[0x300e];
 	}
 	else if (match_id("AKFE")) /* Kirby Super Star (U) */
 	{
 		SA1.WaitPC = 0x8cb8;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x300a;
-		SA1.WaitByteAddress2 = Memory.FillRAM + 0x300e;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x300a];
+		SA1.WaitByteAddress2 = &Memory.FillRAM[0x300e];
 	}
 	else if (match_id("ARWJ") || match_id("ARWE")) /* Super Mario RPG (J), (U) */
 	{
 		SA1.WaitPC = 0x816f;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3000;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x3000];
 	}
 	else if (match_id("AVRJ")) /* Marvelous (J) */
 	{
 		SA1.WaitPC = 0x85f2;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3024;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x3024];
 	}
 	else if (match_id("AO3J")) /* Harukanaru Augusta 3 - Masters New (J) */
 	{
 		SA1.WaitPC = 0xdddb;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x37b4;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x37b4];
 	}
 	else if (match_id("AJOJ")) /* Jikkyou Oshaberi Parodius (J) */
 		SA1.WaitPC = 0x84e5;
@@ -2191,30 +2194,30 @@ void SA1ShutdownAddressHacks()
 	else if (match_id("AONJ")) /* Pebble Beach no Hatou New - Tournament Edition (J) */
 	{
 		SA1.WaitPC = 0xdf33;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x37b4;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x37b4];
 	}
 	else if (match_id("AEPE")) /* PGA European Tour (U) */
 	{
 		SA1.WaitPC = 0x3700;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3102;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x3102];
 	}
 	else if (match_id("A3GE")) /* PGA Tour 96 (U) */
 	{
 		SA1.WaitPC = 0x3700;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3102;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x3102];
 	}
 	else if (match_id("A4RE")) /* Power Rangers Zeo - Battle Racers (U) */
 	{
 		SA1.WaitPC = 0x9899;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3000;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x3000];
 	}
 	else if (match_id("AGFJ")) /* SD F-1 Grand Prix (J) */
 		SA1.WaitPC = 0x81bc;
 	else if (match_id("ASYJ")) /* Saikousoku Shikou Shougi Mahjong (J) */
 	{
 		SA1.WaitPC = 0xf2cc;
-		SA1.WaitByteAddress1 = Memory.SRAM + 0x7ffe;
-		SA1.WaitByteAddress2 = Memory.SRAM + 0x7ffc;
+		SA1.WaitByteAddress1 = &Memory.SRAM[0x7ffe];
+		SA1.WaitByteAddress2 = &Memory.SRAM[0x7ffc];
 	}
 	else if (match_id("AX2J")) /* Shougi Saikyou II (J) */
 		SA1.WaitPC = 0xd675;
@@ -2223,8 +2226,8 @@ void SA1ShutdownAddressHacks()
 	else if (match_id("AHJJ")) /* Shin Shougi Club (J) */
 	{
 		SA1.WaitPC = 0x002a;
-		SA1.WaitByteAddress1 = Memory.SRAM + 0x0806;
-		SA1.WaitByteAddress2 = Memory.SRAM + 0x0808;
+		SA1.WaitByteAddress1 = &Memory.SRAM[0x0806];
+		SA1.WaitByteAddress2 = &Memory.SRAM[0x0808];
 	}
 	else if (match_id("AMSJ")) /* ｼｮｳｷﾞｻｲｷｮｳ */
 		SA1.WaitPC = 0xCD6A;
@@ -2233,7 +2236,7 @@ void SA1ShutdownAddressHacks()
 	else if (match_id("ALXJ")) /* MASOUKISHIN */
 	{
 		SA1.WaitPC = 0xEC9C;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3072;
+		SA1.WaitByteAddress1 = &Memory.FillRAM[0x3072];
 	}
 	else if (match_id("A3IJ")) /* SUPER SHOGI3 */
 		SA1.WaitPC = 0xF669;

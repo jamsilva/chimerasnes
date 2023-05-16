@@ -12,84 +12,107 @@
 #include "cpumacro.h"
 #include "cpuaddr.h"
 
-#define MAIN_LOOP(HBLANK_PROCESSING, SA1_MAIN_LOOP)                  \
-{                                                                    \
-	uint8_t Work8;                                                   \
-	                                                                 \
-	do                                                               \
-	{                                                                \
-		do                                                           \
-		{                                                            \
-			if (CPU.Flags)                                           \
-			{                                                        \
-				if (CPU.Flags & NMI_FLAG)                            \
-				{                                                    \
-					if (--CPU.NMICycleCount == 0)                    \
-					{                                                \
-						CPU.Flags &= ~NMI_FLAG;                      \
-						                                             \
-						if (CPU.WaitingForInterrupt)                 \
-						{                                            \
-							CPU.WaitingForInterrupt = false;         \
-							ICPU.Registers.PCw++;                    \
-						}                                            \
-						                                             \
-						OpcodeNMI();                                 \
-					}                                                \
-				}                                                    \
-				                                                     \
-				if (CPU.Flags & IRQ_PENDING_FLAG)                    \
-				{                                                    \
-					if (CPU.IRQCycleCount == 0)                      \
-					{                                                \
-						if (CPU.WaitingForInterrupt)                 \
-						{                                            \
-							CPU.WaitingForInterrupt = false;         \
-							ICPU.Registers.PCw++;                    \
-						}                                            \
-						                                             \
-						if (!CPU.IRQActive)                          \
-							CPU.Flags &= ~IRQ_PENDING_FLAG;          \
-						else if (!CheckIRQ())                        \
-							OpcodeIRQ();                             \
-					}                                                \
-					else if (--CPU.IRQCycleCount == 0 && CheckIRQ()) \
-						CPU.IRQCycleCount = 1;                       \
-				}                                                    \
-				                                                     \
-				if (CPU.Flags & SCAN_KEYS_FLAG)                      \
-					break;                                           \
-			}                                                        \
-			                                                         \
-			CPU.PCAtOpcodeStart = ICPU.Registers.PCw;                \
-			CPU.Cycles += CPU.MemSpeed;                              \
-			READ_PC_BYTE(Work8);                                     \
-			(*ICPU.Opcodes[Work8].Opcode)();                         \
-			SA1_MAIN_LOOP;                                           \
-			                                                         \
-			if (CPU.Cycles >= CPU.NextEvent)                         \
-				HBLANK_PROCESSING;                                   \
-			                                                         \
-			APU_EXECUTE();                                           \
-			                                                         \
-			if (finishedFrame)                                       \
-				break;                                               \
-		} while (true);                                              \
-		                                                             \
-		IAPU.Registers.PC = IAPU.PC - IAPU.RAM;                      \
-		                                                             \
-		if (!finishedFrame)                                          \
-		{                                                            \
-			PackStatus();                                            \
-			APUPackStatus();                                         \
-			CPU.Flags &= ~SCAN_KEYS_FLAG;                            \
-		}                                                            \
-		else                                                         \
-		{                                                            \
-			finishedFrame = false;                                   \
-			break;                                                   \
-		}                                                            \
-	} while (!finishedFrame);                                        \
+#define MAIN_LOOP(HBLANK_PROCESSING, SA1_MAIN_LOOP)                                                            \
+{                                                                                                              \
+	uint8_t Op;                                                                                                \
+	SOpcodes* Opcodes;                                                                                         \
+	                                                                                                           \
+	do                                                                                                         \
+	{                                                                                                          \
+		do                                                                                                     \
+		{                                                                                                      \
+			if (CPU.Flags)                                                                                     \
+			{                                                                                                  \
+				if (CPU.Flags & NMI_FLAG)                                                                      \
+				{                                                                                              \
+					if (--CPU.NMICycleCount == 0)                                                              \
+					{                                                                                          \
+						CPU.Flags &= ~NMI_FLAG;                                                                \
+						                                                                                       \
+						if (CPU.WaitingForInterrupt)                                                           \
+						{                                                                                      \
+							CPU.WaitingForInterrupt = false;                                                   \
+							ICPU.Registers.PCw++;                                                              \
+						}                                                                                      \
+						                                                                                       \
+						OpcodeNMI();                                                                           \
+					}                                                                                          \
+				}                                                                                              \
+				                                                                                               \
+				if (CPU.Flags & IRQ_FLAG)                                                              \
+				{                                                                                              \
+					if (CPU.IRQCycleCount == 0)                                                                \
+					{                                                                                          \
+						if (CPU.WaitingForInterrupt)                                                           \
+						{                                                                                      \
+							CPU.WaitingForInterrupt = false;                                                   \
+							ICPU.Registers.PCw++;                                                              \
+						}                                                                                      \
+						                                                                                       \
+						if (!CPU.IRQActive)                                                                    \
+							CPU.Flags &= ~IRQ_FLAG;                                                    \
+						else if (!CheckIRQ())                                                                  \
+							OpcodeIRQ();                                                                       \
+					}                                                                                          \
+					else if (--CPU.IRQCycleCount == 0 && CheckIRQ())                                           \
+						CPU.IRQCycleCount = 1;                                                                 \
+				}                                                                                              \
+				                                                                                               \
+				if (CPU.Flags & SCAN_KEYS_FLAG)                                                                \
+					break;                                                                                     \
+			}                                                                                                  \
+			                                                                                                   \
+			CPU.PCAtOpcodeStart = ICPU.Registers.PCw;                                                          \
+			                                                                                                   \
+			if (CPU.PCBase)                                                                                    \
+			{                                                                                                  \
+				Op = CPU.PCBase[ICPU.Registers.PCw];                                                           \
+				CPU.Cycles += CPU.MemSpeed;                                                                    \
+				Opcodes = ICPU.Opcodes;                                                                        \
+			}                                                                                                  \
+			else                                                                                               \
+			{                                                                                                  \
+				Op = GetByte(ICPU.Registers.PBPC);                                                             \
+				ICPU.OpenBus = Op;                                                                             \
+				Opcodes = OpcodesSlow;                                                                         \
+			}                                                                                                  \
+			                                                                                                   \
+			if ((ICPU.Registers.PCw & MEMMAP_MASK) + ICPU.OpLengths[Op] >= MEMMAP_BLOCK_SIZE)                  \
+			{                                                                                                  \
+				uint8_t* oldPCBase = CPU.PCBase;                                                               \
+				CPU.PCBase = GetBasePointer(ICPU.ShiftedPB + ((uint16_t) (ICPU.Registers.PCw + 4)));           \
+				                                                                                               \
+				if (oldPCBase != CPU.PCBase || (ICPU.Registers.PCw & ~MEMMAP_MASK) == (0xffff & ~MEMMAP_MASK)) \
+					Opcodes = OpcodesSlow;                                                                     \
+			}                                                                                                  \
+			                                                                                                   \
+			ICPU.Registers.PCw++;                                                                              \
+			(*Opcodes[Op].Opcode)();                                                                           \
+			SA1_MAIN_LOOP;                                                                                     \
+			                                                                                                   \
+			if (CPU.Cycles >= CPU.NextEvent)                                                                   \
+				HBLANK_PROCESSING;                                                                             \
+			                                                                                                   \
+			APU_EXECUTE();                                                                                     \
+			                                                                                                   \
+			if (finishedFrame)                                                                                 \
+				break;                                                                                         \
+		} while (true);                                                                                        \
+		                                                                                                       \
+		IAPU.Registers.PC = IAPU.PC - IAPU.RAM;                                                                \
+		                                                                                                       \
+		if (!finishedFrame)                                                                                    \
+		{                                                                                                      \
+			PackStatus();                                                                                      \
+			APUPackStatus();                                                                                   \
+			CPU.Flags &= ~SCAN_KEYS_FLAG;                                                                      \
+		}                                                                                                      \
+		else                                                                                                   \
+		{                                                                                                      \
+			finishedFrame = false;                                                                             \
+			break;                                                                                             \
+		}                                                                                                      \
+	} while (!finishedFrame);                                                                                  \
 }
 
 /* This is a CatSFC modification inspired by a Snes9x-Euphoria modification.
@@ -126,7 +149,7 @@ void SetMainLoop()
 void SetIRQSource(uint32_t source)
 {
 	CPU.IRQActive |= source;
-	CPU.Flags |= IRQ_PENDING_FLAG;
+	CPU.Flags |= IRQ_FLAG;
 	CPU.IRQCycleCount = 3;
 
 	if (CPU.WaitingForInterrupt) /* Force IRQ to trigger immediately after WAI - Final Fantasy Mystic Quest crashes without this. */
@@ -142,7 +165,7 @@ void ClearIRQSource(uint32_t source)
 	CPU.IRQActive &= ~source;
 
 	if (!CPU.IRQActive)
-		CPU.Flags &= ~IRQ_PENDING_FLAG;
+		CPU.Flags &= ~IRQ_FLAG;
 }
 
 /* This is a CatSFC modification inspired by a Snes9x-Euphoria modification.

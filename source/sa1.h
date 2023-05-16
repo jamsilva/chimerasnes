@@ -47,6 +47,7 @@ typedef struct
 	uint8_t*      PCBase;
 	uint8_t*      WaitByteAddress1;
 	uint8_t*      WaitByteAddress2;
+	uint8_t*      OpLengths;
 	SOpcodes*     Opcodes;
 	uint8_t*      Map[MEMMAP_NUM_BLOCKS];
 	uint8_t*      WriteMap[MEMMAP_NUM_BLOCKS];
@@ -61,16 +62,20 @@ typedef struct
 #define SA1ClearFlags(f)    (SA1.Registers.P.W &= ~(f))
 
 extern SSA1     SA1;
-extern SOpcodes SA1OpcodesE1[256];
+
 extern SOpcodes SA1OpcodesM1X1[256];
 extern SOpcodes SA1OpcodesM1X0[256];
 extern SOpcodes SA1OpcodesM0X1[256];
 extern SOpcodes SA1OpcodesM0X0[256];
+extern uint8_t  OpLengthsM1X1[256];
+extern uint8_t  OpLengthsM1X0[256];
+extern uint8_t  OpLengthsM0X1[256];
+extern uint8_t  OpLengthsM0X0[256];
 
 uint8_t  SA1GetByte(uint32_t address);
 void     SA1SetByte(uint8_t byte, uint32_t address);
-uint16_t SA1GetWord(uint32_t address);
-void     SA1SetWord(uint16_t Word, uint32_t address);
+uint16_t SA1GetWord(uint32_t address, wrap_t w);
+void     SA1SetWord(uint16_t Word, uint32_t address, wrap_t w, writeorder_t o);
 void     SA1SetPCBase(uint32_t address);
 uint8_t  GetSA1(uint32_t address);
 void     SetSA1(uint8_t byte, uint32_t address);
@@ -99,18 +104,34 @@ static INLINE void SA1FixCycles()
 {
 	if (SA1CheckEmulation())
 	{
-		SA1.Opcodes = SA1OpcodesE1;
+		SA1.Opcodes = SA1OpcodesM1X1;
+		SA1.OpLengths = OpLengthsM1X1;
 	}
 	else if (SA1CheckMemory())
 	{
 		if (SA1CheckIndex())
+		{
 			SA1.Opcodes = SA1OpcodesM1X1;
+			SA1.OpLengths = OpLengthsM1X1;
+		}
 		else
+		{
 			SA1.Opcodes = SA1OpcodesM1X0;
+			SA1.OpLengths = OpLengthsM1X0;
+		}
 	}
-	else if (SA1CheckIndex())
-		SA1.Opcodes = SA1OpcodesM0X1;
 	else
-		SA1.Opcodes = SA1OpcodesM0X0;
+	{
+		if (SA1CheckIndex())
+		{
+			SA1.Opcodes = SA1OpcodesM0X1;
+			SA1.OpLengths = OpLengthsM0X1;
+		}
+		else
+		{
+			SA1.Opcodes = SA1OpcodesM0X0;
+			SA1.OpLengths = OpLengthsM0X0;
+		}
+	}
 }
 #endif

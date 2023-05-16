@@ -9,65 +9,6 @@
 #define MEMMAP_SHIFT           12
 #define MEMMAP_MASK            (MEMMAP_BLOCK_SIZE - 1)
 
-bool     LoadROM(const struct retro_game_info* game, char* info_buf);
-void     InitROM();
-bool     InitMemory();
-void     DeinitMemory();
-void     FixROMSpeed(int32_t FastROMSpeed);
-bool     match_na(const char*);
-bool     match_lo_na(const char* str);
-bool     match_hi_na(const char* str);
-bool     match_id(const char*);
-void     ApplyROMFixes();
-void     APUTimingHacks();
-void     HDMATimingHacks();
-void     SA1ShutdownAddressHacks();
-void     ShutdownHacks();
-void     ParseSNESHeader(uint8_t*);
-void     ResetSpeedMap();
-uint8_t  GetByte(uint32_t Address);
-uint16_t GetWord(uint32_t Address);
-void     SetByte(uint8_t Byte, uint32_t Address);
-void     SetWord(uint16_t Byte, uint32_t Address);
-void     SetPCBase(uint32_t Address);
-uint8_t* GetMemPointer(uint32_t Address);
-uint8_t* GetBasePointer(uint32_t Address);
-
-uint32_t map_mirror(uint32_t, uint32_t);
-void     map_lorom(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-void     map_hirom(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-void     map_lorom_offset(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-void     map_hirom_offset(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-void     map_space(uint32_t, uint32_t, uint32_t, uint32_t, uint8_t*);
-void     map_index(uint32_t, uint32_t, uint32_t, uint32_t, intptr_t, int32_t);
-void     map_System();
-void     map_WRAM();
-void     map_LoROMSRAM();
-void     map_HiROMSRAM();
-void     map_DSP();
-void     map_C4();
-void     map_OBC1();
-void     map_SetaDSP();
-void     map_WriteProtectROM();
-void     Map_Initialize();
-void     Map_LoROMMap();
-void     Map_NoMAD1LoROMMap();
-void     Map_JumboLoROMMap();
-void     Map_ROM24MBSLoROMMap();
-void     Map_SRAM512KLoROMMap();
-void     Map_SufamiTurboPseudoLoROMMap();
-void     Map_SuperFXLoROMMap();
-void     Map_SetaDSPLoROMMap();
-void     Map_SDD1LoROMMap();
-void     Map_SA1LoROMMap();
-void     Map_HiROMMap();
-void     Map_ExtendedHiROMMap();
-void     Map_SPC7110HiROMMap();
-void     Map_BSLoROMMap();
-void     Map_BSCartLoROMMap(bool mapping);
-void     Map_BSCartHiROMMap();
-void     Map_XBANDHiROMMap();
-
 /* Extended ROM Formats */
 enum
 {
@@ -112,6 +53,19 @@ enum
 	MAP_TYPE_RAM
 };
 
+typedef enum
+{
+	WRAP_NONE,
+	WRAP_BANK,
+	WRAP_PAGE
+} wrap_t;
+
+typedef enum
+{
+	WRITE_01,
+	WRITE_10
+} writeorder_t;
+
 typedef struct
 {
 	bool     LoROM         : 1;
@@ -148,4 +102,63 @@ typedef struct
 } CMemory;
 
 extern CMemory Memory;
+
+bool     LoadROM(const struct retro_game_info* game, char* info_buf);
+void     InitROM();
+bool     InitMemory();
+void     DeinitMemory();
+void     FixROMSpeed(int32_t FastROMSpeed);
+bool     match_na(const char*);
+bool     match_lo_na(const char* str);
+bool     match_hi_na(const char* str);
+bool     match_id(const char*);
+void     ApplyROMFixes();
+void     APUTimingHacks();
+void     HDMATimingHacks();
+void     SA1ShutdownAddressHacks();
+void     ShutdownHacks();
+void     ParseSNESHeader(uint8_t*);
+void     ResetSpeedMap();
+uint8_t  GetByte(uint32_t Address);
+uint16_t GetWord(uint32_t Address, wrap_t w);
+void     SetByte(uint8_t Byte, uint32_t Address);
+void     SetWord(uint16_t Word, uint32_t Address, wrap_t w, writeorder_t o);
+void     SetPCBase(uint32_t Address);
+uint8_t* GetMemPointer(uint32_t Address);
+uint8_t* GetBasePointer(uint32_t Address);
+
+uint32_t map_mirror(uint32_t, uint32_t);
+void     map_lorom(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+void     map_hirom(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+void     map_lorom_offset(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+void     map_hirom_offset(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+void     map_space(uint32_t, uint32_t, uint32_t, uint32_t, uint8_t*);
+void     map_index(uint32_t, uint32_t, uint32_t, uint32_t, intptr_t, int32_t);
+void     map_System();
+void     map_WRAM();
+void     map_LoROMSRAM();
+void     map_HiROMSRAM();
+void     map_DSP();
+void     map_C4();
+void     map_OBC1();
+void     map_SetaDSP();
+void     map_WriteProtectROM();
+void     Map_Initialize();
+void     Map_LoROMMap();
+void     Map_NoMAD1LoROMMap();
+void     Map_JumboLoROMMap();
+void     Map_ROM24MBSLoROMMap();
+void     Map_SRAM512KLoROMMap();
+void     Map_SufamiTurboPseudoLoROMMap();
+void     Map_SuperFXLoROMMap();
+void     Map_SetaDSPLoROMMap();
+void     Map_SDD1LoROMMap();
+void     Map_SA1LoROMMap();
+void     Map_HiROMMap();
+void     Map_ExtendedHiROMMap();
+void     Map_SPC7110HiROMMap();
+void     Map_BSLoROMMap();
+void     Map_BSCartLoROMMap(bool mapping);
+void     Map_BSCartHiROMMap();
+void     Map_XBANDHiROMMap();
 #endif

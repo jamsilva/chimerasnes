@@ -21,6 +21,7 @@ typedef struct
 	uint32_t   ShiftedDB;
 	uint32_t   ShiftedPB;
 	SRegisters Registers;
+	uint8_t*   OpLengths;
 	SOpcodes*  Opcodes;
 } SICPU;
 
@@ -28,11 +29,17 @@ typedef void (*MainLoopPtr)();
 
 extern MainLoopPtr MainLoop;
 extern SICPU       ICPU;
-extern SOpcodes    OpcodesE1[256];
-extern SOpcodes    OpcodesM1X1[256];
-extern SOpcodes    OpcodesM1X0[256];
-extern SOpcodes    OpcodesM0X1[256];
-extern SOpcodes    OpcodesM0X0[256];
+
+extern SOpcodes OpcodesE1[256];
+extern SOpcodes OpcodesM1X1[256];
+extern SOpcodes OpcodesM1X0[256];
+extern SOpcodes OpcodesM0X1[256];
+extern SOpcodes OpcodesM0X0[256];
+extern SOpcodes OpcodesSlow[256];
+extern uint8_t  OpLengthsM1X1[256];
+extern uint8_t  OpLengthsM1X0[256];
+extern uint8_t  OpLengthsM0X1[256];
+extern uint8_t  OpLengthsM0X0[256];
 
 void SetMainLoop();
 void Reset();
@@ -59,18 +66,36 @@ static INLINE void PackStatus()
 static INLINE void FixCycles()
 {
 	if (CheckEmulation())
+	{
 		ICPU.Opcodes = OpcodesE1;
+		ICPU.OpLengths = OpLengthsM1X1;
+	}
 	else if (CheckMemory())
 	{
 		if (CheckIndex())
+		{
 			ICPU.Opcodes = OpcodesM1X1;
+			ICPU.OpLengths = OpLengthsM1X1;
+		}
 		else
+		{
 			ICPU.Opcodes = OpcodesM1X0;
+			ICPU.OpLengths = OpLengthsM1X0;
+		}
 	}
-	else if (CheckIndex())
-		ICPU.Opcodes = OpcodesM0X1;
 	else
-		ICPU.Opcodes = OpcodesM0X0;
+	{
+		if (CheckIndex())
+		{
+			ICPU.Opcodes = OpcodesM0X1;
+			ICPU.OpLengths = OpLengthsM0X1;
+		}
+		else
+		{
+			ICPU.Opcodes = OpcodesM0X0;
+			ICPU.OpLengths = OpLengthsM0X0;
+		}
+	}
 }
 
 static INLINE void Reschedule()

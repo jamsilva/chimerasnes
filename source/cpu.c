@@ -15,7 +15,7 @@
 
 void ResetCPU()
 {
-	ICPU.Registers.PBPC = GetWord(0xfffc);
+	ICPU.Registers.PBPC = GetWord(0xfffc, WRAP_NONE);
 	ICPU.Registers.D.W = 0;
 	ICPU.Registers.DB = 0;
 	ICPU.Registers.SH = 1;
@@ -45,6 +45,7 @@ void ResetCPU()
 	CPU.SRAMModified = false;
 	SetPCBase(ICPU.Registers.PCw);
 	ICPU.Opcodes = OpcodesE1;
+	ICPU.OpLengths = OpLengthsM1X1;
 	ICPU.Executing = true;
 	CPU.NMICycleCount = 0;
 	CPU.IRQCycleCount = 0;

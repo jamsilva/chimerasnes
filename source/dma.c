@@ -663,7 +663,7 @@ uint8_t DoHDMA(uint8_t byte)
 				p->IndirectBank = Memory.FillRAM[0x4307 + (d << 4)];
 				/* again, no cycle charges while InDMA is set! */
 				CPU.Cycles += Settings.SlowOneCycle << 2;
-				p->IndirectAddress = GetWord((p->ABank << 16) + p->Address);
+				p->IndirectAddress = GetWord((p->ABank << 16) + p->Address, WRAP_NONE);
 				p->Address += 2;
 			}
 			else

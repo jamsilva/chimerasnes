@@ -60,7 +60,18 @@ void ResetOBC1()
 	memset(Memory.OBC1RAM, 0x00, 0x2000);
 }
 
+uint8_t* GetBasePointerOBC1(uint16_t Address)
+{
+	if (Address >= 0x7ff0 && Address <= 0x7ff6)
+		return NULL;
+
+	return &Memory.OBC1RAM[-0x6000];
+}
+
 uint8_t* GetMemPointerOBC1(uint16_t Address)
 {
-	return Memory.FillRAM + (Address & 0xffff);
+	if (Address >= 0x7ff0 && Address <= 0x7ff6)
+		return NULL;
+
+	return &Memory.OBC1RAM[Address - 0x6000];
 }
