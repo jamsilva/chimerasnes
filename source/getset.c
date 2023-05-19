@@ -6,6 +6,7 @@
 #include "spc7110.h"
 #include "obc1.h"
 #include "seta.h"
+#include "bsx.h"
 #include "xband.h"
 
 uint8_t GetByte(uint32_t Address)
@@ -57,6 +58,8 @@ uint8_t GetByte(uint32_t Address)
 			return GetOBC1(Address & 0xffff);
 		case MAP_SETA_DSP:
 			return GetSETA(Address);
+		case MAP_BSX:
+			return GetBSX(Address);
 		case MAP_XBAND:
 			return GetXBAND(Address);
 		case MAP_NONE:
@@ -145,6 +148,8 @@ uint16_t GetWord(uint32_t Address, wrap_t w)
 			return GetOBC1(Address & 0xffff) | (GetOBC1((Address + 1) & 0xffff) << 8);
 		case MAP_SETA_DSP:
 			return GetSETA(Address) | (GetSETA(Address + 1) << 8);
+		case MAP_BSX:
+			return GetBSX(Address) | (GetBSX(Address + 1) << 8);
 		case MAP_XBAND:
 			return GetXBAND(Address) | (GetXBAND(Address + 1) << 8);
 		case MAP_NONE:
@@ -218,6 +223,9 @@ void SetByte(uint8_t Byte, uint32_t Address)
 			return;
 		case MAP_SETA_DSP:
 			SetSETA(Byte, Address);
+			return;
+		case MAP_BSX:
+			SetBSX(Byte, Address);
 			return;
 		case MAP_XBAND:
 			SetXBAND(Byte, Address);
@@ -417,9 +425,30 @@ void SetWord(uint16_t Word, uint32_t Address, wrap_t w, writeorder_t o)
 			}
 
 			return;
+		case MAP_BSX:
+			if (o)
+			{
+				SetBSX(Word >> 8, Address + 1);
+				SetBSX((uint8_t) Word, Address);
+			}
+			else
+			{
+				SetBSX((uint8_t) Word, Address);
+				SetBSX(Word >> 8, Address + 1);
+			}
+
+			return;
 		case MAP_XBAND:
-			SetXBAND((uint8_t) Word, Address);
-			SetXBAND(Word >> 8, Address + 1);
+			if (o)
+			{
+				SetXBAND(Word >> 8, Address + 1);
+				SetXBAND((uint8_t) Word, Address);
+			}
+			else
+			{
+				SetXBAND((uint8_t) Word, Address);
+				SetXBAND(Word >> 8, Address + 1);
+			}
 			return;
 		case MAP_NONE:
 		default:
@@ -468,6 +497,8 @@ uint8_t* GetBasePointer(uint32_t Address)
 			return GetBasePointerOBC1(Address & 0xffff);
 		case MAP_SETA_DSP:
 			return Memory.SRAM;
+		case MAP_BSX:
+			return GetBasePointerBSX(Address);
 		case MAP_XBAND:
 			return GetBasePointerXBAND(Address);
 		case MAP_NONE:

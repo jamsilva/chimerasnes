@@ -93,6 +93,7 @@ typedef struct
 	uint8_t* FillRAM;
 	uint8_t* OBC1RAM;
 	uint8_t* PSRAM;
+	uint8_t* BIOSROM;
 	uint8_t* RAM;
 	uint8_t* ROM;
 	uint8_t* SRAM;
@@ -142,6 +143,7 @@ void     map_DSP();
 void     map_C4();
 void     map_OBC1();
 void     map_SetaDSP();
+void     map_XBAND();
 void     map_WriteProtectROM();
 void     Map_Initialize();
 void     Map_LoROMMap();
@@ -157,8 +159,4 @@ void     Map_SA1LoROMMap();
 void     Map_HiROMMap();
 void     Map_ExtendedHiROMMap();
 void     Map_SPC7110HiROMMap();
-void     Map_BSLoROMMap();
-void     Map_BSCartLoROMMap(bool mapping);
-void     Map_BSCartHiROMMap();
-void     Map_XBANDHiROMMap();
 #endif

@@ -26,6 +26,7 @@
 #include "spc7110.h"
 #include "seta.h"
 #include "math.h"
+#include "bsx.h"
 
 #ifdef _MSC_VER
 	/* Necessary to build on MSVC */
@@ -255,6 +256,7 @@ bool InitMemory()
 	Memory.FillRAM = Memory.ROM;                                                         /* FillRAM uses first 32K of ROM image area, otherwise space just wasted. Might be read by the SuperFX code. */
 	Memory.CX4RAM  = &Memory.FillRAM[0x400000 + 8192 * 8];                               /* CX4 */
 	Memory.OBC1RAM = &Memory.FillRAM[0x6000];                                            /* OBC1 */
+	Memory.BIOSROM = &Memory.FillRAM[0x300000];                                          /* BS-X */
 	Memory.PSRAM   = &Memory.FillRAM[0x400000];                                          /* BS-X */
 	IPPU.TileCache[TILE_2BIT]  = (uint8_t*) calloc(MAX_2BIT_TILES, 128);
 	IPPU.TileCache[TILE_4BIT]  = (uint8_t*) calloc(MAX_4BIT_TILES, 128);
@@ -854,64 +856,13 @@ bool LoadROM(const struct retro_game_info* game, char* info_buf)
 	{
 		Settings.Chip = SFT;
 		Memory.LoROM = true;
-		Interleaved = false;
-		Tales = false;
 		memmove(&Memory.ROM[0x100000], Memory.ROM, Memory.CalculatedSize);
 		LoadSFTBIOS();
 	}
-	else if (match_lo_na("YUYU NO QUIZ DE GO!GO!") || match_lo_na("SP MOMOTAROU DENTETSU2") || match_lo_na("SUPER FORMATION SOCCE"))
+	else if (match_lo_na("YUYU NO QUIZ DE GO!GO!") || match_hi_na("BATMAN--REVENGE JOKER"))
 	{
 		Memory.LoROM = true;
 		Interleaved = false;
-	}
-	else if (match_hi_na("\x82\x79\x82\x8f\x82\x8f\x82\xc1\x82\xc6\x96\x83\x90\x9d\x81\x49") || match_hi_na("\x5a\x6f\x6f\x82\xc1\x82\xc6\x96\x83\x90\x9d\x21\x49\x56\x54")) /* BS Zooっと麻雀 */
-	{
-		Memory.LoROM = false;
-	}
-	else if (match_hi_na("\x8D\xC4\x42\x53\x92\x54\x92\xE3\x8B\xE4\x8A\x79\x95\x94")) /* 再BS探偵倶楽部 */
-	{
-		Memory.LoROM = false;
-	}
-	else if (match_hi_na("BATMAN--REVENGE JOKER"))
-	{
-		Memory.LoROM = true;
-		Interleaved = true;
-	}
-	else if (match_lo_na("THE DUEL: TEST DRIVE"))
-	{
-		Memory.LoROM = true;
-		Interleaved = false;
-	}
-	else if (match_lo_na("POPEYE IJIWARU MAJO"))
-	{
-		Memory.LoROM = true;
-		Interleaved = false;
-	}
-	else if (match_lo_na("POPN TWINBEE"))
-	{
-		Memory.LoROM = true;
-		Interleaved = false;
-	}
-	else if (match_lo_na("MEY Fun with Numbers"))
-	{
-		int32_t i;
-
-		for (i = 0x87fc0; i < 0x87fe0; i++)
-			Memory.ROM[i] = 0;
-	}
-	else if (Memory.CalculatedSize == 0x100000 && match_hi_na("WWF SUPER WRESTLEMANIA"))
-	{
-		int32_t cvcount;
-		memcpy(&Memory.ROM[0x100000], Memory.ROM, 0x100000);
-
-		for (cvcount = 0; cvcount < 16; cvcount++)
-		{
-			memcpy(&Memory.ROM[0x8000 * cvcount], &Memory.ROM[0x10000 * cvcount + 0x100000 + 0x8000], 0x8000);
-			memcpy(&Memory.ROM[0x8000 * cvcount + 0x80000], &Memory.ROM[0x10000 * cvcount + 0x100000], 0x8000);
-		}
-
-		Memory.LoROM = true;
-		memset(&Memory.ROM[Memory.CalculatedSize], 0, MAX_ROM_SIZE - Memory.CalculatedSize);
 	}
 
 	if (Interleaved)
@@ -992,108 +943,6 @@ void ParseSNESHeader(uint8_t* RomHeader)
 	}
 }
 
-static bool bs_name(uint8_t* p)
-{
-	int32_t lcount;
-
-	for(lcount = 16; lcount > 0; lcount--)
-	{
-		if(*p == 0) /* null strings */
-		{
-			if(lcount == 16)
-				return false;
-
-			p++;
-		}
-		else if((*p >= 0x20 && *p <= 0x7f) || (*p >= 0xa0 && *p <= 0xdf)) /* SJIS single byte char */
-			p++;
-		else if(lcount >= 2) /* SJIS multi byte char */
-		{
-			if(((*p >= 0x81 && *p <= 0x9f) || (*p >= 0xe0 && *p <= 0xfc)) && ((*(p + 1) >= 0x40 && *(p + 1) <= 0x7e) || (*(p + 1) >= 0x80 && *(p + 1) <= 0xfc)))
-			{
-				p += 2;
-				lcount--;
-			}
-			else
-				return false;
-		}
-		else
-			return false;
-	}
-
-	return true;
-}
-
-/* 7fc0h or ffc0h
- * ffc0h - FFCFh: CartName
- * ffd0h        : Memory pack location
- * ffd1h - ffd5h: 00:00:00:00:00 (??)
- * ffd6h        : Month 10h, 20h, 30h...
- * ffd7h        : Day   This byte / 8  low 3bits is unknown.
- * ffd8h        : ROMSpeed
- * ffd9h        : Satellaview ROM Type
- * ffdah        : Maker ID
- * ffdbh        : ROM Version */
-static bool is_bsx(uint8_t *p) /* p == "0xFFC0" or "0x7FC0" ROM offset pointer */
-{
-	uint32_t c;
-	int32_t i;
-	bool b = false;
-	bool bb = false;
-
-	if (p[0x19] & 0x4f) /* Satellaview ROM Type */
-		return false;
-
-	c = p[0x1a]; /* Maker ID */
-
-	if ((c != 0x33) && (c != 0xff)) /* 0x33 = Manufacturer: Nintendo */
-		return false;
-
-	c = (p[0x17] << 8) | p[0x16]; /* Month, Day */
-
-	if ((c != 0x0000) && (c != 0xffff))
-	{
-		if ((c & 0x040f) != 0)
-			return false;
-		if ((c & 0xff) > 0xc0)
-			return false;
-	}
-
-	c = p[0x18]; /* ROMSpeed */
-
-	if ((c & 0xce) || ((c & 0x30) == 0))
-		return false;
-
-	if(p[0x10] == 0) /* Memory pack location */
-		return false;
-
-	for(i = 0; i < 8; i++)
-	{
-		if(p[0x10] & (1 << i))
-		{
-			if(bb)
-				return false;
-
-			b = true;
-		}
-		else if(b)
-			bb = true;
-	}
-
-	if ((p[0x15] & 0x03) != 0)
-		return false;
-
-	c = p[0x13];
-
-	if ((c != 0x00) && (c != 0xff))
-		return false;
-
-	if (p[0x14] != 0x00)
-		return false;
-
-	return bs_name(p);
-}
-
 void InitROM()
 {
 	uint8_t* RomHeader = &Memory.ROM[0x7FB0];
@@ -1106,24 +955,11 @@ void InitROM()
 	if (!Memory.LoROM)
 		RomHeader += 0x8000;
 
-	if ((Settings.Chip & BS) != BS)
-	{
-		if (is_bsx(&Memory.ROM[0x7FC0]))
-		{
-			Settings.Chip = BS;
-			Memory.LoROM = true;
-		}
-		else if (is_bsx(&Memory.ROM[0xFFC0]))
-		{
-			Settings.Chip = BS;
-			Memory.LoROM = false;
-		}
-	}
-
 	memset(Memory.BlockIsRAM, 0, MEMMAP_NUM_BLOCKS);
 	memset(Memory.BlockIsROM, 0, MEMMAP_NUM_BLOCKS);
 	memset(Memory.ROMId, 0, 5);
 	Memory.CompanyId = 0;
+	InitBSX(); /* Set BS-X header before parsing */
 	ParseSNESHeader(RomHeader);
 
 	/* Detect and initialize chips - detection codes are compatible with NSRT */
@@ -1232,11 +1068,6 @@ void InitROM()
 		case 0x4532:
 			Settings.Chip = S_DD1;
 			break;
-		case 0xE530:
-			if (Settings.Chip == NOCHIP)
-				Settings.Chip = BSFW;
-
-			break;
 		case 0xF530:
 			Settings.Chip = ST_018;
 			SetSETA = &NullSet;
@@ -1266,11 +1097,13 @@ void InitROM()
 
 	Map_Initialize();
 
-	if (Memory.LoROM)
+	if ((Settings.Chip & BS) == BS)
 	{
-		if ((Settings.Chip & BS) == BS)
-			Map_BSLoROMMap();
-		else if (Settings.Chip == ST_010 || Settings.Chip == ST_011)
+		/* Do nothing */
+	}
+	else if (Memory.LoROM)
+	{
+		if (Settings.Chip == ST_010 || Settings.Chip == ST_011)
 			Map_SetaDSPLoROMMap();
 		else if (Settings.Chip == GSU)
 			Map_SuperFXLoROMMap();
@@ -1299,11 +1132,9 @@ void InitROM()
 	else
 	{
 		if (match_na("XBAND JAPANESE MODEM") || match_na("XBAND VIDEOGAME MODEM"))
-		{
 			Settings.Chip = XBAND;
-			Map_XBANDHiROMMap();
-		}
-		else if ((Settings.Chip & SPC7110) == SPC7110)
+
+		if ((Settings.Chip & SPC7110) == SPC7110)
 			Map_SPC7110HiROMMap();
 		else if (Memory.ExtendedFormat != NOPE)
 			Map_ExtendedHiROMMap();
@@ -1331,8 +1162,8 @@ void InitROM()
 	SetMainLoop();
 	ResetSpeedMap();
 	ApplyROMFixes();
-	sprintf(Memory.ROMName,   "%s", Safe(Memory.ROMName));
-	sprintf(Memory.ROMId,     "%s", Safe(Memory.ROMId));
+	sprintf(Memory.ROMName, "%s", Safe(Memory.ROMName));
+	sprintf(Memory.ROMId,   "%s", Safe(Memory.ROMId));
 }
 
 void FixROMSpeed(int32_t FastROMSpeed)
@@ -1571,6 +1402,16 @@ void map_SetaDSP()
 	map_index(0x60, 0x67, 0x0000, 0x3fff, MAP_SETA_DSP, MAP_TYPE_I_O);
 }
 
+void map_XBAND()
+{
+	for (int c = 0; c < 0x200; c++)
+	{
+		Memory.Map[c + 0xe00] = (uint8_t*) MAP_XBAND;
+		Memory.BlockIsRAM[c + 0xe00] = true;
+		Memory.BlockIsROM[c + 0xe00] = false;
+	}
+}
+
 void map_WriteProtectROM()
 {
 	int32_t c;
@@ -1789,6 +1630,8 @@ void Map_HiROMMap()
 
 	if ((Settings.Chip & DSP) == DSP)
 		map_DSP();
+	else if ((Settings.Chip & XBAND) == XBAND)
+		map_XBAND();
 
 	map_HiROMSRAM();
 	map_WRAM();
@@ -1821,138 +1664,6 @@ void Map_SPC7110HiROMMap()
 	map_hirom(0x80, 0x8f, 0x8000, 0xffff, Memory.CalculatedSize);
 	map_hirom_offset(0xc0, 0xcf, 0x0000, 0xffff, Memory.CalculatedSize, 0);
 	map_index(0xd0, 0xff, 0x0000, 0xffff, MAP_SPC7110_ROM,  MAP_TYPE_ROM);
-	map_WRAM();
-	map_WriteProtectROM();
-}
-
-void Map_BSLoROMMap()
-{
-	int32_t c, i;
-	Memory.SRAMSize = 5;
-
-	for (c = 0; c < 0x400; c += 16) /* Banks 00->3f and 80->bf */
-	{
-		Memory.Map[c + 0] = Memory.Map[c + 0x800] = Memory.RAM;
-		Memory.Map[c + 1] = Memory.Map[c + 0x801] = Memory.RAM;
-		Memory.BlockIsRAM[c + 0] = Memory.BlockIsRAM[c + 0x800] = true;
-		Memory.BlockIsRAM[c + 1] = Memory.BlockIsRAM[c + 0x801] = true;
-		Memory.Map[c + 2] = Memory.Map[c + 0x802] = (uint8_t*) MAP_PPU;
-		Memory.Map[c + 3] = Memory.Map[c + 0x803] = (uint8_t*) MAP_PPU;
-		Memory.Map[c + 4] = Memory.Map[c + 0x804] = (uint8_t*) MAP_CPU;
-		Memory.Map[c + 5] = Memory.Map[c + 0x805] = Memory.RAM;
-		Memory.BlockIsRAM[c + 5] = Memory.BlockIsRAM[c + 0x805] = true;
-		Memory.Map[c + 6] = Memory.Map[c + 0x806] = Memory.RAM;
-		Memory.BlockIsRAM[c + 6] = Memory.BlockIsRAM[c + 0x806] = true;
-		Memory.Map[c + 7] = Memory.Map[c + 0x807] = Memory.RAM;
-		Memory.BlockIsRAM[c + 7] = Memory.BlockIsRAM[c + 0x807] = true;
-
-		for (i = c + 8; i < c + 16; i++)
-		{
-			Memory.Map[i] = Memory.Map[i + 0x800] = Memory.ROM + ((c << 11) % Memory.CalculatedSize) - 0x8000;
-			Memory.BlockIsROM[i] = Memory.BlockIsROM[i + 0x800] = true;
-		}
-	}
-
-	for (c = 0; c < 8; c++)
-	{
-		Memory.Map[(c << 4) + 0x105] = (uint8_t*) MAP_LOROM_SRAM;
-		Memory.BlockIsROM[(c << 4) + 0x105] = false;
-		Memory.BlockIsRAM[(c << 4) + 0x105] = true;
-	}
-
-	for (c = 1; c <= 4; c++)
-	{
-		for (i = 0; i < 16; i++)
-		{
-			Memory.Map[0x400 + i + (c << 4)] = (uint8_t*) MAP_LOROM_SRAM;
-			Memory.BlockIsRAM[0x400 + i + (c << 4)] = true;
-			Memory.BlockIsROM[0x400 + i + (c << 4)] = false;
-		}
-	}
-
-	for (i = 0; i < 0x80; i++)
-	{
-		Memory.Map[0x700 + i] = &Memory.PSRAM[0x10000 * (i / 16)];
-		Memory.BlockIsRAM[0x700 + i] = true;
-		Memory.BlockIsROM[0x700 + i] = false;
-	}
-
-	for (i = 0; i < 8; i++)
-	{
-		Memory.Map[0x205 + (i << 4)] = Memory.Map[0x285 + (i << 4)] = Memory.Map[0x305 + (i << 4)] = Memory.Map[0x385 + (i << 4)] = Memory.Map[0x705 + (i << 4)];
-		Memory.BlockIsRAM[0x205 + (i << 4)] = Memory.BlockIsRAM[0x285 + (i << 4)] = Memory.BlockIsRAM[0x305 + (i << 4)] = Memory.BlockIsRAM[0x385 + (i << 4)] = true;
-		Memory.BlockIsROM[0x205 + (i << 4)] = Memory.BlockIsROM[0x285 + (i << 4)] = Memory.BlockIsROM[0x305 + (i << 4)] = Memory.BlockIsROM[0x385 + (i << 4)] = false;
-	}
-
-	for (c = 0; c < 8; c++)
-	{
-		Memory.Map[(c << 4) + 0x005] = Memory.PSRAM - 0x5000;
-		Memory.BlockIsROM[(c << 4) + 0x005] = false;
-		Memory.BlockIsRAM[(c << 4) + 0x005] = true;
-	}
-
-	map_WRAM();
-	map_WriteProtectROM();
-}
-
-void Map_XBANDHiROMMap()
-{
-	int32_t c, i;
-
-	for (c = 0; c < 0x400; c += 16) /* Banks 00->ff */
-	{
-		Memory.Map[c + 0] = Memory.Map[c + 0x800] = Memory.RAM;
-		Memory.BlockIsRAM[c + 0] = Memory.BlockIsRAM[c + 0x800] = true;
-		Memory.Map[c + 1] = Memory.Map[c + 0x801] = Memory.RAM;
-		Memory.BlockIsRAM[c + 1] = Memory.BlockIsRAM[c + 0x801] = true;
-		Memory.Map[c + 2] = Memory.Map[c + 0x802] = (uint8_t*) MAP_PPU;
-		Memory.Map[c + 3] = Memory.Map[c + 0x803] = (uint8_t*) MAP_PPU;
-		Memory.Map[c + 4] = Memory.Map[c + 0x804] = (uint8_t*) MAP_CPU;
-		Memory.Map[c + 5] = Memory.Map[c + 0x805] = (uint8_t*) MAP_CPU;
-
-		if ((Settings.Chip & DSP) == DSP)
-		{
-			Memory.Map[c + 6] = Memory.Map[c + 0x806] = (uint8_t*) MAP_DSP;
-			Memory.Map[c + 7] = Memory.Map[c + 0x807] = (uint8_t*) MAP_DSP;
-		}
-		else
-		{
-			Memory.Map[c + 6] = Memory.Map[c + 0x806] = (uint8_t*) MAP_NONE;
-			Memory.Map[c + 7] = Memory.Map[c + 0x807] = (uint8_t*) MAP_NONE;
-		}
-
-		for (i = c; i < c + 16; i++)
-		{
-			Memory.Map[i + 0x400] = Memory.Map[i + 0xc00] = &Memory.ROM[(c << 12) % Memory.CalculatedSize];
-			Memory.BlockIsROM[i + 0x400] = Memory.BlockIsROM[i + 0xc00] = true;
-		}
-
-		for (i = c + 8; i < c + 16; i++)
-		{
-			Memory.Map[i] = Memory.Map[i + 0x800] = &Memory.ROM[(c << 12) % Memory.CalculatedSize];
-			Memory.BlockIsROM[i] = Memory.BlockIsROM[i + 0x800] = true;
-		}
-	}
-
-	for (c = 0; c < 16; c++) /* Banks 30->3f and b0->bf, address ranges 6000->7fff is S-RAM. */
-	{
-		Memory.Map[0x306 + (c << 4)] = (uint8_t*) MAP_HIROM_SRAM;
-		Memory.Map[0x307 + (c << 4)] = (uint8_t*) MAP_HIROM_SRAM;
-		Memory.Map[0xb06 + (c << 4)] = (uint8_t*) MAP_HIROM_SRAM;
-		Memory.Map[0xb07 + (c << 4)] = (uint8_t*) MAP_HIROM_SRAM;
-		Memory.BlockIsRAM[0x306 + (c << 4)] = true;
-		Memory.BlockIsRAM[0x307 + (c << 4)] = true;
-		Memory.BlockIsRAM[0xb06 + (c << 4)] = true;
-		Memory.BlockIsRAM[0xb07 + (c << 4)] = true;
-	}
-
-	for (c = 0; c < 0x200; c++) /* XBAND */
-	{
-		Memory.Map[c + 0xe00] = (uint8_t*) MAP_XBAND;
-		Memory.BlockIsRAM[c + 0xe00] = true;
-		Memory.BlockIsROM[c + 0xe00] = false;
-	}
-
 	map_WRAM();
 	map_WriteProtectROM();
 }

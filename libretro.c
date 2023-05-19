@@ -578,7 +578,7 @@ void retro_get_system_av_info(struct retro_system_av_info* info)
 
 void retro_reset()
 {
-	Reset();
+	SoftReset();
 }
 
 size_t retro_serialize_size()

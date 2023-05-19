@@ -15,6 +15,7 @@
 #include "spc7110.h"
 #include "obc1.h"
 #include "srtc.h"
+#include "bsx.h"
 
 MainLoopPtr MainLoop;
 SCPUState   CPU;
@@ -35,6 +36,7 @@ SRTCData  RTCData;
 SOBC1     OBC1;
 FXRegs_s  FXRegs;
 FXInfo_s  SuperFX;
+SBSX      BSX;
 
 void    (*SetSETA)(uint32_t, uint8_t);
 uint8_t (*GetSETA)(uint32_t);

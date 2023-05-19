@@ -6,6 +6,7 @@ INCFLAGS := -I$(CORE_DIR) \
 
 SOURCES_C := \
 	$(CORE_DIR)/apu.c \
+	$(CORE_DIR)/bsx.c \
 	$(CORE_DIR)/cheats.c \
 	$(CORE_DIR)/clip.c \
 	$(CORE_DIR)/cpu.c \

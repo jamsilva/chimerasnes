@@ -12,6 +12,7 @@
 #include "sdd1.h"
 #include "spc7110.h"
 #include "srtc.h"
+#include "bsx.h"
 
 void ResetCPU()
 {
@@ -55,10 +56,9 @@ void ResetCPU()
 static void CommonReset()
 {
 	memset(Memory.VRAM, 0x00, 0x10000);
-	ResetCPU();
-	ResetDMA();
-	ResetAPU();
 
+	if ((Settings.Chip & BS) == BS)
+		ResetBSX();
 	if ((Settings.Chip & DSP) == DSP)
 		ResetDSP();
 	else if (Settings.Chip == GSU)
@@ -75,6 +75,10 @@ static void CommonReset()
 		ResetOBC1();
 	else if (Settings.Chip == S_RTC)
 		ResetSRTC();
+
+	ResetCPU();
+	ResetDMA();
+	ResetAPU();
 }
 
 void Reset()
