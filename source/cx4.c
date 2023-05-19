@@ -814,7 +814,8 @@ void SetCX4(uint8_t byte, uint16_t Address)
 		}
 		case 0x54: /* Square */
 		{
-			int64_t a = SAR64((int64_t) READ_3WORD(Memory.CX4RAM + 0x1f80) << 40, 10);
+			int64_t a = (int64_t) READ_3WORD(Memory.CX4RAM + 0x1f80);
+			a |= 0xffffffffff000000 * ((a >> 23) & 1);
 			a *= a;
 			WRITE_3WORD(Memory.CX4RAM + 0x1f83, a);
 			WRITE_3WORD(Memory.CX4RAM + 0x1f86, (a >> 24));

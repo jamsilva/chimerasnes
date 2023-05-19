@@ -120,6 +120,7 @@ extern uint32_t odd_high[4][16];
 extern uint32_t odd_low[4][16];
 extern SBG      BG;
 extern uint16_t DirectColourMaps[8][256];
+extern uint8_t  brightness_cap[64];
 extern uint8_t  mul_brightness[16][32];
 
 #define SUB_SCREEN_DEPTH  0
@@ -127,20 +128,9 @@ extern uint8_t  mul_brightness[16][32];
 
 static INLINE uint16_t COLOR_ADD(uint16_t C1, uint16_t C2)
 {
-	const int RED_MASK   = 0x1F << RED_SHIFT_BITS;
-	const int GREEN_MASK = 0x1F << GREEN_SHIFT_BITS;
-	const int BLUE_MASK  = 0x1F;
-	int rb               = (C1 & (RED_MASK | BLUE_MASK)) + (C2 & (RED_MASK | BLUE_MASK));
-	int rbcarry          = rb & ((0x20 << RED_SHIFT_BITS) | (0x20 << 0));
-	int g                = (C1 & (GREEN_MASK)) + (C2 & (GREEN_MASK));
-	int rgbsaturate      = (((g & (0x20 << GREEN_SHIFT_BITS)) | rbcarry) >> 5) * 0x1f;
-	uint16_t retval      = (rb & (RED_MASK | BLUE_MASK)) | (g & GREEN_MASK) | rgbsaturate;
-
-#if GREEN_SHIFT_BITS == 6
-	retval              |= (retval & 0x0400) >> 5;
-#endif
-
-	return retval;
+	return ((brightness_cap[(C1 >> RED_SHIFT_BITS) + (C2 >> RED_SHIFT_BITS) ] << RED_SHIFT_BITS) |
+	        (brightness_cap[((C1 >> GREEN_SHIFT_BITS) & 0x1f) + ((C2 >> GREEN_SHIFT_BITS) & 0x1f)] << GREEN_SHIFT_BITS) |
+	        (brightness_cap[(C1 & 0x1f) + (C2 & 0x1f)]));
 }
 
 #define COLOR_ADD1_2(C1, C2)                   \

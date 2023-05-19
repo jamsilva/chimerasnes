@@ -20,6 +20,7 @@ void DoDMA(uint8_t Channel)
 	int32_t  count;
 	int32_t  inc;
 	SDMA*    d;
+	uint8_t  Work;
 	bool     in_sa1_dma  = false;
 	uint8_t* in_sdd1_dma = NULL;
 	uint8_t* spc7110_dma = NULL;
@@ -255,8 +256,8 @@ void DoDMA(uint8_t Channel)
 				case 0x04: /* OAMDATA */
 					do
 					{
-						ICPU.OpenBus = base[p];
-						REGISTER_2104(ICPU.OpenBus);
+						Work = base[p];
+						REGISTER_2104(Work);
 						p += inc;
 					} while (--count > 0);
 
@@ -268,8 +269,8 @@ void DoDMA(uint8_t Channel)
 					{
 						do
 						{
-							ICPU.OpenBus = base[p];
-							REGISTER_2118_linear(ICPU.OpenBus);
+							Work = base[p];
+							REGISTER_2118_linear(Work);
 							p += inc;
 						} while (--count > 0);
 					}
@@ -277,8 +278,8 @@ void DoDMA(uint8_t Channel)
 					{
 						do
 						{
-							ICPU.OpenBus = base[p];
-							REGISTER_2118_tile(ICPU.OpenBus);
+							Work = base[p];
+							REGISTER_2118_tile(Work);
 							p += inc;
 						} while (--count > 0);
 					}
@@ -291,8 +292,8 @@ void DoDMA(uint8_t Channel)
 					{
 						do
 						{
-							ICPU.OpenBus = base[p];
-							REGISTER_2119_linear(ICPU.OpenBus);
+							Work = base[p];
+							REGISTER_2119_linear(Work);
 							p += inc;
 						} while (--count > 0);
 					}
@@ -300,8 +301,8 @@ void DoDMA(uint8_t Channel)
 					{
 						do
 						{
-							ICPU.OpenBus = base[p];
-							REGISTER_2119_tile(ICPU.OpenBus);
+							Work = base[p];
+							REGISTER_2119_tile(Work);
 							p += inc;
 						} while (--count > 0);
 					}
@@ -310,8 +311,8 @@ void DoDMA(uint8_t Channel)
 				case 0x22: /* CGDATA */
 					do
 					{
-						ICPU.OpenBus = base[p];
-						REGISTER_2122(ICPU.OpenBus);
+						Work = base[p];
+						REGISTER_2122(Work);
 						p += inc;
 					} while (--count > 0);
 
@@ -319,8 +320,8 @@ void DoDMA(uint8_t Channel)
 				case 0x80: /* WMDATA */
 					do
 					{
-						ICPU.OpenBus = base[p];
-						REGISTER_2180(ICPU.OpenBus);
+						Work = base[p];
+						REGISTER_2180(Work);
 						p += inc;
 					} while (--count > 0);
 
@@ -328,8 +329,8 @@ void DoDMA(uint8_t Channel)
 				default:
 					do
 					{
-						ICPU.OpenBus = base[p];
-						SetPPU(ICPU.OpenBus, 0x2100 + d->BAddress);
+						Work = base[p];
+						SetPPU(Work, 0x2100 + d->BAddress);
 						p += inc;
 					} while (--count > 0);
 
@@ -347,8 +348,8 @@ void DoDMA(uint8_t Channel)
 				{
 					while (count > 1)
 					{
-						ICPU.OpenBus = base[p];
-						REGISTER_2118_linear(ICPU.OpenBus);
+						Work = base[p];
+						REGISTER_2118_linear(Work);
 						p += inc;
 						ICPU.OpenBus = base[p];
 						REGISTER_2119_linear(ICPU.OpenBus);
@@ -358,27 +359,27 @@ void DoDMA(uint8_t Channel)
 
 					if (count == 1)
 					{
-						ICPU.OpenBus = base[p];
-						REGISTER_2118_linear(ICPU.OpenBus);
+						Work = base[p];
+						REGISTER_2118_linear(Work);
 					}
 				}
 				else
 				{
 					while (count > 1)
 					{
-						ICPU.OpenBus = base[p];
-						REGISTER_2118_tile(ICPU.OpenBus);
+						Work = base[p];
+						REGISTER_2118_tile(Work);
 						p += inc;
-						ICPU.OpenBus = base[p];
-						REGISTER_2119_tile(ICPU.OpenBus);
+						Work = base[p];
+						REGISTER_2119_tile(Work);
 						p += inc;
 						count -= 2;
 					}
 
 					if (count == 1)
 					{
-						ICPU.OpenBus = base[p];
-						REGISTER_2118_tile(ICPU.OpenBus);
+						Work = base[p];
+						REGISTER_2118_tile(Work);
 					}
 				}
 			}
@@ -386,19 +387,19 @@ void DoDMA(uint8_t Channel)
 			{
 				while (count > 1)
 				{
-					ICPU.OpenBus = base[p];
-					SetPPU(ICPU.OpenBus, 0x2100 + d->BAddress);
+					Work = base[p];
+					SetPPU(Work, 0x2100 + d->BAddress);
 					p += inc;
-					ICPU.OpenBus = base[p];
-					SetPPU(ICPU.OpenBus, 0x2101 + d->BAddress);
+					Work = base[p];
+					SetPPU(Work, 0x2101 + d->BAddress);
 					p += inc;
 					count -= 2;
 				}
 
 				if (count == 1)
 				{
-					ICPU.OpenBus = base[p];
-					SetPPU(ICPU.OpenBus, 0x2100 + d->BAddress);
+					Work = base[p];
+					SetPPU(Work, 0x2100 + d->BAddress);
 				}
 			}
 		}
@@ -406,29 +407,29 @@ void DoDMA(uint8_t Channel)
 		{
 			do
 			{
-				ICPU.OpenBus = base[p];
-				SetPPU(ICPU.OpenBus, 0x2100 + d->BAddress);
+				Work = base[p];
+				SetPPU(Work, 0x2100 + d->BAddress);
 				p += inc;
 
 				if (count <= 1)
 					break;
 
-				ICPU.OpenBus = base[p];
-				SetPPU(ICPU.OpenBus, 0x2100 + d->BAddress);
+				Work = base[p];
+				SetPPU(Work, 0x2100 + d->BAddress);
 				p += inc;
 
 				if (count <= 2)
 					break;
 
-				ICPU.OpenBus = base[p];
-				SetPPU(ICPU.OpenBus, 0x2101 + d->BAddress);
+				Work = base[p];
+				SetPPU(Work, 0x2101 + d->BAddress);
 				p += inc;
 
 				if (count <= 3)
 					break;
 
-				ICPU.OpenBus = base[p];
-				SetPPU(ICPU.OpenBus, 0x2101 + d->BAddress);
+				Work = base[p];
+				SetPPU(Work, 0x2101 + d->BAddress);
 				p += inc;
 				count -= 4;
 			} while (count > 0);
@@ -437,29 +438,29 @@ void DoDMA(uint8_t Channel)
 		{
 			do
 			{
-				ICPU.OpenBus = base[p];
-				SetPPU(ICPU.OpenBus, 0x2100 + d->BAddress);
+				Work = base[p];
+				SetPPU(Work, 0x2100 + d->BAddress);
 				p += inc;
 
 				if (count <= 1)
 					break;
 
-				ICPU.OpenBus = base[p];
-				SetPPU(ICPU.OpenBus, 0x2101 + d->BAddress);
+				Work = base[p];
+				SetPPU(Work, 0x2101 + d->BAddress);
 				p += inc;
 
 				if (count <= 2)
 					break;
 
-				ICPU.OpenBus = base[p];
-				SetPPU(ICPU.OpenBus, 0x2102 + d->BAddress);
+				Work = base[p];
+				SetPPU(Work, 0x2102 + d->BAddress);
 				p += inc;
 
 				if (count <= 3)
 					break;
 
-				ICPU.OpenBus = base[p];
-				SetPPU(ICPU.OpenBus, 0x2103 + d->BAddress);
+				Work = base[p];
+				SetPPU(Work, 0x2103 + d->BAddress);
 				p += inc;
 				count -= 4;
 			} while (count > 0);
@@ -478,77 +479,77 @@ void DoDMA(uint8_t Channel)
 				case 0:
 				case 2:
 				case 6:
-					ICPU.OpenBus = GetPPU(0x2100 + d->BAddress);
-					SetByte(ICPU.OpenBus, (d->ABank << 16) + d->AAddress);
+					Work = GetPPU(0x2100 + d->BAddress);
+					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
 					--count;
 					break;
 				case 1:
 				case 5:
-					ICPU.OpenBus = GetPPU(0x2100 + d->BAddress);
-					SetByte(ICPU.OpenBus, (d->ABank << 16) + d->AAddress);
+					Work = GetPPU(0x2100 + d->BAddress);
+					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
 
 					if (!--count)
 						break;
 
-					ICPU.OpenBus = GetPPU(0x2101 + d->BAddress);
-					SetByte(ICPU.OpenBus, (d->ABank << 16) + d->AAddress);
+					Work = GetPPU(0x2101 + d->BAddress);
+					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
 					--count;
 					break;
 				case 3:
 				case 7:
-					ICPU.OpenBus = GetPPU(0x2100 + d->BAddress);
-					SetByte(ICPU.OpenBus, (d->ABank << 16) + d->AAddress);
+					Work = GetPPU(0x2100 + d->BAddress);
+					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
 
 					if (!--count)
 						break;
 
-					ICPU.OpenBus = GetPPU(0x2100 + d->BAddress);
-					SetByte(ICPU.OpenBus, (d->ABank << 16) + d->AAddress);
+					Work = GetPPU(0x2100 + d->BAddress);
+					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
 
 					if (!--count)
 						break;
 
-					ICPU.OpenBus = GetPPU(0x2101 + d->BAddress);
-					SetByte(ICPU.OpenBus, (d->ABank << 16) + d->AAddress);
+					Work = GetPPU(0x2101 + d->BAddress);
+					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
 
 					if (!--count)
 						break;
 
-					ICPU.OpenBus = GetPPU(0x2101 + d->BAddress);
-					SetByte(ICPU.OpenBus, (d->ABank << 16) + d->AAddress);
+					Work = GetPPU(0x2101 + d->BAddress);
+					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
 					--count;
 					break;
 				case 4:
-					ICPU.OpenBus = GetPPU(0x2100 + d->BAddress);
-					SetByte(ICPU.OpenBus, (d->ABank << 16) + d->AAddress);
+					Work = GetPPU(0x2100 + d->BAddress);
+					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
 
 					if (!--count)
 						break;
 
-					ICPU.OpenBus = GetPPU(0x2101 + d->BAddress);
-					SetByte(ICPU.OpenBus, (d->ABank << 16) + d->AAddress);
+					Work = GetPPU(0x2101 + d->BAddress);
+					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
 
 					if (!--count)
 						break;
 
-					ICPU.OpenBus = GetPPU(0x2102 + d->BAddress);
-					SetByte(ICPU.OpenBus, (d->ABank << 16) + d->AAddress);
+					Work = GetPPU(0x2102 + d->BAddress);
+					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
 
 					if (!--count)
 						break;
 
-					ICPU.OpenBus = GetPPU(0x2103 + d->BAddress);
-					SetByte(ICPU.OpenBus, (d->ABank << 16) + d->AAddress);
+					Work = GetPPU(0x2103 + d->BAddress);
+					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
 					count--;
 					break;
@@ -688,9 +689,9 @@ uint8_t DoHDMA(uint8_t byte)
 			if (!(HDMABasePointers[d] = HDMAMemPointers[d] = GetMemPointer((p->IndirectBank << 16) + p->IndirectAddress)))
 			{
 				/* XXX: Instead of this, goto a slow path that first
-					* XXX: verifies src!=Address Bus B, then uses
-					* XXX: GetByte(). Or make GetByte return OpenBus
-					* XXX: (probably?) for Address Bus B while inDMA. */
+				 * XXX: verifies src!=Address Bus B, then uses
+				 * XXX: GetByte(). Or make GetByte return OpenBus
+				 * XXX: (probably?) for Address Bus B while inDMA. */
 				byte &= ~mask;
 				continue;
 			}
@@ -705,44 +706,44 @@ uint8_t DoHDMA(uint8_t byte)
 		switch (p->TransferMode)
 		{
 			case 0:
-				CPU.Cycles += Settings.SlowOneCycle;
 				SetPPU(*HDMAMemPointers[d]++, 0x2100 + p->BAddress);
+				CPU.Cycles += Settings.SlowOneCycle;
 				break;
 			case 5:
-				CPU.Cycles += 2 * Settings.SlowOneCycle;
 				SetPPU(HDMAMemPointers[d][0], 0x2100 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][1], 0x2101 + p->BAddress);
+				CPU.Cycles += Settings.SlowOneCycle * 2;
 				HDMAMemPointers[d] += 2;
 				/* fall through */
 			case 1:
-				CPU.Cycles += 2 * Settings.SlowOneCycle;
 				SetPPU(HDMAMemPointers[d][0], 0x2100 + p->BAddress);
-				ICPU.OpenBus = HDMAMemPointers[d][1];
 				SetPPU(HDMAMemPointers[d][1], 0x2101 + p->BAddress);
+				ICPU.OpenBus = HDMAMemPointers[d][1];
+				CPU.Cycles += Settings.SlowOneCycle * 2;
 				HDMAMemPointers[d] += 2;
 				break;
 			case 2:
 			case 6:
-				CPU.Cycles += 2 * Settings.SlowOneCycle;
 				SetPPU(HDMAMemPointers[d][0], 0x2100 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][1], 0x2100 + p->BAddress);
+				CPU.Cycles += Settings.SlowOneCycle * 2;
 				HDMAMemPointers[d] += 2;
 				break;
 			case 3:
 			case 7:
-				CPU.Cycles += 4 * Settings.SlowOneCycle;
 				SetPPU(HDMAMemPointers[d][0], 0x2100 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][1], 0x2100 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][2], 0x2101 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][3], 0x2101 + p->BAddress);
+				CPU.Cycles += Settings.SlowOneCycle * 4;
 				HDMAMemPointers[d] += 4;
 				break;
 			case 4:
-				CPU.Cycles += 4 * Settings.SlowOneCycle;
 				SetPPU(HDMAMemPointers[d][0], 0x2100 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][1], 0x2101 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][2], 0x2102 + p->BAddress);
 				SetPPU(HDMAMemPointers[d][3], 0x2103 + p->BAddress);
+				CPU.Cycles += Settings.SlowOneCycle * 4;
 				HDMAMemPointers[d] += 4;
 				break;
 		}

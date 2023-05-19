@@ -366,31 +366,31 @@ static void check_variables(bool first_run)
 		if (strcmp(var.value, "compatible") == 0)
 		{
 			Settings.OverclockCycles = true;
-			Settings.OneCycle            = DEFAULT_ONE_CYCLE - 2;
-			Settings.SlowOneCycle       = DEFAULT_ONE_CYCLE - 1;
-			Settings.TwoCycles            = DEFAULT_ONE_CYCLE;
+			Settings.OneCycle        = DEFAULT_ONE_CYCLE - 2;
+			Settings.SlowOneCycle    = DEFAULT_ONE_CYCLE - 1;
+			Settings.TwoCycles       = DEFAULT_ONE_CYCLE;
 		}
 		else if (strcmp(var.value, "max") == 0)
 		{
 			Settings.OverclockCycles = true;
-			Settings.OneCycle            = DEFAULT_ONE_CYCLE / 2;
-			Settings.SlowOneCycle       = DEFAULT_ONE_CYCLE / 2;
-			Settings.TwoCycles            = DEFAULT_ONE_CYCLE / 2;
+			Settings.OneCycle        = DEFAULT_ONE_CYCLE / 2;
+			Settings.SlowOneCycle    = DEFAULT_ONE_CYCLE / 2;
+			Settings.TwoCycles       = DEFAULT_ONE_CYCLE / 2;
 		}
 		else if (strcmp(var.value, "light") == 0)
 		{
 			Settings.OverclockCycles = true;
-			Settings.OneCycle            = DEFAULT_ONE_CYCLE;
-			Settings.SlowOneCycle       = DEFAULT_ONE_CYCLE;
-			Settings.TwoCycles            = DEFAULT_TWO_CYCLES;
+			Settings.OneCycle        = DEFAULT_ONE_CYCLE;
+			Settings.SlowOneCycle    = DEFAULT_ONE_CYCLE;
+			Settings.TwoCycles       = DEFAULT_TWO_CYCLES;
 		}
 	}
 
 	if (!Settings.OverclockCycles)
 	{
-		Settings.OneCycle      = DEFAULT_ONE_CYCLE;
+		Settings.OneCycle     = DEFAULT_ONE_CYCLE;
 		Settings.SlowOneCycle = DEFAULT_SLOW_ONE_CYCLE;
-		Settings.TwoCycles      = DEFAULT_TWO_CYCLES;
+		Settings.TwoCycles    = DEFAULT_TWO_CYCLES;
 	}
 
 	var.key = "chimerasnes_overclock_superfx";

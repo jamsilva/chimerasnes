@@ -13,12 +13,10 @@
 #include "spc7110.h"
 #include "gfx.h"
 
-extern uint8_t mul_brightness[16][32];
+extern uint8_t* HDMAMemPointers[8];
 
 uint32_t justifiers = 0xffff00aa;
 uint8_t in_bit = 0;
-
-extern uint8_t* HDMAMemPointers[8];
 
 void LatchCounters(bool force)
 {
@@ -88,6 +86,14 @@ void FixColourBrightness()
 	int32_t i;
 	IPPU.XB = mul_brightness[PPU.Brightness];
 
+	for (int i = 0; i < 64; i++)
+	{
+		if (i > IPPU.XB[0x1f])
+			brightness_cap[i] = IPPU.XB[0x1f];
+		else
+			brightness_cap[i] = i;
+	}
+
 	for (i = 0; i < 256; i++)
 	{
 		IPPU.Red[i] = IPPU.XB[PPU.CGDATA[i] & 0x1f];
@@ -114,7 +120,7 @@ void SetPPU(uint8_t Byte, uint16_t Address)
 		else if (Settings.Chip == S_RTC && Address == 0x2801)
 			SetSRTC(Byte, Address);
 
-		ICPU.OpenBus = Memory.FillRAM[Address] = Byte;
+		Memory.FillRAM[Address] = Byte;
 		return;
 	}
 
@@ -648,7 +654,7 @@ void SetPPU(uint8_t Byte, uint16_t Address)
 			break;
 	}
 
-	ICPU.OpenBus = Memory.FillRAM[Address] = Byte;
+	Memory.FillRAM[Address] = Byte;
 }
 
 uint8_t GetPPU(uint16_t Address)
@@ -1449,181 +1455,184 @@ uint8_t GetCPU(uint16_t Address)
 				return ICPU.OpenBus;
 		}
 	}
-	else
-		switch (Address)
-		{
-			case 0x4200:
-			case 0x4201:
-			case 0x4202:
-			case 0x4203:
-			case 0x4204:
-			case 0x4205:
-			case 0x4206:
-			case 0x4207:
-			case 0x4208:
-			case 0x4209:
-			case 0x420a:
-			case 0x420b:
-			case 0x420c:
-			case 0x420d:
-			case 0x420e:
-			case 0x420f:
-				return ICPU.OpenBus;
-			case 0x4210: /* RDNMI */
-				CPU.WaitPC = CPU.PCAtOpcodeStart;
-				byte = Memory.FillRAM[0x4210];
-				Memory.FillRAM[0x4210] = Model->_5A22;
-				return (byte & 0x80) | (ICPU.OpenBus & 0x70) | Model->_5A22;
-			case 0x4211: /* TIMEUP */
-				byte = (CPU.IRQActive & (PPU_V_BEAM_IRQ_SOURCE | PPU_H_BEAM_IRQ_SOURCE)) ? 0x80 : 0;
-				ClearIRQSource(PPU_V_BEAM_IRQ_SOURCE | PPU_H_BEAM_IRQ_SOURCE);
-				return byte | (ICPU.OpenBus & 0x7f);
-			case 0x4212: /* HVBJOY */
-				CPU.WaitPC = CPU.PCAtOpcodeStart;
-				return REGISTER_4212() | (ICPU.OpenBus & 0x3e);
-			case 0x4213: /* RDIO */
-			case 0x4214: /* RDDIVL */
-			case 0x4215: /* RDDIVH */
-			case 0x4216: /* RDMPYL */
-			case 0x4217: /* RDMPYH */
-			case 0x4218: /* JOY1L */
-			case 0x4219: /* JOY1H */
-			case 0x421a: /* JOY2L */
-			case 0x421b: /* JOY2H */
-			case 0x421c: /* JOY3L */
-			case 0x421d: /* JOY3H */
-			case 0x421e: /* JOY4L */
-			case 0x421f: /* JOY4H */
+
+	if ((Address & 0xff80) == 0x4300 && CPU.InDMA)
+		return ICPU.OpenBus;
+
+	switch (Address)
+	{
+		case 0x4200:
+		case 0x4201:
+		case 0x4202:
+		case 0x4203:
+		case 0x4204:
+		case 0x4205:
+		case 0x4206:
+		case 0x4207:
+		case 0x4208:
+		case 0x4209:
+		case 0x420a:
+		case 0x420b:
+		case 0x420c:
+		case 0x420d:
+		case 0x420e:
+		case 0x420f:
+			return ICPU.OpenBus;
+		case 0x4210: /* RDNMI */
+			CPU.WaitPC = CPU.PCAtOpcodeStart;
+			byte = Memory.FillRAM[0x4210];
+			Memory.FillRAM[0x4210] = Model->_5A22;
+			return (byte & 0x80) | (ICPU.OpenBus & 0x70) | Model->_5A22;
+		case 0x4211: /* TIMEUP */
+			byte = (CPU.IRQActive & (PPU_V_BEAM_IRQ_SOURCE | PPU_H_BEAM_IRQ_SOURCE)) ? 0x80 : 0;
+			ClearIRQSource(PPU_V_BEAM_IRQ_SOURCE | PPU_H_BEAM_IRQ_SOURCE);
+			return byte | (ICPU.OpenBus & 0x7f);
+		case 0x4212: /* HVBJOY */
+			CPU.WaitPC = CPU.PCAtOpcodeStart;
+			return REGISTER_4212() | (ICPU.OpenBus & 0x3e);
+		case 0x4213: /* RDIO */
+		case 0x4214: /* RDDIVL */
+		case 0x4215: /* RDDIVH */
+		case 0x4216: /* RDMPYL */
+		case 0x4217: /* RDMPYH */
+		case 0x4218: /* JOY1L */
+		case 0x4219: /* JOY1H */
+		case 0x421a: /* JOY2L */
+		case 0x421b: /* JOY2H */
+		case 0x421c: /* JOY3L */
+		case 0x421d: /* JOY3H */
+		case 0x421e: /* JOY4L */
+		case 0x421f: /* JOY4H */
+			return Memory.FillRAM[Address];
+		case 0x4300:
+		case 0x4310:
+		case 0x4320:
+		case 0x4330:
+		case 0x4340:
+		case 0x4350:
+		case 0x4360:
+		case 0x4370:
+			d = (Address >> 4) & 0x7;
+			return  (DMA[d].ReverseTransfer ? 0x80 : 0x00) | (DMA[d].HDMAIndirectAddressing ? 0x40 : 0x00) |
+			        ((uint8_t) Memory.FillRAM [Address]) | (DMA[d].AAddressDecrement ? 0x10 : 0x00) |
+			        (DMA[d].AAddressFixed ? 0x08 : 0x00) | (DMA[d].TransferMode & 7);
+		case 0x4301:
+		case 0x4311:
+		case 0x4321:
+		case 0x4331:
+		case 0x4341:
+		case 0x4351:
+		case 0x4361:
+		case 0x4371:
+			return DMA[((Address >> 4) & 0x7)].BAddress;
+		case 0x4302:
+		case 0x4312:
+		case 0x4322:
+		case 0x4332:
+		case 0x4342:
+		case 0x4352:
+		case 0x4362:
+		case 0x4372:
+			return DMA[((Address >> 4) & 0x7)].AAddress & 0xFF;
+		case 0x4303:
+		case 0x4313:
+		case 0x4323:
+		case 0x4333:
+		case 0x4343:
+		case 0x4353:
+		case 0x4363:
+		case 0x4373:
+			return DMA[((Address >> 4) & 0x7)].AAddress >> 8;
+		case 0x4304:
+		case 0x4314:
+		case 0x4324:
+		case 0x4334:
+		case 0x4344:
+		case 0x4354:
+		case 0x4364:
+		case 0x4374:
+			return DMA[((Address >> 4) & 0x7)].ABank;
+		case 0x4305:
+		case 0x4315:
+		case 0x4325:
+		case 0x4335:
+		case 0x4345:
+		case 0x4355:
+		case 0x4365:
+		case 0x4375:
+			return DMA[((Address >> 4) & 0x7)].IndirectAddress & 0xff;
+		case 0x4306:
+		case 0x4316:
+		case 0x4326:
+		case 0x4336:
+		case 0x4346:
+		case 0x4356:
+		case 0x4366:
+		case 0x4376:
+			return DMA[((Address >> 4) & 0x7)].IndirectAddress >> 8;
+		case 0x4307:
+		case 0x4317:
+		case 0x4327:
+		case 0x4337:
+		case 0x4347:
+		case 0x4357:
+		case 0x4367:
+		case 0x4377:
+			return DMA[((Address >> 4) & 0x7)].IndirectBank;
+		case 0x4308:
+		case 0x4318:
+		case 0x4328:
+		case 0x4338:
+		case 0x4348:
+		case 0x4358:
+		case 0x4368:
+		case 0x4378:
+			return DMA[((Address >> 4) & 0x7)].Address & 0xFF;
+		case 0x4309:
+		case 0x4319:
+		case 0x4329:
+		case 0x4339:
+		case 0x4349:
+		case 0x4359:
+		case 0x4369:
+		case 0x4379:
+			return DMA[((Address >> 4) & 0x7)].Address >> 8;
+		case 0x430A:
+		case 0x431A:
+		case 0x432A:
+		case 0x433A:
+		case 0x434A:
+		case 0x435A:
+		case 0x436A:
+		case 0x437A:
+			d = (Address >> 4) & 0x7;
+			return DMA[d].LineCount ^ (DMA[d].Repeat ? 0x00 : 0x80);
+		case 0x430B:
+		case 0x431B:
+		case 0x432B:
+		case 0x433B:
+		case 0x434B:
+		case 0x435B:
+		case 0x436B:
+		case 0x437B:
+		case 0x430F:
+		case 0x431F:
+		case 0x432F:
+		case 0x433F:
+		case 0x434F:
+		case 0x435F:
+		case 0x436F:
+		case 0x437F:
+			return (uint8_t) Memory.FillRAM[Address | 0xf];
+		default:
+			if ((Settings.Chip & SPC7110) == SPC7110 && Address >= 0x4800)
+				return GetSPC7110(Address);
+
+			if (Settings.Chip == S_DD1 && Address >= 0x4800 && Address <= 0x4807)
 				return Memory.FillRAM[Address];
-			case 0x4300:
-			case 0x4310:
-			case 0x4320:
-			case 0x4330:
-			case 0x4340:
-			case 0x4350:
-			case 0x4360:
-			case 0x4370:
-				d = (Address >> 4) & 0x7;
-				return  (DMA[d].ReverseTransfer ? 0x80 : 0x00) | (DMA[d].HDMAIndirectAddressing ? 0x40 : 0x00) |
-				        ((uint8_t) Memory.FillRAM [Address]) | (DMA[d].AAddressDecrement ? 0x10 : 0x00) |
-				        (DMA[d].AAddressFixed ? 0x08 : 0x00) | (DMA[d].TransferMode & 7);
-			case 0x4301:
-			case 0x4311:
-			case 0x4321:
-			case 0x4331:
-			case 0x4341:
-			case 0x4351:
-			case 0x4361:
-			case 0x4371:
-				return DMA[((Address >> 4) & 0x7)].BAddress;
-			case 0x4302:
-			case 0x4312:
-			case 0x4322:
-			case 0x4332:
-			case 0x4342:
-			case 0x4352:
-			case 0x4362:
-			case 0x4372:
-				return DMA[((Address >> 4) & 0x7)].AAddress & 0xFF;
-			case 0x4303:
-			case 0x4313:
-			case 0x4323:
-			case 0x4333:
-			case 0x4343:
-			case 0x4353:
-			case 0x4363:
-			case 0x4373:
-				return DMA[((Address >> 4) & 0x7)].AAddress >> 8;
-			case 0x4304:
-			case 0x4314:
-			case 0x4324:
-			case 0x4334:
-			case 0x4344:
-			case 0x4354:
-			case 0x4364:
-			case 0x4374:
-				return DMA[((Address >> 4) & 0x7)].ABank;
-			case 0x4305:
-			case 0x4315:
-			case 0x4325:
-			case 0x4335:
-			case 0x4345:
-			case 0x4355:
-			case 0x4365:
-			case 0x4375:
-				return DMA[((Address >> 4) & 0x7)].IndirectAddress & 0xff;
-			case 0x4306:
-			case 0x4316:
-			case 0x4326:
-			case 0x4336:
-			case 0x4346:
-			case 0x4356:
-			case 0x4366:
-			case 0x4376:
-				return DMA[((Address >> 4) & 0x7)].IndirectAddress >> 8;
-			case 0x4307:
-			case 0x4317:
-			case 0x4327:
-			case 0x4337:
-			case 0x4347:
-			case 0x4357:
-			case 0x4367:
-			case 0x4377:
-				return DMA[((Address >> 4) & 0x7)].IndirectBank;
-			case 0x4308:
-			case 0x4318:
-			case 0x4328:
-			case 0x4338:
-			case 0x4348:
-			case 0x4358:
-			case 0x4368:
-			case 0x4378:
-				return DMA[((Address >> 4) & 0x7)].Address & 0xFF;
-			case 0x4309:
-			case 0x4319:
-			case 0x4329:
-			case 0x4339:
-			case 0x4349:
-			case 0x4359:
-			case 0x4369:
-			case 0x4379:
-				return DMA[((Address >> 4) & 0x7)].Address >> 8;
-			case 0x430A:
-			case 0x431A:
-			case 0x432A:
-			case 0x433A:
-			case 0x434A:
-			case 0x435A:
-			case 0x436A:
-			case 0x437A:
-				d = (Address >> 4) & 0x7;
-				return DMA[d].LineCount ^ (DMA[d].Repeat ? 0x00 : 0x80);
-			case 0x430B:
-			case 0x431B:
-			case 0x432B:
-			case 0x433B:
-			case 0x434B:
-			case 0x435B:
-			case 0x436B:
-			case 0x437B:
-			case 0x430F:
-			case 0x431F:
-			case 0x432F:
-			case 0x433F:
-			case 0x434F:
-			case 0x435F:
-			case 0x436F:
-			case 0x437F:
-				return (uint8_t) Memory.FillRAM[Address | 0xf];
-			default:
-				if ((Settings.Chip & SPC7110) == SPC7110 && Address >= 0x4800)
-					return GetSPC7110(Address);
 
-				if (Settings.Chip == S_DD1 && Address >= 0x4800 && Address <= 0x4807)
-					return Memory.FillRAM[Address];
-
-				return ICPU.OpenBus;
-		}
+			return ICPU.OpenBus;
+	}
 }
 
 void SoftResetPPU()

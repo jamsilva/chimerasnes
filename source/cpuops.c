@@ -1513,6 +1513,7 @@ mOP8 (0CM1,     Absolute,                         WRAP_BANK, TSB)
 mOP16(0CM0,     Absolute,                         WRAP_BANK, TSB)
 mOPM (0CSlow,   AbsoluteSlow,                     WRAP_BANK, TSB)
 
+/* Branch Instructions */
 /* BCC */
 bOPE1(90,     Relative,     1, !CheckCarry())
 bOP  (90E0,   Relative,     1, !CheckCarry(),    0)

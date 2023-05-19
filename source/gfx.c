@@ -463,6 +463,7 @@ static INLINE void SelectTileRenderer(bool normal)
 					DrawTilePtr        = DrawTile16FixedAdd1_2;
 					DrawClippedTilePtr = DrawClippedTile16FixedAdd1_2;
 				}
+
 				DrawLargePixelPtr = DrawLargePixel16Add1_2;
 				break;
 			case 0x80:
@@ -482,6 +483,7 @@ static INLINE void SelectTileRenderer(bool normal)
 					DrawTilePtr        = DrawTile16FixedSub1_2;
 					DrawClippedTilePtr = DrawClippedTile16FixedSub1_2;
 				}
+
 				DrawLargePixelPtr = DrawLargePixel16Sub1_2;
 				break;
 		}
