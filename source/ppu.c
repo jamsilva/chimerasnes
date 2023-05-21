@@ -86,6 +86,14 @@ void FixColourBrightness()
 	int32_t i;
 	IPPU.XB = mul_brightness[PPU.Brightness];
 
+	for (int i = 0; i < 64; i++)
+	{
+		if (i > IPPU.XB[0x1f])
+			brightness_cap[i] = IPPU.XB[0x1f];
+		else
+			brightness_cap[i] = i;
+	}
+
 	for (i = 0; i < 256; i++)
 	{
 		IPPU.Red[i] = IPPU.XB[PPU.CGDATA[i] & 0x1f];

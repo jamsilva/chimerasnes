@@ -214,8 +214,7 @@ else
         TARGET         := $(TARGET_NAME)_libretro_$(platform).$(EXT)
         CC              = psp-gcc$(EXE_EXT)
         AR              = psp-ar$(EXE_EXT)
-        CFLAGS         += -DPSP -G0
-        INCFLAGS       += -I$(shell psp-config --pspsdk-path)/include
+        CFLAGS         += -DPSP -G0 -I$(shell psp-config --pspsdk-path)/include
         STATIC_LINKING  = 1
     else ifeq ($(platform), dos) # DOS
         EXT             = a

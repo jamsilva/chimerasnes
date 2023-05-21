@@ -7,14 +7,6 @@
 #include <libretro.h>
 #include <retro_inline.h>
 
-/* This is used to disable the 16-bit graphics mode checks sprinkled
-   throughout the code, if the pixel format is always 16-bit. */
-#ifdef PSP
-	#define PIXEL_FORMAT BGR555
-#else
-	#define PIXEL_FORMAT RGB565
-#endif
-
 #include "pixform.h"
 
 #ifndef _WIN32

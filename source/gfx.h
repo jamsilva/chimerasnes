@@ -120,6 +120,7 @@ extern uint32_t odd_high[4][16];
 extern uint32_t odd_low[4][16];
 extern SBG      BG;
 extern uint16_t DirectColourMaps[8][256];
+extern uint8_t  brightness_cap[64];
 extern uint8_t  mul_brightness[16][32];
 
 #define SUB_SCREEN_DEPTH  0
@@ -127,20 +128,9 @@ extern uint8_t  mul_brightness[16][32];
 
 static INLINE uint16_t COLOR_ADD(uint16_t C1, uint16_t C2)
 {
-	const int32_t RED_MASK   = 0x1F << RED_SHIFT_BITS;
-	const int32_t GREEN_MASK = 0x1F << GREEN_SHIFT_BITS;
-	const int32_t BLUE_MASK  = 0x1F << BLUE_SHIFT_BITS;
-	int32_t  rb              = (C1 & (RED_MASK | BLUE_MASK)) + (C2 & (RED_MASK | BLUE_MASK));
-	int32_t  rbcarry         = rb & ((0x20 << RED_SHIFT_BITS) | (0x20 << 0));
-	int32_t  g               = (C1 & (GREEN_MASK)) + (C2 & (GREEN_MASK));
-	int32_t  rgbsaturate     = (((g & (0x20 << GREEN_SHIFT_BITS)) | rbcarry) >> 5) * 0x1f;
-	uint16_t retval          = (rb & (RED_MASK | BLUE_MASK)) | (g & GREEN_MASK) | rgbsaturate;
-
-#if GREEN_SHIFT_BITS == 6
-	return (retval & 0x0400) >> 5;
-#else
-	return  retval;
-#endif
+	return ((brightness_cap[(C1 >> RED_SHIFT_BITS) + (C2 >> RED_SHIFT_BITS) ] << RED_SHIFT_BITS) |
+	        (brightness_cap[((C1 >> GREEN_SHIFT_BITS) & 0x1f) + ((C2 >> GREEN_SHIFT_BITS) & 0x1f)] << GREEN_SHIFT_BITS) |
+	        (brightness_cap[(C1 & 0x1f) + (C2 & 0x1f)]));
 }
 
 #define COLOR_ADD1_2(C1, C2)                   \
@@ -157,17 +147,12 @@ static INLINE uint16_t COLOR_SUB(uint16_t C1, uint16_t C2)
 	int32_t g           = ((C1 & (SECOND_COLOR_MASK)) | (0x20 << GREEN_SHIFT_BITS)) - (C2 & (SECOND_COLOR_MASK));
 	int32_t rgbsaturate = (((g & (0x20 << GREEN_SHIFT_BITS)) | rbcarry) >> 5) * 0x1f;
 	uint16_t retval     = ((rb & (THIRD_COLOR_MASK | FIRST_COLOR_MASK)) | (g & SECOND_COLOR_MASK)) & rgbsaturate;
-
-#if GREEN_SHIFT_BITS == 6
 	return (retval & 0x0400) >> 5;
-#else
-	return  retval;
-#endif
 }
 
 #define COLOR_SUB1_2(C1, C2)                \
 	GFX.Zero[(((C1) | RGB_HI_BITS_MASKx2) - \
-	((C2) & RGB_REMOVE_LOW_BITS_MASK)) >> 1]
+	          ((C2) & RGB_REMOVE_LOW_BITS_MASK)) >> 1]
 
 typedef void (*NormalTileRenderer)(uint32_t Tile, int32_t Offset, uint32_t StartLine, uint32_t LineCount);
 typedef void (*ClippedTileRenderer)(uint32_t Tile, int32_t Offset, uint32_t StartPixel, uint32_t Width, uint32_t StartLine, uint32_t LineCount);
