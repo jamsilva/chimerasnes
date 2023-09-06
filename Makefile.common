@@ -1,8 +1,15 @@
-LIBRETRO_COMM_DIR := $(LIBRETRO_DIR)/libretro-common
+INCFLAGS    := -I$(ROOT_DIR) -I$(CORE_DIR) -I$(LIBRETRO_COMM_DIR)/include
+COREDEFINES  = -D__LIBRETRO__
 
-INCFLAGS := -I$(CORE_DIR) \
-				-I$(LIBRETRO_DIR) \
-				-I$(LIBRETRO_COMM_DIR)/include
+ifneq (,$(findstring msvc,$(platform)))
+	COREDEFINES += -DINLINE=_inline
+else
+	COREDEFINES += -DINLINE=inline
+endif
+
+ifneq (,$(findstring msvc200,$(platform)))
+	INCFLAGS += -I$(LIBRETRO_COMM_DIR)/include/compat/msvc
+endif
 
 SOURCES_C := \
 	$(CORE_DIR)/apu.c \
@@ -40,12 +47,14 @@ SOURCES_C := \
 	$(CORE_DIR)/srtc.c \
 	$(CORE_DIR)/tile.c \
 	$(CORE_DIR)/xband.c \
-	$(LIBRETRO_DIR)/libretro.c
+	$(ROOT_DIR)/libretro.c
 
 ifneq ($(STATIC_LINKING), 1)
 	SOURCES_C += \
+		$(LIBRETRO_COMM_DIR)/streams/memory_stream.c \
 		$(LIBRETRO_COMM_DIR)/compat/compat_posix_string.c \
 		$(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c \
+		$(LIBRETRO_COMM_DIR)/compat/compat_snprintf.c \
 		$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
 		$(LIBRETRO_COMM_DIR)/compat/fopen_utf8.c \
 		$(LIBRETRO_COMM_DIR)/encodings/encoding_utf.c \
@@ -57,5 +66,3 @@ ifneq ($(STATIC_LINKING), 1)
 		$(LIBRETRO_COMM_DIR)/time/rtime.c \
 		$(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c
 endif
-
-FLAGS += $(DEFS) $(WARNINGS) $(INCFLAGS)

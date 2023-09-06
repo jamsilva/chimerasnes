@@ -98,7 +98,7 @@ static void BSX_Map_LoROM()
 		for (i = c; i < c + 8; i++)
 			Memory.Map[i + 0x400] = Memory.Map[i + 0xC00] = &MapROM[(c << 11) % FlashSize];
 
-		for (; i < c + 16; i++)
+		for (i = c + 8; i < c + 16; i++)
 		{
 			Memory.Map[i] = Memory.Map[i + 0x800] = &MapROM[(c << 11) % FlashSize] - 0x8000;
 			Memory.BlockIsRAM[i] = Memory.BlockIsRAM[i + 0x800] = BSX.write_enable;
