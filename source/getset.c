@@ -169,13 +169,15 @@ void SetByte(uint8_t Byte, uint32_t Address)
 		if ((intptr_t) SetAddress != MAP_CPU || !CPU.InDMA)
 			CPU.Cycles += Memory.MemorySpeed[block];
 
+		SetAddress += Address & 0xffff;
+
 		if ((Settings.Chip == SA_1) && (SetAddress == SA1.WaitByteAddress1 || SetAddress == SA1.WaitByteAddress2))
 		{
 			SA1.Executing = (SA1.Opcodes != NULL);
 			SA1.WaitCounter = 0;
 		}
 
-		SetAddress[Address & 0xffff] = Byte;
+		*SetAddress = Byte;
 		return;
 	}
 
@@ -282,13 +284,15 @@ void SetWord(uint16_t Word, uint32_t Address, wrap_t w, writeorder_t o)
 		if ((intptr_t) SetAddress != MAP_CPU || !CPU.InDMA)
 			CPU.Cycles += Memory.MemorySpeed[block] << 1;
 
+		SetAddress += Address & 0xffff;
+
 		if ((Settings.Chip == SA_1) && (SetAddress == SA1.WaitByteAddress1 || SetAddress == SA1.WaitByteAddress2))
 		{
 			SA1.Executing = (SA1.Opcodes != NULL);
 			SA1.WaitCounter = 0;
 		}
 
-		WRITE_WORD(&SetAddress[Address & 0xffff], Word);
+		WRITE_WORD(SetAddress, Word);
 		return;
 	}
 
