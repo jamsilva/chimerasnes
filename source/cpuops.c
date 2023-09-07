@@ -102,7 +102,7 @@
 	}
 
 #define rOPM(OP, ADDR, WRAP, FUNC) \
-	rOPC(OP, Memory, ADDR, WRAP, FUNC)
+	rOPC(OP, Mem, ADDR, WRAP, FUNC)
 
 #define rOPX(OP, ADDR, WRAP, FUNC) \
 	rOPC(OP, Index, ADDR, WRAP, FUNC)
@@ -120,7 +120,7 @@
 	wmOPC(OP, COND, ADDR, WRAP, FUNC, WRITE)
 
 #define wOPM(OP, ADDR, WRAP, FUNC) \
-	wOPC(OP, Memory, ADDR, WRAP, FUNC)
+	wOPC(OP, Mem, ADDR, WRAP, FUNC)
 
 #define wOPX(OP, ADDR, WRAP, FUNC) \
 	wOPC(OP, Index, ADDR, WRAP, FUNC)
@@ -138,7 +138,7 @@
 	wmOPC(OP, COND, ADDR, WRAP, FUNC, MODIFY)
 
 #define mOPM(OP, ADDR, WRAP, FUNC) \
-	mOPC(OP, Memory, ADDR, WRAP, FUNC)
+	mOPC(OP, Mem, ADDR, WRAP, FUNC)
 
 #define bOP(OP, REL, BRACHK, COND, E) \
 	static void Op##OP()              \
@@ -212,7 +212,7 @@ static void Op69M0()
 
 static void Op69Slow()
 {
-	if (CheckMemory())
+	if (CheckMem())
 		ADC8(Immediate8Slow(READ));
 	else
 		ADC16(Immediate16Slow(READ));
@@ -299,7 +299,7 @@ static void Op29M0()
 
 static void Op29Slow()
 {
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		ICPU.Registers.AL &= Immediate8Slow(READ);
 		SetZN8(ICPU.Registers.AL);
@@ -398,7 +398,7 @@ static void Op0ASlow()
 {
 	AddCycles(Settings.OneCycle);
 
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		ICPU.Carry = (ICPU.Registers.AL & 0x80) != 0;
 		ICPU.Registers.AL <<= 1;
@@ -444,7 +444,7 @@ static void Op89M0()
 
 static void Op89Slow()
 {
-	if (CheckMemory())
+	if (CheckMem())
 		ICPU.Zero = ICPU.Registers.AL & Immediate8Slow(READ);
 	else
 		ICPU.Zero = (ICPU.Registers.A.W & Immediate16Slow(READ)) != 0;
@@ -486,7 +486,7 @@ static void OpC9M0()
 
 static void OpC9Slow()
 {
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		int16_t Int16 = (int16_t) ICPU.Registers.AL - (int16_t) Immediate8Slow(READ);
 		ICPU.Carry = (Int16 >= 0);
@@ -666,7 +666,7 @@ static void Op3ASlow()
 	AddCycles(Settings.OneCycle);
 	CPU.WaitPC = 0;
 
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		ICPU.Registers.AL--;
 		SetZN8(ICPU.Registers.AL);
@@ -712,7 +712,7 @@ static void Op49M0()
 
 static void Op49Slow()
 {
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		ICPU.Registers.AL ^= Immediate8Slow(READ);
 		SetZN8(ICPU.Registers.AL);
@@ -812,7 +812,7 @@ static void Op1ASlow()
 	AddCycles(Settings.OneCycle);
 	CPU.WaitPC = 0;
 
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		ICPU.Registers.AL++;
 		SetZN8(ICPU.Registers.AL);
@@ -858,7 +858,7 @@ static void OpA9M0()
 
 static void OpA9Slow()
 {
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		ICPU.Registers.AL = Immediate8Slow(READ);
 		SetZN8(ICPU.Registers.AL);
@@ -1045,7 +1045,7 @@ static void Op4ASlow()
 {
 	AddCycles(Settings.OneCycle);
 
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		ICPU.Carry = ICPU.Registers.AL & 1;
 		ICPU.Registers.AL >>= 1;
@@ -1093,7 +1093,7 @@ static void Op09M0()
 
 static void Op09Slow()
 {
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		ICPU.Registers.AL |= Immediate8Slow(READ);
 		SetZN8(ICPU.Registers.AL);
@@ -1196,7 +1196,7 @@ static void Op2ASlow()
 {
 	AddCycles(Settings.OneCycle);
 
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		uint16_t w = (((uint16_t) ICPU.Registers.AL) << 1) | CheckCarry();
 		ICPU.Carry = w >= 0x100;
@@ -1258,7 +1258,7 @@ static void Op6ASlow()
 {
 	AddCycles(Settings.OneCycle);
 
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		uint16_t w = ((uint16_t) ICPU.Registers.AL) | (((uint16_t) CheckCarry()) << 8);
 		ICPU.Carry = w & 1;
@@ -1308,7 +1308,7 @@ static void OpE9M0()
 
 static void OpE9Slow()
 {
-	if (CheckMemory())
+	if (CheckMem())
 		SBC8(Immediate8Slow(READ));
 	else
 		SBC16(Immediate16Slow(READ));
@@ -1900,7 +1900,7 @@ static void Op48Slow()
 
 	if (CheckEmulation())
 		PushBE(ICPU.Registers.AL);
-	else if (CheckMemory())
+	else if (CheckMem())
 		PushB(ICPU.Registers.AL);
 	else
 		PushW(ICPU.Registers.A.W);
@@ -2170,7 +2170,7 @@ static void Op68Slow()
 		SetZN8(ICPU.Registers.AL);
 		ICPU.OpenBus = ICPU.Registers.AL;
 	}
-	else if (CheckMemory())
+	else if (CheckMem())
 	{
 		PullB(ICPU.Registers.AL);
 		SetZN8(ICPU.Registers.AL);
@@ -2555,7 +2555,7 @@ static void Op8ASlow()
 {
 	AddCycles(Settings.OneCycle);
 
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		ICPU.Registers.AL = ICPU.Registers.XL;
 		SetZN8(ICPU.Registers.AL);
@@ -2626,7 +2626,7 @@ static void Op98Slow()
 {
 	AddCycles(Settings.OneCycle);
 
-	if (CheckMemory())
+	if (CheckMem())
 	{
 		ICPU.Registers.AL = ICPU.Registers.YL;
 		SetZN8(ICPU.Registers.AL);

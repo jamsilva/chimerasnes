@@ -43,7 +43,7 @@ enum
 
 enum
 {
-	MAX_ROM_SIZE = 0x800000
+	MAX_ROM_SIZE = 0xC00000
 };
 
 enum
@@ -68,11 +68,8 @@ typedef enum
 
 typedef struct
 {
-	bool     LoROM         : 1;
-	int8_t   _CMemory_PAD1 : 7;
-	int8_t   _CMemory_PAD2 : 8;
-	int8_t   _CMemory_PAD3 : 8;
-	int8_t   _CMemory_PAD4 : 8;
+	bool     LoROM        : 1;
+	int8_t   _CMemory_PAD : 7;
 	char     ROMId[5];
 	char     ROMName[ROM_NAME_LEN];
 	uint8_t  ExtendedFormat;
@@ -84,25 +81,26 @@ typedef struct
 	uint8_t  MemorySpeed[MEMMAP_NUM_BLOCKS];
 	uint8_t  BlockIsRAM[MEMMAP_NUM_BLOCKS];
 	uint8_t  BlockIsROM[MEMMAP_NUM_BLOCKS];
+	uint8_t  RAM[0x20000];
+	uint8_t  SRAM[0x20000];
+	uint8_t  VRAM[0x10000];
+	uint8_t  FillRAM[MAX_ROM_SIZE + 0x200 + 0x8000];
 	uint16_t CompanyId;
 	int32_t  HeaderCount;
 	uint32_t CalculatedSize;
 	uint32_t SRAMMask;
 	uint8_t* BWRAM;
 	uint8_t* CX4RAM;
-	uint8_t* FillRAM;
 	uint8_t* OBC1RAM;
 	uint8_t* PSRAM;
 	uint8_t* BIOSROM;
-	uint8_t* RAM;
 	uint8_t* ROM;
-	uint8_t* SRAM;
-	uint8_t* VRAM;
 	uint8_t* Map[MEMMAP_NUM_BLOCKS];
 	uint8_t* WriteMap[MEMMAP_NUM_BLOCKS];
 } CMemory;
 
-extern CMemory Memory;
+extern CMemory* MemoryPtr;
+#define Memory (*MemoryPtr)
 
 bool     LoadROM(const struct retro_game_info* game, char* info_buf);
 void     InitROM();

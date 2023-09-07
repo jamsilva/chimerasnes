@@ -70,7 +70,7 @@ static INLINE void FixCycles()
 		ICPU.Opcodes = OpcodesE1;
 		ICPU.OpLengths = OpLengthsM1X1;
 	}
-	else if (CheckMemory())
+	else if (CheckMem())
 	{
 		if (CheckIndex())
 		{

@@ -249,15 +249,12 @@ static char* Safe(const char* s)
 
 bool InitMemory()
 {
-	Memory.RAM   = (uint8_t*) calloc(0x20000, sizeof(uint8_t));
-	Memory.SRAM  = (uint8_t*) calloc(0x20000, sizeof(uint8_t));
-	Memory.VRAM  = (uint8_t*) calloc(0x10000, sizeof(uint8_t));
-	Memory.ROM   = (uint8_t*) malloc((MAX_ROM_SIZE + 0x200 + 0x8000) * sizeof(uint8_t)); /* Don't bother initializing ROM, we will load a game anyway. */
-	Memory.FillRAM = Memory.ROM;                                                         /* FillRAM uses first 32K of ROM image area, otherwise space just wasted. Might be read by the SuperFX code. */
-	Memory.CX4RAM  = &Memory.FillRAM[0x400000 + 8192 * 8];                               /* CX4 */
-	Memory.OBC1RAM = &Memory.FillRAM[0x6000];                                            /* OBC1 */
-	Memory.BIOSROM = &Memory.FillRAM[0x300000];                                          /* BS-X */
-	Memory.PSRAM   = &Memory.FillRAM[0x400000];                                          /* BS-X */
+	MemoryPtr      = (CMemory*) calloc(sizeof(CMemory), 1);
+	Memory.ROM     = &Memory.FillRAM[0x8000];
+	Memory.CX4RAM  = &Memory.ROM[0x400000 + 8192 * 8]; /* CX4 */
+	Memory.OBC1RAM = &Memory.ROM[0x6000];              /* OBC1 */
+	Memory.BIOSROM = &Memory.ROM[0x300000];            /* BS-X */
+	Memory.PSRAM   = &Memory.ROM[0x400000];            /* BS-X */
 	IPPU.TileCache[TILE_2BIT]  = (uint8_t*) calloc(MAX_2BIT_TILES, 128);
 	IPPU.TileCache[TILE_4BIT]  = (uint8_t*) calloc(MAX_4BIT_TILES, 128);
 	IPPU.TileCache[TILE_8BIT]  = (uint8_t*) calloc(MAX_8BIT_TILES, 128);
@@ -265,10 +262,7 @@ bool InitMemory()
 	IPPU.TileCached[TILE_4BIT] = (uint8_t*) calloc(MAX_4BIT_TILES, 1);
 	IPPU.TileCached[TILE_8BIT] = (uint8_t*) calloc(MAX_8BIT_TILES, 1);
 
-	if (Memory.ROM) /* Add 0x8000 to ROM image pointer to stop SuperFX code accessing unallocated memory (can cause crash on some ports). */
-		Memory.ROM += 0x8000;
-
-	if (!Memory.RAM || !Memory.SRAM || !Memory.VRAM || !Memory.ROM || !Memory.PSRAM || !IPPU.TileCache[TILE_2BIT] || !IPPU.TileCache[TILE_4BIT] || !IPPU.TileCache[TILE_8BIT] || !IPPU.TileCached[TILE_2BIT] || !IPPU.TileCached[TILE_4BIT] || !IPPU.TileCached[TILE_8BIT])
+	if (!MemoryPtr || !IPPU.TileCache[TILE_2BIT] || !IPPU.TileCache[TILE_4BIT] || !IPPU.TileCache[TILE_8BIT] || !IPPU.TileCached[TILE_2BIT] || !IPPU.TileCached[TILE_4BIT] || !IPPU.TileCached[TILE_8BIT])
 	{
 		DeinitMemory();
 		return false;
@@ -284,14 +278,8 @@ bool InitMemory()
 
 void DeinitMemory()
 {
-	if (Memory.ROM)
-		Memory.ROM -= 0x8000;
-
-	free(Memory.RAM);
-	free(Memory.SRAM);
-	free(Memory.VRAM);
-	free(Memory.ROM);
-	Memory.RAM = Memory.SRAM = Memory.VRAM = Memory.ROM = Memory.PSRAM = NULL;
+	free(MemoryPtr);
+	MemoryPtr = NULL;
 
 	for (int32_t t = 0; t < 2; t++)
 	{
@@ -691,7 +679,7 @@ static char* CartType(char* buf)
 		[ST_011]     = "+ST-011",
 		[ST_018]     = "+ST-018",
 		[SFT]        = "+SuFami Turbo",
-		[XBAND]      = "+XBⱯND Firmware",
+		[XBAND]      = "+XBAND Firmware",
 		[BS]         = "+Satellaview",
 		[BSFW]       = "+Satellaview Firmware",
 		[S_RTC]      = "+S-RTC",
@@ -789,8 +777,17 @@ bool LoadROM(const struct retro_game_info* game, char* info_buf)
 	Memory.CalculatedSize = TotalFileSize & ~0x1FFF; /* round down to lower 0x2000 */
 	memset(&Memory.ROM[Memory.CalculatedSize], 0, MAX_ROM_SIZE - Memory.CalculatedSize);
 
-	if (Memory.CalculatedSize > 0x400000 && !(Memory.ROM[0x7fd5] == 0x32 && ((Memory.ROM[0x7fd6] & 0xf0) == 0x40)) && /* exclude S-DD1 */
-	   !(Memory.ROM[0xFFD5] == 0x3A && ((Memory.ROM[0xFFD6] & 0xF0) == 0xF0))) /* exclude SPC7110 */
+	if (Memory.CalculatedSize > 0x400000 &&
+	   (Memory.ROM[0x7fd5] + (Memory.ROM[0x7fd6] << 8)) != 0x1320 && /* exclude SuperFX */
+	   (Memory.ROM[0x7fd5] + (Memory.ROM[0x7fd6] << 8)) != 0x1420 &&
+	   (Memory.ROM[0x7fd5] + (Memory.ROM[0x7fd6] << 8)) != 0x1520 &&
+	   (Memory.ROM[0x7fd5] + (Memory.ROM[0x7fd6] << 8)) != 0x1A20 &&
+	   (Memory.ROM[0x7fd5] + (Memory.ROM[0x7fd6] << 8)) != 0x3423 && /* exclude SA-1 */
+	   (Memory.ROM[0x7fd5] + (Memory.ROM[0x7fd6] << 8)) != 0x3523 &&
+	   (Memory.ROM[0x7fd5] + (Memory.ROM[0x7fd6] << 8)) != 0x4332 && /* exclude S-DD1 */
+	   (Memory.ROM[0x7fd5] + (Memory.ROM[0x7fd6] << 8)) != 0x4532 &&
+	   (Memory.ROM[0xffd5] + (Memory.ROM[0xffd6] << 8)) != 0xF93A && /* exclude SPC7110 */
+	   (Memory.ROM[0xffd5] + (Memory.ROM[0xffd6] << 8)) != 0xF53A)
 		Memory.ExtendedFormat = YEAH; /* you might be a Jumbo! */
 
 	if (Memory.ExtendedFormat != NOPE)
@@ -1531,22 +1528,51 @@ void Map_SuperFXLoROMMap()
 {
 	map_System();
 
-	/* Replicate the first 2Mb of the ROM at ROM + 2MB such that each 32K
+	/* Replicate the first 2Mb of the ROM at ROM + 8MB such that each 32K
 	 * block is repeated twice in each 64K block. */
 	for (int c = 0; c < 64; c++)
 	{
-		memmove(&Memory.ROM[0x200000 + c * 0x10000], &Memory.ROM[c * 0x8000], 0x8000);
-		memmove(&Memory.ROM[0x208000 + c * 0x10000], &Memory.ROM[c * 0x8000], 0x8000);
+		memmove(&Memory.ROM[0x800000 + c * 0x10000], &Memory.ROM[c * 0x8000], 0x8000);
+		memmove(&Memory.ROM[0x808000 + c * 0x10000], &Memory.ROM[c * 0x8000], 0x8000);
 	}
 
-	map_lorom(0x00, 0x3f, 0x8000, 0xffff, Memory.CalculatedSize);
-	map_lorom(0x80, 0xbf, 0x8000, 0xffff, Memory.CalculatedSize);
-	map_hirom_offset(0x40, 0x7f, 0x0000, 0xffff, Memory.CalculatedSize, 0);
-	map_hirom_offset(0xc0, 0xff, 0x0000, 0xffff, Memory.CalculatedSize, 0);
-	map_space(0x00, 0x3f, 0x6000, 0x7fff, Memory.SRAM - 0x6000);
-	map_space(0x80, 0xbf, 0x6000, 0x7fff, Memory.SRAM - 0x6000);
-	map_space(0x70, 0x70, 0x0000, 0xffff, Memory.SRAM);
-	map_space(0x71, 0x71, 0x0000, 0xffff, Memory.SRAM + 0x10000);
+	/* Check GSU revision (not 100% accurate but it works) */
+	if (Memory.CalculatedSize > 0x400000) /* GSU2 */
+	{
+		map_lorom(0x00, 0x3f, 0x8000, 0xffff, 0x200000);
+		map_lorom_offset(0x80, 0xbf, 0x8000, 0xffff, 0x200000, 0x200000);
+		map_hirom_offset(0x40, 0x5f, 0x0000, 0xffff, 0x200000, 0);
+		map_hirom_offset(0xc0, 0xff, 0x0000, 0xffff, Memory.CalculatedSize - 0x400000, 0x400000);
+		map_space(0x00, 0x3f, 0x6000, 0x7fff, Memory.SRAM - 0x6000);
+		map_space(0x80, 0xbf, 0x6000, 0x7fff, Memory.SRAM - 0x6000);
+		map_space(0x70, 0x70, 0x0000, 0xffff, Memory.SRAM);
+		map_space(0x71, 0x71, 0x0000, 0xffff, Memory.SRAM + 0x10000);
+	}
+	else if (Memory.CalculatedSize > 0x200000) /* GSU2 */
+	{
+		map_lorom(0x00, 0x3f, 0x8000, 0xffff, 0x200000);
+		map_lorom_offset(0x80, 0xbf, 0x8000, 0xffff, Memory.CalculatedSize - 0x200000, 0x200000);
+		map_hirom_offset(0x40, 0x5f, 0x0000, 0xffff, 0x200000, 0);
+		map_hirom_offset(0xc0, 0xff, 0x0000, 0xffff, Memory.CalculatedSize - 0x200000, 0x200000);
+		map_space(0x00, 0x3f, 0x6000, 0x7fff, Memory.SRAM - 0x6000);
+		map_space(0x80, 0xbf, 0x6000, 0x7fff, Memory.SRAM - 0x6000);
+		map_space(0x70, 0x70, 0x0000, 0xffff, Memory.SRAM);
+		map_space(0x71, 0x71, 0x0000, 0xffff, Memory.SRAM + 0x10000);
+	}
+	else /* GSU1 */
+	{
+		map_lorom(0x00, 0x3f, 0x8000, 0xffff, Memory.CalculatedSize);
+		map_lorom(0x80, 0xbf, 0x8000, 0xffff, Memory.CalculatedSize);
+		map_hirom_offset(0x40, 0x5f, 0x0000, 0xffff, Memory.CalculatedSize, 0);
+		map_hirom_offset(0xc0, 0xdf, 0x0000, 0xffff, Memory.CalculatedSize, 0);
+		map_space(0x00, 0x3f, 0x6000, 0x7fff, Memory.SRAM - 0x6000);
+		map_space(0x80, 0xbf, 0x6000, 0x7fff, Memory.SRAM - 0x6000);
+		map_space(0x70, 0x70, 0x0000, 0xffff, Memory.SRAM);
+		map_space(0x71, 0x71, 0x0000, 0xffff, Memory.SRAM + 0x10000);
+		map_space(0xf0, 0xf0, 0x0000, 0xffff, Memory.SRAM);
+		map_space(0xf1, 0xf1, 0x0000, 0xffff, Memory.SRAM + 0x10000);
+	}
+
 	map_WRAM();
 	map_WriteProtectROM();
 }

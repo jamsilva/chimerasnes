@@ -23,13 +23,6 @@
 #define SNES_MAX_VCOUNTER      (Settings.PAL ? SNES_MAX_PAL_VCOUNTER : SNES_MAX_NTSC_VCOUNTER)
 #define SNES_MAX_HCOUNTER      341 /* 0-340 */
 
-#define SPC700_TO_65C816_RATIO 2
-#define AUTO_FRAMERATE         200
-
-#define DEFAULT_ONE_CYCLE      6u
-#define DEFAULT_SLOW_ONE_CYCLE 8u
-#define DEFAULT_TWO_CYCLES     12u
-
 /* NTSC master clock signal 21.47727MHz
  * PPU: master clock / 4
  * 1 / PPU clock * 342 -> 63.695us
@@ -41,10 +34,10 @@
  * PPU: master clock / 4
  * 1 / PPU clock * 342 -> 64.281us
  * 64.281us / (1 / 3.546895MHz) -> 228 cycles per scanline.  */
-#define SNES_SCANLINE_TIME       (63.695e-6)
-#define SNES_CLOCK_SPEED         (3579545u)
-#define SNES_CLOCK_LEN           (1.0 / SNES_CLOCK_SPEED)
-#define SNES_CYCLES_PER_SCANLINE ((uint32_t)((SNES_SCANLINE_TIME / SNES_CLOCK_LEN) * 6 + 0.5))
+#define	NTSC_MASTER_CLOCK        21477272.727272 /* 21477272 + 8/11 exact */
+#define	ONE_DOT_CYCLE            4
+#define SNES_CYCLES_PER_SCANLINE (SNES_MAX_HCOUNTER * ONE_DOT_CYCLE)
+#define SNES_SCANLINE_TIME       (SNES_CYCLES_PER_SCANLINE / NTSC_MASTER_CLOCK)
 
 /* NTSC/PAL Differences, It referred to nesdev.
    Consoles in the USA and Europe run at different speeds due to the different television standards used.
@@ -175,7 +168,7 @@ typedef struct
 	bool     APUEnabled           : 1;
 	bool     PAL                  : 1;
 	bool     Shutdown             : 1;
-	bool     OverclockCycles      : 1;
+	bool     _SSettings_PAD1      : 1;
 	bool     ReduceSpriteFlicker  : 1;
 	bool     StarfoxHack          : 1;
 	bool     WinterGold           : 1;

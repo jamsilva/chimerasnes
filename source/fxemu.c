@@ -300,7 +300,7 @@ void FxReset(FXInfo_s* psFXInfo) /* Reset the FxChip */
 		else
 		{
 			b %= FXRegs.nRomBanks * 2;
-			FXRegs.apvRomBank[i] = &FXRegs.pvRom[(b << 16) + 0x200000];
+			FXRegs.apvRomBank[i] = &FXRegs.pvRom[(b << 16) + 0x800000];
 		}
 	}
 

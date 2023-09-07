@@ -47,7 +47,7 @@ enum
 #define CheckIndex()     (ICPU.Registers.PL &   INDEX_FLAG)
 #define SetIndex()       (ICPU.Registers.PL |=  INDEX_FLAG)
 #define ClearIndex()     (ICPU.Registers.PL &= ~INDEX_FLAG)
-#define CheckMemory()    (ICPU.Registers.PL &   MEMORY_FLAG)
+#define CheckMem()       (ICPU.Registers.PL &   MEMORY_FLAG)
 #define SetMemory()      (ICPU.Registers.PL |=  MEMORY_FLAG)
 #define ClearMemory()    (ICPU.Registers.PL &= ~MEMORY_FLAG)
 #define CheckOverflow()  (ICPU.Overflow)

@@ -56,7 +56,7 @@ typedef struct
 
 #define SA1CheckIRQ()       (SA1.Registers.PL  & IRQ)
 #define SA1CheckIndex()     (SA1.Registers.PL  & INDEX_FLAG)
-#define SA1CheckMemory()    (SA1.Registers.PL  & MEMORY_FLAG)
+#define SA1CheckMem()       (SA1.Registers.PL  & MEMORY_FLAG)
 #define SA1CheckEmulation() (SA1.Registers.P.W & EMULATION)
 #define SA1SetFlags(f)      (SA1.Registers.P.W |=  (f))
 #define SA1ClearFlags(f)    (SA1.Registers.P.W &= ~(f))
@@ -107,7 +107,7 @@ static INLINE void SA1FixCycles()
 		SA1.Opcodes = SA1OpcodesM1X1;
 		SA1.OpLengths = OpLengthsM1X1;
 	}
-	else if (SA1CheckMemory())
+	else if (SA1CheckMem())
 	{
 		if (SA1CheckIndex())
 		{

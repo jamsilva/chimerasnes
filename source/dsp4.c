@@ -1005,7 +1005,7 @@ terminate:
 
 static void DSP4_OP0A(int16_t n2, int16_t* o1, int16_t* o2, int16_t* o3, int16_t* o4)
 {
-	const uint16_t OP0A_Values[16] =
+	static const uint16_t OP0A_Values[16] =
 	{
 		0x0000, 0x0030, 0x0060, 0x0090, 0x00c0, 0x00f0, 0x0120, 0x0150,
 		0xfe80, 0xfeb0, 0xfee0, 0xff10, 0xff40, 0xff70, 0xffa0, 0xffd0

@@ -336,7 +336,7 @@ static int16_t DSP1_Truncate(int16_t C, int16_t E)
 
 static void DSP1_Parameter(int16_t Fx, int16_t Fy, int16_t Fz, int16_t Lfe, int16_t Les, int16_t Aas, int16_t Azs, int16_t* Vof, int16_t* Vva, int16_t* Cx, int16_t* Cy)
 {
-	const int16_t MaxAZS_Exp[16] =
+	static const int16_t MaxAZS_Exp[16] =
 	{
 		0x38b4, 0x38b7, 0x38ba, 0x38be, 0x38c0, 0x38c4, 0x38c7, 0x38ca,
 		0x38ce, 0x38d0, 0x38d4, 0x38d7, 0x38da, 0x38dd, 0x38e0, 0x38e4
@@ -809,372 +809,317 @@ void DSP1SetByte(uint8_t byte, uint16_t address)
 				DSP1.out_count = 2048;
 				break;
 			case 0x00: /* Multiple */
-				DSP1.Op00Multiplicand = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op00Multiplier = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
+				DSP1.Op00Multiplicand = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op00Multiplier   = (int16_t) READ_WORD(&DSP1.parameters[2]);
 				DSP1.Op00Result = DSP1.Op00Multiplicand * DSP1.Op00Multiplier >> 15;
 				DSP1.out_count = 2;
-				DSP1.output[0] = DSP1.Op00Result & 0xFF;
-				DSP1.output[1] = (DSP1.Op00Result >> 8) & 0xFF;
+				WRITE_WORD(&DSP1.output[0], DSP1.Op00Result);
 				break;
 			case 0x20: /* Multiple */
-				DSP1.Op20Multiplicand = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op20Multiplier = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
+				DSP1.Op20Multiplicand = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op20Multiplier   = (int16_t) READ_WORD(&DSP1.parameters[2]);
 				DSP1.Op20Result = DSP1.Op20Multiplicand * DSP1.Op20Multiplier >> 15;
 				DSP1.Op20Result++;
 				DSP1.out_count = 2;
-				DSP1.output[0] = DSP1.Op20Result & 0xFF;
-				DSP1.output[1] = (DSP1.Op20Result >> 8) & 0xFF;
+				WRITE_WORD(&DSP1.output[0], DSP1.Op20Result);
 				break;
 			case 0x10:
 			case 0x30: /* Inverse */
-				DSP1.Op10Coefficient = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op10Exponent = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
+				DSP1.Op10Coefficient = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op10Exponent    = (int16_t) READ_WORD(&DSP1.parameters[2]);
 				DSP1_Inverse(DSP1.Op10Coefficient, DSP1.Op10Exponent, &DSP1.Op10CoefficientR, &DSP1.Op10ExponentR);
 				DSP1.out_count = 4;
-				DSP1.output[0] = (uint8_t) (((int16_t) DSP1.Op10CoefficientR) & 0xFF);
-				DSP1.output[1] = (uint8_t) ((((int16_t) DSP1.Op10CoefficientR) >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (((int16_t) DSP1.Op10ExponentR) & 0xFF);
-				DSP1.output[3] = (uint8_t) ((((int16_t) DSP1.Op10ExponentR) >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op10CoefficientR);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op10ExponentR);
 				break;
 			case 0x04:
 			case 0x24: /* Sin and Cos of angle */
-				DSP1.Op04Angle = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op04Radius = (uint16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
+				DSP1.Op04Angle  = (int16_t)  READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op04Radius = (uint16_t) READ_WORD(&DSP1.parameters[2]);
 				DSP1.Op04Sin = math_sin(DSP1.Op04Angle) * DSP1.Op04Radius >> 15;
 				DSP1.Op04Cos = math_cos(DSP1.Op04Angle) * DSP1.Op04Radius >> 15;
 				DSP1.out_count = 4;
-				DSP1.output[0] = (uint8_t) (DSP1.Op04Sin & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op04Sin >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op04Cos & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op04Cos >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op04Sin);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op04Cos);
 				break;
 			case 0x08: /* Radius */
 			{
 				int32_t op08Size;
-				DSP1.Op08X = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op08Y = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op08Z = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op08X = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op08Y = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op08Z = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				op08Size = (DSP1.Op08X * DSP1.Op08X + DSP1.Op08Y * DSP1.Op08Y + DSP1.Op08Z * DSP1.Op08Z) << 1;
 				DSP1.Op08Ll = op08Size & 0xffff;
 				DSP1.Op08Lh = (op08Size >> 16) & 0xffff;
 				DSP1.out_count = 4;
-				DSP1.output[0] = (uint8_t) (((int16_t) DSP1.Op08Ll) & 0xFF);
-				DSP1.output[1] = (uint8_t) ((((int16_t) DSP1.Op08Ll) >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (((int16_t) DSP1.Op08Lh) & 0xFF);
-				DSP1.output[3] = (uint8_t) ((((int16_t) DSP1.Op08Lh) >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op08Ll);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op08Lh);
 				break;
 			}
 			case 0x18: /* Range */
-				DSP1.Op18X = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op18Y = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op18Z = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
-				DSP1.Op18R = (int16_t) (DSP1.parameters[6] | (DSP1.parameters[7] << 8));
+				DSP1.Op18X = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op18Y = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op18Z = (int16_t) READ_WORD(&DSP1.parameters[4]);
+				DSP1.Op18R = (int16_t) READ_WORD(&DSP1.parameters[6]);
 				DSP1.Op18D = (DSP1.Op18X * DSP1.Op18X + DSP1.Op18Y * DSP1.Op18Y + DSP1.Op18Z * DSP1.Op18Z - DSP1.Op18R * DSP1.Op18R) >> 15;
 				DSP1.out_count = 2;
-				DSP1.output[0] = (uint8_t) (DSP1.Op18D & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op18D >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op18D);
 				break;
 			case 0x38: /* Range */
-				DSP1.Op38X = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op38Y = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op38Z = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
-				DSP1.Op38R = (int16_t) (DSP1.parameters[6] | (DSP1.parameters[7] << 8));
+				DSP1.Op38X = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op38Y = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op38Z = (int16_t) READ_WORD(&DSP1.parameters[4]);
+				DSP1.Op38R = (int16_t) READ_WORD(&DSP1.parameters[6]);
 				DSP1.Op38D = (DSP1.Op38X * DSP1.Op38X + DSP1.Op38Y * DSP1.Op38Y + DSP1.Op38Z * DSP1.Op38Z - DSP1.Op38R * DSP1.Op38R) >> 15;
 				DSP1.Op38D++;
 				DSP1.out_count = 2;
-				DSP1.output[0] = (uint8_t) (DSP1.Op38D & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op38D >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op38D);
 				break;
 			case 0x28: /* Distance (vector length) */
-				DSP1.Op28X = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op28Y = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op28Z = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op28X = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op28Y = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op28Z = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1_Op28();
 				DSP1.out_count = 2;
-				DSP1.output[0] = (uint8_t) (DSP1.Op28R & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op28R >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op28R);
 				break;
 			case 0x0c:
 			case 0x2c: /* Rotate (2D rotate) */
-				DSP1.Op0CA = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op0CX1 = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op0CY1 = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op0CA  = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op0CX1 = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op0CY1 = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1.Op0CX2 = (DSP1.Op0CY1 * math_sin(DSP1.Op0CA) >> 15) + (DSP1.Op0CX1 * math_cos(DSP1.Op0CA) >> 15);
 				DSP1.Op0CY2 = (DSP1.Op0CY1 * math_cos(DSP1.Op0CA) >> 15) - (DSP1.Op0CX1 * math_sin(DSP1.Op0CA) >> 15);
 				DSP1.out_count = 4;
-				DSP1.output[0] = (uint8_t) (DSP1.Op0CX2 & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op0CX2 >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op0CY2 & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op0CY2 >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op0CX2);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op0CY2);
 				break;
 			case 0x1c:
 			case 0x3c: /* Polar (3D rotate) */
-				DSP1.Op1CZ = (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op1CY = (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op1CX = (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
-				DSP1.Op1CXBR = (DSP1.parameters[6] | (DSP1.parameters[7] << 8));
-				DSP1.Op1CYBR = (DSP1.parameters[8] | (DSP1.parameters[9] << 8));
-				DSP1.Op1CZBR = (DSP1.parameters[10] | (DSP1.parameters[11] << 8));
+				DSP1.Op1CZ   = READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op1CY   = READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op1CX   = READ_WORD(&DSP1.parameters[4]);
+				DSP1.Op1CXBR = READ_WORD(&DSP1.parameters[6]);
+				DSP1.Op1CYBR = READ_WORD(&DSP1.parameters[8]);
+				DSP1.Op1CZBR = READ_WORD(&DSP1.parameters[10]);
 				DSP1_Op1C();
 				DSP1.out_count = 6;
-				DSP1.output[0] = (uint8_t) (DSP1.Op1CXAR & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op1CXAR >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op1CYAR & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op1CYAR >> 8) & 0xFF);
-				DSP1.output[4] = (uint8_t) (DSP1.Op1CZAR & 0xFF);
-				DSP1.output[5] = (uint8_t) ((DSP1.Op1CZAR >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op1CXAR);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op1CYAR);
+				WRITE_WORD(&DSP1.output[4], DSP1.Op1CZAR);
 				break;
 			case 0x02:
 			case 0x12:
 			case 0x22:
 			case 0x32: /* Parameter (Projection) */
-				DSP1.Op02FX = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op02FY = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op02FZ = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
-				DSP1.Op02LFE = (int16_t) (DSP1.parameters[6] | (DSP1.parameters[7] << 8));
-				DSP1.Op02LES = (int16_t) (DSP1.parameters[8] | (DSP1.parameters[9] << 8));
-				DSP1.Op02AAS = (uint16_t) (DSP1.parameters[10] | (DSP1.parameters[11] << 8));
-				DSP1.Op02AZS = (uint16_t) (DSP1.parameters[12] | (DSP1.parameters[13] << 8));
+				DSP1.Op02FX  = (int16_t)  READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op02FY  = (int16_t)  READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op02FZ  = (int16_t)  READ_WORD(&DSP1.parameters[4]);
+				DSP1.Op02LFE = (int16_t)  READ_WORD(&DSP1.parameters[6]);
+				DSP1.Op02LES = (int16_t)  READ_WORD(&DSP1.parameters[8]);
+				DSP1.Op02AAS = (uint16_t) READ_WORD(&DSP1.parameters[10]);
+				DSP1.Op02AZS = (uint16_t) READ_WORD(&DSP1.parameters[12]);
 				DSP1_Parameter(DSP1.Op02FX, DSP1.Op02FY, DSP1.Op02FZ, DSP1.Op02LFE, DSP1.Op02LES, DSP1.Op02AAS, DSP1.Op02AZS, &DSP1.Op02VOF, &DSP1.Op02VVA, &DSP1.Op02CX, &DSP1.Op02CY);
 				DSP1.out_count = 8;
-				DSP1.output[0] = (uint8_t) (DSP1.Op02VOF & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op02VOF >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op02VVA & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op02VVA >> 8) & 0xFF);
-				DSP1.output[4] = (uint8_t) (DSP1.Op02CX & 0xFF);
-				DSP1.output[5] = (uint8_t) ((DSP1.Op02CX >> 8) & 0xFF);
-				DSP1.output[6] = (uint8_t) (DSP1.Op02CY & 0xFF);
-				DSP1.output[7] = (uint8_t) ((DSP1.Op02CY >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op02VOF);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op02VVA);
+				WRITE_WORD(&DSP1.output[4], DSP1.Op02CX);
+				WRITE_WORD(&DSP1.output[6], DSP1.Op02CY);
 				break;
 			case 0x0a:
 			case 0x1a:
 			case 0x2a:
 			case 0x3a: /* Raster mode 7 matrix data */
-				DSP1.Op0AVS = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
+				DSP1.Op0AVS = (int16_t) READ_WORD(&DSP1.parameters[0]);
 				DSP1_Raster(DSP1.Op0AVS, &DSP1.Op0AA, &DSP1.Op0AB, &DSP1.Op0AC, &DSP1.Op0AD);
 				DSP1.Op0AVS++;
 				DSP1.out_count = 8;
-				DSP1.output[0] = (uint8_t) (DSP1.Op0AA & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op0AA >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op0AB & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op0AB >> 8) & 0xFF);
-				DSP1.output[4] = (uint8_t) (DSP1.Op0AC & 0xFF);
-				DSP1.output[5] = (uint8_t) ((DSP1.Op0AC >> 8) & 0xFF);
-				DSP1.output[6] = (uint8_t) (DSP1.Op0AD & 0xFF);
-				DSP1.output[7] = (uint8_t) ((DSP1.Op0AD >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op0AA);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op0AB);
+				WRITE_WORD(&DSP1.output[4], DSP1.Op0AC);
+				WRITE_WORD(&DSP1.output[6], DSP1.Op0AD);
 				DSP1.in_index = 0;
 				break;
 			case 0x06:
 			case 0x16:
 			case 0x26:
 			case 0x36: /* Project object */
-				DSP1.Op06X = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op06Y = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op06Z = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op06X = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op06Y = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op06Z = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1_Project(DSP1.Op06X, DSP1.Op06Y, DSP1.Op06Z, &DSP1.Op06H, &DSP1.Op06V, &DSP1.Op06M);
 				DSP1.out_count = 6;
-				DSP1.output[0] = (uint8_t) (DSP1.Op06H & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op06H >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op06V & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op06V >> 8) & 0xFF);
-				DSP1.output[4] = (uint8_t) (DSP1.Op06M & 0xFF);
-				DSP1.output[5] = (uint8_t) ((DSP1.Op06M >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op06H);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op06V);
+				WRITE_WORD(&DSP1.output[4], DSP1.Op06M);
 				break;
 			case 0x0e:
 			case 0x1e:
 			case 0x2e:
 			case 0x3e: /* Target */
-				DSP1.Op0EH = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op0EV = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
+				DSP1.Op0EH = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op0EV = (int16_t) READ_WORD(&DSP1.parameters[2]);
 				DSP1_Target(DSP1.Op0EH, DSP1.Op0EV, &DSP1.Op0EX, &DSP1.Op0EY);
 				DSP1.out_count = 4;
-				DSP1.output[0] = (uint8_t) (DSP1.Op0EX & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op0EX >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op0EY & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op0EY >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op0EX);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op0EY);
 				break;
 			case 0x01:
 			case 0x05:
 			case 0x31:
 			case 0x35: /* Set attitude matrix A */
-				DSP1.Op01m = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op01Zr = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op01Yr = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
-				DSP1.Op01Xr = (int16_t) (DSP1.parameters[6] | (DSP1.parameters[7] << 8));
+				DSP1.Op01m  = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op01Zr = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op01Yr = (int16_t) READ_WORD(&DSP1.parameters[4]);
+				DSP1.Op01Xr = (int16_t) READ_WORD(&DSP1.parameters[6]);
 				DSP1_Op01();
 				break;
 			case 0x11:
 			case 0x15: /* Set attitude matrix B */
-				DSP1.Op11m = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op11Zr = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op11Yr = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
-				DSP1.Op11Xr = (int16_t) (DSP1.parameters[6] | (DSP1.parameters[7] << 8));
+				DSP1.Op11m  = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op11Zr = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op11Yr = (int16_t) READ_WORD(&DSP1.parameters[4]);
+				DSP1.Op11Xr = (int16_t) READ_WORD(&DSP1.parameters[6]);
 				DSP1_Op11();
 				break;
 			case 0x21:
 			case 0x25: /* Set attitude matrix C */
-				DSP1.Op21m = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op21Zr = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op21Yr = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
-				DSP1.Op21Xr = (int16_t) (DSP1.parameters[6] | (DSP1.parameters[7] << 8));
+				DSP1.Op21m  = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op21Zr = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op21Yr = (int16_t) READ_WORD(&DSP1.parameters[4]);
+				DSP1.Op21Xr = (int16_t) READ_WORD(&DSP1.parameters[6]);
 				DSP1_Op21();
 				break;
 			case 0x09:
 			case 0x0d:
 			case 0x39:
 			case 0x3d: /* Objective matrix A */
-				DSP1.Op0DX = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op0DY = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op0DZ = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op0DX = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op0DY = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op0DZ = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1.Op0DF = (DSP1.Op0DX * DSP1.matrixA[0][0] >> 15) + (DSP1.Op0DY * DSP1.matrixA[0][1] >> 15) + (DSP1.Op0DZ * DSP1.matrixA[0][2] >> 15);
 				DSP1.Op0DL = (DSP1.Op0DX * DSP1.matrixA[1][0] >> 15) + (DSP1.Op0DY * DSP1.matrixA[1][1] >> 15) + (DSP1.Op0DZ * DSP1.matrixA[1][2] >> 15);
 				DSP1.Op0DU = (DSP1.Op0DX * DSP1.matrixA[2][0] >> 15) + (DSP1.Op0DY * DSP1.matrixA[2][1] >> 15) + (DSP1.Op0DZ * DSP1.matrixA[2][2] >> 15);
 				DSP1.out_count = 6;
-				DSP1.output[0] = (uint8_t) (DSP1.Op0DF & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op0DF >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op0DL & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op0DL >> 8) & 0xFF);
-				DSP1.output[4] = (uint8_t) (DSP1.Op0DU & 0xFF);
-				DSP1.output[5] = (uint8_t) ((DSP1.Op0DU >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op0DF);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op0DL);
+				WRITE_WORD(&DSP1.output[4], DSP1.Op0DU);
 				break;
 			case 0x19:
 			case 0x1d: /* Objective matrix B */
-				DSP1.Op1DX = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op1DY = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op1DZ = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op1DX = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op1DY = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op1DZ = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1.Op1DF = (DSP1.Op1DX * DSP1.matrixB[0][0] >> 15) + (DSP1.Op1DY * DSP1.matrixB[0][1] >> 15) + (DSP1.Op1DZ * DSP1.matrixB[0][2] >> 15);
 				DSP1.Op1DL = (DSP1.Op1DX * DSP1.matrixB[1][0] >> 15) + (DSP1.Op1DY * DSP1.matrixB[1][1] >> 15) + (DSP1.Op1DZ * DSP1.matrixB[1][2] >> 15);
 				DSP1.Op1DU = (DSP1.Op1DX * DSP1.matrixB[2][0] >> 15) + (DSP1.Op1DY * DSP1.matrixB[2][1] >> 15) + (DSP1.Op1DZ * DSP1.matrixB[2][2] >> 15);
 				DSP1.out_count = 6;
-				DSP1.output[0] = (uint8_t) (DSP1.Op1DF & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op1DF >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op1DL & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op1DL >> 8) & 0xFF);
-				DSP1.output[4] = (uint8_t) (DSP1.Op1DU & 0xFF);
-				DSP1.output[5] = (uint8_t) ((DSP1.Op1DU >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op1DF);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op1DL);
+				WRITE_WORD(&DSP1.output[4], DSP1.Op1DU);
 				break;
 			case 0x29:
 			case 0x2d: /* Objective matrix C */
-				DSP1.Op2DX = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op2DY = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op2DZ = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op2DX = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op2DY = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op2DZ = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1.Op2DF = (DSP1.Op2DX * DSP1.matrixC[0][0] >> 15) + (DSP1.Op2DY * DSP1.matrixC[0][1] >> 15) + (DSP1.Op2DZ * DSP1.matrixC[0][2] >> 15);
 				DSP1.Op2DL = (DSP1.Op2DX * DSP1.matrixC[1][0] >> 15) + (DSP1.Op2DY * DSP1.matrixC[1][1] >> 15) + (DSP1.Op2DZ * DSP1.matrixC[1][2] >> 15);
 				DSP1.Op2DU = (DSP1.Op2DX * DSP1.matrixC[2][0] >> 15) + (DSP1.Op2DY * DSP1.matrixC[2][1] >> 15) + (DSP1.Op2DZ * DSP1.matrixC[2][2] >> 15);
 				DSP1.out_count = 6;
-				DSP1.output[0] = (uint8_t) (DSP1.Op2DF & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op2DF >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op2DL & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op2DL >> 8) & 0xFF);
-				DSP1.output[4] = (uint8_t) (DSP1.Op2DU & 0xFF);
-				DSP1.output[5] = (uint8_t) ((DSP1.Op2DU >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op2DF);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op2DL);
+				WRITE_WORD(&DSP1.output[4], DSP1.Op2DU);
 				break;
 			case 0x03:
 			case 0x33: /* Subjective matrix A */
-				DSP1.Op03F = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op03L = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op03U = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op03F = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op03L = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op03U = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1.Op03X = (DSP1.Op03F * DSP1.matrixA[0][0] >> 15) + (DSP1.Op03L * DSP1.matrixA[1][0] >> 15) + (DSP1.Op03U * DSP1.matrixA[2][0] >> 15);
 				DSP1.Op03Y = (DSP1.Op03F * DSP1.matrixA[0][1] >> 15) + (DSP1.Op03L * DSP1.matrixA[1][1] >> 15) + (DSP1.Op03U * DSP1.matrixA[2][1] >> 15);
 				DSP1.Op03Z = (DSP1.Op03F * DSP1.matrixA[0][2] >> 15) + (DSP1.Op03L * DSP1.matrixA[1][2] >> 15) + (DSP1.Op03U * DSP1.matrixA[2][2] >> 15);
 				DSP1.out_count = 6;
-				DSP1.output[0] = (uint8_t) (DSP1.Op03X & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op03X >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op03Y & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op03Y >> 8) & 0xFF);
-				DSP1.output[4] = (uint8_t) (DSP1.Op03Z & 0xFF);
-				DSP1.output[5] = (uint8_t) ((DSP1.Op03Z >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op03X);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op03Y);
+				WRITE_WORD(&DSP1.output[4], DSP1.Op03Z);
 				break;
 			case 0x13: /* Subjective matrix B */
-				DSP1.Op13F = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op13L = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op13U = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op13F = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op13L = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op13U = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1.Op13X = (DSP1.Op13F * DSP1.matrixB[0][0] >> 15) + (DSP1.Op13L * DSP1.matrixB[1][0] >> 15) + (DSP1.Op13U * DSP1.matrixB[2][0] >> 15);
 				DSP1.Op13Y = (DSP1.Op13F * DSP1.matrixB[0][1] >> 15) + (DSP1.Op13L * DSP1.matrixB[1][1] >> 15) + (DSP1.Op13U * DSP1.matrixB[2][1] >> 15);
 				DSP1.Op13Z = (DSP1.Op13F * DSP1.matrixB[0][2] >> 15) + (DSP1.Op13L * DSP1.matrixB[1][2] >> 15) + (DSP1.Op13U * DSP1.matrixB[2][2] >> 15);
 				DSP1.out_count = 6;
-				DSP1.output[0] = (uint8_t) (DSP1.Op13X & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op13X >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op13Y & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op13Y >> 8) & 0xFF);
-				DSP1.output[4] = (uint8_t) (DSP1.Op13Z & 0xFF);
-				DSP1.output[5] = (uint8_t) ((DSP1.Op13Z >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op13X);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op13Y);
+				WRITE_WORD(&DSP1.output[4], DSP1.Op13Z);
 				break;
 			case 0x23: /* Subjective matrix C */
-				DSP1.Op23F = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op23L = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op23U = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op23F = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op23L = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op23U = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1.Op23X = (DSP1.Op23F * DSP1.matrixC[0][0] >> 15) + (DSP1.Op23L * DSP1.matrixC[1][0] >> 15) + (DSP1.Op23U * DSP1.matrixC[2][0] >> 15);
 				DSP1.Op23Y = (DSP1.Op23F * DSP1.matrixC[0][1] >> 15) + (DSP1.Op23L * DSP1.matrixC[1][1] >> 15) + (DSP1.Op23U * DSP1.matrixC[2][1] >> 15);
 				DSP1.Op23Z = (DSP1.Op23F * DSP1.matrixC[0][2] >> 15) + (DSP1.Op23L * DSP1.matrixC[1][2] >> 15) + (DSP1.Op23U * DSP1.matrixC[2][2] >> 15);
 				DSP1.out_count = 6;
-				DSP1.output[0] = (uint8_t) (DSP1.Op23X & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op23X >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op23Y & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op23Y >> 8) & 0xFF);
-				DSP1.output[4] = (uint8_t) (DSP1.Op23Z & 0xFF);
-				DSP1.output[5] = (uint8_t) ((DSP1.Op23Z >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op23X);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op23Y);
+				WRITE_WORD(&DSP1.output[4], DSP1.Op23Z);
 				break;
 			case 0x0b:
 			case 0x3b:
-				DSP1.Op0BX = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op0BY = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op0BZ = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op0BX = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op0BY = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op0BZ = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1.Op0BS = (DSP1.Op0BX * DSP1.matrixA[0][0] + DSP1.Op0BY * DSP1.matrixA[0][1] + DSP1.Op0BZ * DSP1.matrixA[0][2]) >> 15;
 				DSP1.out_count = 2;
-				DSP1.output[0] = (uint8_t) (DSP1.Op0BS & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op0BS >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op0BS);
 				break;
 			case 0x1b:
-				DSP1.Op1BX = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op1BY = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op1BZ = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op1BX = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op1BY = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op1BZ = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1.Op1BS = (DSP1.Op1BX * DSP1.matrixB[0][0] + DSP1.Op1BY * DSP1.matrixB[0][1] + DSP1.Op1BZ * DSP1.matrixB[0][2]) >> 15;
 				DSP1.out_count = 2;
-				DSP1.output[0] = (uint8_t) (DSP1.Op1BS & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op1BS >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op1BS);
 				break;
 			case 0x2b:
-				DSP1.Op2BX = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op2BY = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op2BZ = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
+				DSP1.Op2BX = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op2BY = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op2BZ = (int16_t) READ_WORD(&DSP1.parameters[4]);
 				DSP1.Op2BS = (DSP1.Op2BX * DSP1.matrixC[0][0] + DSP1.Op2BY * DSP1.matrixC[0][1] + DSP1.Op2BZ * DSP1.matrixC[0][2]) >> 15;
 				DSP1.out_count = 2;
-				DSP1.output[0] = (uint8_t) (DSP1.Op2BS & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op2BS >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op2BS);
 				break;
 			case 0x14:
 			case 0x34:
-				DSP1.Op14Zr = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
-				DSP1.Op14Xr = (int16_t) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
-				DSP1.Op14Yr = (int16_t) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
-				DSP1.Op14U = (int16_t) (DSP1.parameters[6] | (DSP1.parameters[7] << 8));
-				DSP1.Op14F = (int16_t) (DSP1.parameters[8] | (DSP1.parameters[9] << 8));
-				DSP1.Op14L = (int16_t) (DSP1.parameters[10] | (DSP1.parameters[11] << 8));
+				DSP1.Op14Zr = (int16_t) READ_WORD(&DSP1.parameters[0]);
+				DSP1.Op14Xr = (int16_t) READ_WORD(&DSP1.parameters[2]);
+				DSP1.Op14Yr = (int16_t) READ_WORD(&DSP1.parameters[4]);
+				DSP1.Op14U  = (int16_t) READ_WORD(&DSP1.parameters[6]);
+				DSP1.Op14F  = (int16_t) READ_WORD(&DSP1.parameters[8]);
+				DSP1.Op14L  = (int16_t) READ_WORD(&DSP1.parameters[10]);
 				DSP1_Op14();
 				DSP1.out_count = 6;
-				DSP1.output[0] = (uint8_t) (DSP1.Op14Zrr & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op14Zrr >> 8) & 0xFF);
-				DSP1.output[2] = (uint8_t) (DSP1.Op14Xrr & 0xFF);
-				DSP1.output[3] = (uint8_t) ((DSP1.Op14Xrr >> 8) & 0xFF);
-				DSP1.output[4] = (uint8_t) (DSP1.Op14Yrr & 0xFF);
-				DSP1.output[5] = (uint8_t) ((DSP1.Op14Yrr >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op14Zrr);
+				WRITE_WORD(&DSP1.output[2], DSP1.Op14Xrr);
+				WRITE_WORD(&DSP1.output[4], DSP1.Op14Yrr);
 				break;
 			case 0x27:
 			case 0x2F:
-				DSP1.Op2FUnknown = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
+				DSP1.Op2FUnknown = (int16_t) READ_WORD(&DSP1.parameters[0]);
 				DSP1.Op2FSize = 0x100;
 				DSP1.out_count = 2;
-				DSP1.output[0] = (uint8_t) (DSP1.Op2FSize & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op2FSize >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op2FSize);
 				break;
 			case 0x07:
 			case 0x0F:
-				DSP1.Op0FRamsize = (int16_t) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
+				DSP1.Op0FRamsize = (int16_t) READ_WORD(&DSP1.parameters[0]);
 				DSP1.Op0FPass = 0x0000;
 				DSP1.out_count = 2;
-				DSP1.output[0] = (uint8_t) (DSP1.Op0FPass & 0xFF);
-				DSP1.output[1] = (uint8_t) ((DSP1.Op0FPass >> 8) & 0xFF);
+				WRITE_WORD(&DSP1.output[0], DSP1.Op0FPass);
 				break;
 			default:
 				break;
@@ -1204,14 +1149,10 @@ uint8_t DSP1GetByte(uint16_t address)
 		DSP1.Op0AVS++;
 		DSP1.out_count = 8;
 		DSP1.out_index = 0;
-		DSP1.output[0] = DSP1.Op0AA & 0xFF;
-		DSP1.output[1] = (DSP1.Op0AA >> 8) & 0xFF;
-		DSP1.output[2] = DSP1.Op0AB & 0xFF;
-		DSP1.output[3] = (DSP1.Op0AB >> 8) & 0xFF;
-		DSP1.output[4] = DSP1.Op0AC & 0xFF;
-		DSP1.output[5] = (DSP1.Op0AC >> 8) & 0xFF;
-		DSP1.output[6] = DSP1.Op0AD & 0xFF;
-		DSP1.output[7] = (DSP1.Op0AD >> 8) & 0xFF;
+		WRITE_WORD(&DSP1.output[0], DSP1.Op0AA);
+		WRITE_WORD(&DSP1.output[2], DSP1.Op0AB);
+		WRITE_WORD(&DSP1.output[4], DSP1.Op0AC);
+		WRITE_WORD(&DSP1.output[6], DSP1.Op0AD);
 	}
 
 	DSP1.waiting4command = true;

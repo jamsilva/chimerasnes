@@ -45,7 +45,7 @@ SnesModel  M1SNES = {1, 3, 2};
 SnesModel  M2SNES = {2, 4, 3};
 SnesModel* Model = &M1SNES;
 
-CMemory Memory;
+CMemory* MemoryPtr = NULL;
 
 SPPU PPU;
 InternalPPU IPPU;

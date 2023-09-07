@@ -571,8 +571,11 @@ void SetSA1(uint8_t byte, uint32_t address)
 				case 1: /* divide */
 					if (SA1.op2 != 0)
 					{
-						int16_t quotient = (int16_t) SA1.op1 / (uint16_t) SA1.op2;
-						uint16_t remainder = (int16_t) SA1.op1 % (uint16_t) SA1.op2;
+						int16_t dividend = (int16_t) SA1.op1;
+						uint16_t divisor = (uint16_t) SA1.op2;
+						uint32_t dividend_ext = dividend + (uint32_t) divisor * 65536;
+						uint16_t remainder = dividend_ext % divisor;
+						uint16_t quotient = dividend_ext / divisor;
 						SA1.sum = (remainder << 16) | quotient;
 					}
 					else

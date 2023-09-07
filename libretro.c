@@ -31,9 +31,8 @@ static retro_environment_t        environ_cb     = NULL;
 static bool libretro_supports_option_categories = false;
 static bool libretro_supports_bitmasks = false;
 
-#define FRAME_TIME         (Settings.PAL ? 20000 : 16667)
-#define FRAMES_PER_SECOND  (Settings.PAL ? 50    : 60)
-#define VIDEO_REFRESH_RATE (SNES_CLOCK_SPEED * 6.0 / (SNES_CYCLES_PER_SCANLINE * SNES_MAX_VCOUNTER))
+#define FRAME_TIME         (Settings.PAL ? 20000        : 16667)
+#define FRAMES_PER_SECOND  (Settings.PAL ? 50.006977968 : 60.09881389744051)
 
 static int16_t* audio_out_buffer           = NULL;
 static float    audio_samples_per_frame    = 0.0f;
@@ -202,7 +201,7 @@ static void init_sfc_setting()
 
 static void audio_out_buffer_init()
 {
-	float refresh_rate        = (float) VIDEO_REFRESH_RATE;
+	float refresh_rate        = (float) FRAMES_PER_SECOND;
 	float samples_per_frame   = (float) SNES_SAMPLE_RATE / refresh_rate;
 	size_t buffer_size        = ((size_t) samples_per_frame + 1) << 1;
 	audio_out_buffer          = (int16_t*) malloc(buffer_size * sizeof(int16_t));
@@ -336,6 +335,9 @@ static void check_variables(bool first_run)
 	bool prev_frameskip_type;
 	char* endptr;
 	double freq = 10.0;
+	int32_t overclock_type = 0;
+
+	static const int8_t overclock_cycles[4][2] = {{6, 8}, {6, 6}, {3, 4}, {1, 1}};
 
 	var.key = "chimerasnes_frameskip";
 	var.value = NULL;
@@ -359,39 +361,20 @@ static void check_variables(bool first_run)
 
 	var.key = "chimerasnes_overclock_cycles";
 	var.value = NULL;
-	Settings.OverclockCycles = false;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
-		if (strcmp(var.value, "compatible") == 0)
-		{
-			Settings.OverclockCycles = true;
-			Settings.OneCycle        = DEFAULT_ONE_CYCLE - 2;
-			Settings.SlowOneCycle    = DEFAULT_ONE_CYCLE - 1;
-			Settings.TwoCycles       = DEFAULT_ONE_CYCLE;
-		}
-		else if (strcmp(var.value, "max") == 0)
-		{
-			Settings.OverclockCycles = true;
-			Settings.OneCycle        = DEFAULT_ONE_CYCLE / 2;
-			Settings.SlowOneCycle    = DEFAULT_ONE_CYCLE / 2;
-			Settings.TwoCycles       = DEFAULT_ONE_CYCLE / 2;
-		}
-		else if (strcmp(var.value, "light") == 0)
-		{
-			Settings.OverclockCycles = true;
-			Settings.OneCycle        = DEFAULT_ONE_CYCLE;
-			Settings.SlowOneCycle    = DEFAULT_ONE_CYCLE;
-			Settings.TwoCycles       = DEFAULT_TWO_CYCLES;
-		}
+		if (strcmp(var.value, "fastrom") == 0)
+			overclock_type = 1;
+		else if (strcmp(var.value, "low") == 0)
+			overclock_type = 2;
+		else if (strcmp(var.value, "high") == 0)
+			overclock_type = 3;
 	}
 
-	if (!Settings.OverclockCycles)
-	{
-		Settings.OneCycle     = DEFAULT_ONE_CYCLE;
-		Settings.SlowOneCycle = DEFAULT_SLOW_ONE_CYCLE;
-		Settings.TwoCycles    = DEFAULT_TWO_CYCLES;
-	}
+	Settings.OneCycle     = overclock_cycles[overclock_type][0];
+	Settings.SlowOneCycle = overclock_cycles[overclock_type][1];
+	Settings.TwoCycles    = Settings.OneCycle << 1;
 
 	var.key = "chimerasnes_overclock_superfx";
 	var.value = NULL;
@@ -573,7 +556,7 @@ void retro_get_system_av_info(struct retro_system_av_info* info)
 	info->geometry.max_height   = MAX_SNES_HEIGHT;
 	info->geometry.aspect_ratio = 4.0 / 3.0;
 	info->timing.sample_rate    = SNES_SAMPLE_RATE;
-	info->timing.fps            = VIDEO_REFRESH_RATE;
+	info->timing.fps            = FRAMES_PER_SECOND;
 }
 
 void retro_reset()

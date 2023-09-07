@@ -103,17 +103,17 @@ struct retro_core_option_v2_definition option_defs_us[] =
 		"chimerasnes_overclock_cycles",
 		"Reduce Slowdown (Unsafe, Restart)",
 		NULL,
-		"Overclock SNES CPU. May cause games to crash! Use 'Light' for shorter loading times, 'Compatible' for most games exhibiting slowdown and 'Max' only if absolutely required.",
+		"Overclock SNES CPU. May cause games to crash! Use 'AutoFastROM' for shorter loading times, 'Low' for most games exhibiting slowdown and 'High' only if absolutely required.",
 		NULL,
 		"hacks",
 		{
-			{ "disabled",   NULL },
-			{ "light",      "Light" },
-			{ "compatible", "Compatible" },
-			{ "max",        "Max" },
-			{ NULL,         NULL },
+			{ "disabled", NULL },
+			{ "fastrom",  "AutoFastROM" },
+			{ "low",      "Low" },
+			{ "high",     "High" },
+			{ NULL,       NULL },
 		},
-		"disabled"
+		"fastrom"
 	},
 	{
 		"chimerasnes_overclock_superfx",
