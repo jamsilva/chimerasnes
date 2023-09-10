@@ -569,7 +569,7 @@ size_t retro_serialize_size()
 	return sizeof(CPU) + sizeof(ICPU) + sizeof(PPU) + sizeof(DMA) +
 		0x10000 + 0x20000 + 0x20000 + 0x8000 +
 		sizeof(APU) + sizeof(IAPU) + 0x10000 +
-		sizeof(SA1) + sizeof(s7r) + sizeof(rtc_f9);
+		SA1SnapshotSize() + sizeof(s7r) + sizeof(rtc_f9);
 }
 
 bool retro_serialize(void* data, size_t size)
@@ -603,8 +603,8 @@ bool retro_serialize(void* data, size_t size)
 	memcpy(buffer, IAPU.RAM, 0x10000);
 	buffer += 0x10000;
 	SA1PackStatus();
-	memcpy(buffer, &SA1, sizeof(SA1));
-	buffer += sizeof(SA1);
+	memcpy(buffer, &SA1, SA1SnapshotSize());
+	buffer += SA1SnapshotSize();
 	memcpy(buffer, &s7r, sizeof(s7r));
 	buffer += sizeof(s7r);
 	memcpy(buffer, &rtc_f9, sizeof(rtc_f9));
@@ -649,8 +649,9 @@ bool retro_unserialize(const void* data, size_t size)
 	IAPU.RAM = IAPU_RAM_current;
 	memcpy(IAPU.RAM, buffer, 0x10000);
 	buffer += 0x10000;
-	memcpy(&SA1, buffer, sizeof(SA1));
-	buffer += sizeof(SA1);
+	memcpy(&SA1, buffer, SA1SnapshotSize());
+	buffer += SA1SnapshotSize();
+	FixSA1AfterSnapshotLoad();
 	memcpy(&s7r, buffer, sizeof(s7r));
 	buffer += sizeof(s7r);
 	memcpy(&rtc_f9, buffer, sizeof(rtc_f9));

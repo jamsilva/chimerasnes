@@ -43,6 +43,9 @@ typedef struct
 	uint32_t      ShiftedDB;
 	uint32_t      WaitCounter;
 	int64_t       sum;
+	SSA1Registers Registers;
+
+	/* Pointers are _not_ saved during a save state, see SA1SnapshotSize */
 	uint8_t*      BWRAM;
 	uint8_t*      PCBase;
 	uint8_t*      WaitByteAddress1;
@@ -51,7 +54,6 @@ typedef struct
 	SOpcodes*     Opcodes;
 	uint8_t*      Map[MEMMAP_NUM_BLOCKS];
 	uint8_t*      WriteMap[MEMMAP_NUM_BLOCKS];
-	SSA1Registers Registers;
 } SSA1;
 
 #define SA1CheckIRQ()       (SA1.Registers.PL  & IRQ)
@@ -133,5 +135,17 @@ static INLINE void SA1FixCycles()
 			SA1.OpLengths = OpLengthsM0X0;
 		}
 	}
+}
+
+static INLINE size_t SA1SnapshotSize()
+{
+	return (size_t) ((intptr_t) &SA1.BWRAM - (intptr_t) &SA1);
+}
+
+static INLINE void FixSA1AfterSnapshotLoad()
+{
+   SA1UnpackStatus();
+   SA1FixCycles();
+   SA1SetPCBase(SA1.Registers.PBPC);
 }
 #endif

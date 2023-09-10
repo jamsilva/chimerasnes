@@ -1,5 +1,5 @@
 TARGET_NAME       := chimerasnes
-DEBUG              =
+DEBUG              = 0
 GIT_VERSION       := " $(shell git rev-parse --short HEAD)"
 STATIC_LINKING     = 0
 ROOT_DIR          := $(shell pwd)
