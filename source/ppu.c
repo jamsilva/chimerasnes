@@ -86,14 +86,6 @@ void FixColourBrightness()
 	int32_t i;
 	IPPU.XB = mul_brightness[PPU.Brightness];
 
-	for (int i = 0; i < 64; i++)
-	{
-		if (i > IPPU.XB[0x1f])
-			brightness_cap[i] = IPPU.XB[0x1f];
-		else
-			brightness_cap[i] = i;
-	}
-
 	for (i = 0; i < 256; i++)
 	{
 		IPPU.Red[i] = IPPU.XB[PPU.CGDATA[i] & 0x1f];
@@ -105,6 +97,10 @@ void FixColourBrightness()
 
 void SetPPU(uint8_t Byte, uint16_t Address)
 {
+	if (CPU.InDMA)
+		if (Address > 0x21ff) /* Take care of DMA wrapping */
+			Address = 0x2100 + (Address & 0xff);
+
 	if (Address >= 0x2188)
 	{
 		if (Settings.Chip == GSU && Address >= 0x3000 && Address <= 0x32ff)
@@ -664,6 +660,10 @@ uint8_t GetPPU(uint16_t Address)
 	if (Address < 0x2100) /* not a real PPU reg */
 		return PPU.OpenBus1;  /* treat as unmapped memory returning last byte on the bus */
 
+	if (CPU.InDMA)
+		if (Address > 0x21ff) /* Take care of DMA wrapping */
+			Address = 0x2100 + (Address & 0xff);
+
 	if (Address >= 0x2188)
 	{
 		if (Settings.Chip == GSU && Address >= 0x3000 && Address <= 0x32ff)
@@ -903,27 +903,6 @@ uint8_t GetPPU(uint16_t Address)
 				return APU.OutPorts[Address & 3];
 
 			CPU.BranchSkip = true;
-
-			if ((Address & 3) < 2)
-			{
-				int32_t r = rand();
-
-				if (r & 2)
-				{
-					if (r & 4)
-						return (Address & 3) == 1 ? 0xaa : 0xbb;
-					else
-						return (r >> 3) & 0xff;
-				}
-			}
-			else
-			{
-				int32_t r = rand();
-
-				if (r & 2)
-					return (r >> 3) & 0xff;
-			}
-
 			return Memory.FillRAM[Address];
 		case 0x2180: /* WMDATA */
 			if (CPU.InDMA)
@@ -1033,7 +1012,7 @@ void SetCPU(uint8_t byte, uint16_t Address)
 			Memory.FillRAM[0x4217] = (uint8_t) (res >> 8);
 		#else
 			/* assume malloc'd memory is 2-byte aligned */
-			*((uint16_t*) &Memory.FillRAM[0x4216]) = res;
+			*((uint16_t*) (Memory.FillRAM + 0x4216)) = res;
 		#endif
 
 			break;
@@ -1047,7 +1026,7 @@ void SetCPU(uint8_t byte, uint16_t Address)
 			uint16_t a = Memory.FillRAM[0x4204] + (Memory.FillRAM[0x4205] << 8);
 		#else
 			/* assume malloc'd memory is 2-byte aligned */
-			uint16_t a = *((uint16_t*) &Memory.FillRAM[0x4204]);
+			uint16_t a = *((uint16_t*) (Memory.FillRAM + 0x4204));
 		#endif
 
 			uint16_t div = byte ? a / byte : 0xffff;
@@ -1060,8 +1039,8 @@ void SetCPU(uint8_t byte, uint16_t Address)
 			Memory.FillRAM[0x4217] = rem >> 8;
 		#else
 			/* assume malloc'd memory is 2-byte aligned */
-			*((uint16_t*) &Memory.FillRAM[0x4214]) = div;
-			*((uint16_t*) &Memory.FillRAM[0x4216]) = rem;
+			*((uint16_t*) (Memory.FillRAM + 0x4214)) = div;
+			*((uint16_t*) (Memory.FillRAM + 0x4216)) = rem;
 		#endif
 
 			break;
@@ -1776,12 +1755,12 @@ void SoftResetPPU()
 	}
 
 	for (c = 0; c < 0x8000; c += 0x100)
-		memset(&Memory.FillRAM[c], c >> 8, 0x100);
+		memset(Memory.FillRAM + c, c >> 8, 0x100);
 
-	memset(&Memory.FillRAM[0x2100], 0, 0x100);
-	memset(&Memory.FillRAM[0x4200], 0, 0x100);
-	memset(&Memory.FillRAM[0x4000], 0, 0x100);
-	memset(&Memory.FillRAM[0x1000], 0, 0x1000); /* For BS Suttehakkun 2... */
+	memset(Memory.FillRAM + 0x2100, 0, 0x100);
+	memset(Memory.FillRAM + 0x4200, 0, 0x100);
+	memset(Memory.FillRAM + 0x4000, 0, 0x100);
+	memset(Memory.FillRAM + 0x1000, 0, 0x1000); /* For BS Suttehakkun 2... */
 	Memory.FillRAM[0x4201] = Memory.FillRAM[0x4213] = 0xff;
 }
 

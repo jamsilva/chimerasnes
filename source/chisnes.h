@@ -34,8 +34,8 @@
  * PPU: master clock / 4
  * 1 / PPU clock * 342 -> 64.281us
  * 64.281us / (1 / 3.546895MHz) -> 228 cycles per scanline.  */
-#define	NTSC_MASTER_CLOCK        21477272.727272 /* 21477272 + 8/11 exact */
-#define	ONE_DOT_CYCLE            4
+#define NTSC_MASTER_CLOCK        21477272.727272 /* 21477272 + 8/11 exact */
+#define ONE_DOT_CYCLE            4
 #define SNES_CYCLES_PER_SCANLINE (SNES_MAX_HCOUNTER * ONE_DOT_CYCLE)
 #define SNES_SCANLINE_TIME       (SNES_CYCLES_PER_SCANLINE / NTSC_MASTER_CLOCK)
 
@@ -167,12 +167,12 @@ typedef struct
 {
 	bool     APUEnabled           : 1;
 	bool     PAL                  : 1;
-	bool     Shutdown             : 1;
-	bool     _SSettings_PAD1      : 1;
 	bool     ReduceSpriteFlicker  : 1;
-	bool     StarfoxHack          : 1;
-	bool     WinterGold           : 1;
+	bool     Shutdown             : 1;
+	bool     BSXHack              : 1;
+	bool     MetroidHack          : 1;
 	bool     SecretOfEvermoreHack : 1;
+	uint8_t  _SSettings_PAD1      : 1;
 	uint8_t  OneCycle;
 	uint8_t  SlowOneCycle;
 	uint8_t  TwoCycles;

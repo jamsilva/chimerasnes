@@ -1756,9 +1756,9 @@ void ApplyROMFixes()
 	APUTimingHacks();
 
 	/* Specific game fixes */
-	Settings.SecretOfEvermoreHack = match_na("SECRET OF EVERMORE");
-	Settings.StarfoxHack = match_na("STAR FOX") || match_na("STAR WING");
-	Settings.WinterGold = match_na("FX SKIING NINTENDO 96") || match_na("DIRT RACER") || Settings.StarfoxHack;
+	Settings.BSXHack              = match_na("BS ZELDA REMIX") || (Settings.Chip & BS) == BS;
+	Settings.MetroidHack          = match_na("Super Metroid");
+	Settings.SecretOfEvermoreHack = match_na("SECRET OF EVERMORE") && Settings.PAL;
 
 	HDMATimingHacks();
 
