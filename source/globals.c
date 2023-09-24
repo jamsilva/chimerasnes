@@ -21,9 +21,10 @@ MainLoopPtr MainLoop;
 SCPUState   CPU;
 SICPU       ICPU;
 
-SAPU      APU;
-SIAPU     IAPU;
-SEXTState EXT;
+SAPU        APU;
+SIAPU       IAPU;
+SSoundData  SoundData;
+SEXTState   EXT;
 
 SSettings Settings;
 SDSP0     DSP0;
@@ -47,7 +48,7 @@ SnesModel* Model = &M1SNES;
 
 CMemory* MemoryPtr = NULL;
 
-SPPU PPU;
+SPPU        PPU;
 InternalPPU IPPU;
 
 SDMA DMA[8];
@@ -55,18 +56,18 @@ SDMA DMA[8];
 uint8_t* HDMAMemPointers[8];
 uint8_t* HDMABasePointers[8];
 
-SBG BG;
-SGFX GFX;
-SLineData LineData[240];
+SBG             BG;
+SGFX            GFX;
+SLineData       LineData[240];
 SLineMatrixData LineMatrixData[240];
 
 uint8_t Mode7Depths[2];
 
-NormalTileRenderer  DrawTilePtr = NULL;
-ClippedTileRenderer DrawClippedTilePtr = NULL;
-NormalTileRenderer  DrawHiResTilePtr = NULL;
+NormalTileRenderer  DrawTilePtr             = NULL;
+ClippedTileRenderer DrawClippedTilePtr      = NULL;
+NormalTileRenderer  DrawHiResTilePtr        = NULL;
 ClippedTileRenderer DrawHiResClippedTilePtr = NULL;
-LargePixelRenderer  DrawLargePixelPtr = NULL;
+LargePixelRenderer  DrawLargePixelPtr       = NULL;
 
 uint32_t odd_high[4][16];
 uint32_t odd_low[4][16];
@@ -75,6 +76,7 @@ uint32_t even_low[4][16];
 
 bool finishedFrame = false;
 
+int32_t  Echo[ECHOBUF];
 int8_t   FilterTaps[8];
 int16_t  Loop[FIRBUF];
 uint16_t SignExtend[2] = {0x0000, 0xff00};

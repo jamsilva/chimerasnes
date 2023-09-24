@@ -1,40 +1,43 @@
+#include <retro_inline.h>
+
 #include "apu.h"
 #include "chisnes.h"
+#include "math.h"
 #include "memmap.h"
 #include "snesapu.h"
 #include "soundux.h"
 
 /* Envelope mode masks */
 #define E_TYPE 0x01 /* Type of adj: Constant(1/64 or 1/256) / Exp.(255/256) */
-#define E_DIR  0x02 /* Direction: Decrease / Increase */
+#define E_DIR 0x02 /* Direction: Decrease / Increase */
 #define E_DEST 0x04 /* Destination: Default(0 or 1) / Other(x/8 or .75) */
 #define E_ADSR 0x08 /* Envelope mode: Gain/ADSR */
 #define E_IDLE 0x80 /* Envelope speed is set to 0 */
 
-#define E_DEC    0x00 /* Linear decrease */
-#define E_EXP    0x01 /* Exponential decrease */
-#define E_INC    0x02 /* Linear increase */
-#define E_BENT   0x06 /* Bent line increase */
-#define E_REL    0x08 /* Release mode */
-#define E_SUST   0x09 /* Sustain mode */
-#define E_ATT    0x0A /* Attack mode */
-#define E_DECAY  0x0D /* Decay mode */
+#define E_DEC 0x00 /* Linear decrease */
+#define E_EXP 0x01 /* Exponential decrease */
+#define E_INC 0x02 /* Linear increase */
+#define E_BENT 0x06 /* Bent line increase */
+#define E_REL 0x08 /* Release mode */
+#define E_SUST 0x09 /* Sustain mode */
+#define E_ATT 0x0A /* Attack mode */
+#define E_DECAY 0x0D /* Decay mode */
 #define E_DIRECT 0x87 /* Direct gain */
 
 /* Envelope adjustment rates */
-#define A_GAIN  (1 << E_SHIFT)         /* Amount to adjust envelope values */
-#define A_LIN   ((128 * A_GAIN) / 64)  /* Linear rate to increase/decrease envelope */
-#define A_KOF   ((128 * A_GAIN) / 256) /* Rate to decrease envelope during release */
-#define A_BENT  ((128 * A_GAIN) / 256) /* Rate to increase envelope after bend */
-#define A_NOATT (64 * A_GAIN)          /* Rate to increase if attack rate is set to 0ms */
-#define A_EXP   0                      /* Rate to decrease envelope exponentially (Not used) */
+#define A_GAIN (1 << E_SHIFT) /* Amount to adjust envelope values */
+#define A_LIN ((128 * A_GAIN) / 64) /* Linear rate to increase/decrease envelope */
+#define A_KOF ((128 * A_GAIN) / 256) /* Rate to decrease envelope during release */
+#define A_BENT ((128 * A_GAIN) / 256) /* Rate to increase envelope after bend */
+#define A_NOATT (64 * A_GAIN) /* Rate to increase if attack rate is set to 0ms */
+#define A_EXP 0 /* Rate to decrease envelope exponentially (Not used) */
 
 /* Envelope destination values */
-#define D_MAX    ((128 * A_GAIN) - 1)     /* Maximum envelope value */
-#define D_ATTACK ((128 * A_GAIN) - 1)     /* Destination of attack rate */
-#define D_BENT   ((128 * A_GAIN * 3) / 4) /* First destination of bent line */
-#define D_EXP    ((128 * A_GAIN) / 8)     /* Minimum decay destination value */
-#define D_MIN    0                        /* Minimum envelope value */
+#define D_MAX ((128 * A_GAIN) - 1) /* Maximum envelope value */
+#define D_ATTACK ((128 * A_GAIN) - 1) /* Destination of attack rate */
+#define D_BENT ((128 * A_GAIN * 3) / 4) /* First destination of bent line */
+#define D_EXP ((128 * A_GAIN) / 8) /* Minimum decay destination value */
+#define D_MIN 0 /* Minimum envelope value */
 
 #define DSP_SIZE 2
 
@@ -48,30 +51,30 @@ typedef struct
 	uint16_t bStart;    /* -> start block */
 
 	/* Envelope */
-	int32_t  eAdj;  /* Amount to adjust envelope height */
-	int32_t  eDest; /* Envelope Destination */
-	int32_t  eVal;  /* Current envelope value */
-	uint32_t eDec;  /* Pitch Decimal (.16) */
-	uint32_t eRate; /* Rate of envelope adjustment (16.16) */
-	uint8_t  eMode; /* [3-0] Current mode (see EnvM) ; [6-4] ADSR mode to switch into from Gain ; [7] Envelope is idle */
-	uint8_t  eRIdx; /* Index in RateTab (0-31) */
+	int32_t  eAdj;      /* Amount to adjust envelope height */
+	int32_t  eDest;     /* Envelope Destination */
+	int32_t  eVal;      /* Current envelope value */
+	uint32_t eDec;      /* Pitch Decimal (.16) */
+	uint32_t eRate;     /* Rate of envelope adjustment (16.16) */
+	uint8_t  eMode;     /* [3-0] Current mode (see EnvM) ; [6-4] ADSR mode to switch into from Gain ; [7] Envelope is idle */
+	uint8_t  eRIdx;     /* Index in RateTab (0-31) */
 
 	int8_t   _VoiceMix_PAD1 : 8;
 
 	/* Samples */
-	int8_t  sIdx;     /* -> current sample in sBuf */
-	int32_t sP1;      /* Last sample decompressed (prev1) */
-	int32_t sP2;      /* Second to last sample (prev2) */
-	int16_t sBuf[32]; /* 32 + 32 bytes for decompressed sample blocks */
+	int8_t sIdx;        /* -> current sample in sBuf */
+	int32_t sP1;        /* Last sample decompressed (prev1) */
+	int32_t sP2;        /* Second to last sample (prev2) */
+	int16_t sBuf[32];   /* 32 + 32 bytes for decompressed sample blocks */
 
 	/* Mixing */
-	int32_t  mChnL;    /* Channel Volume (-24.7) */
-	int32_t  mChnR;    /* Channel Volume (-24.7) */
-	int32_t  mOut;     /* Last sample output before chn vol (used forpitch mod) */
-	uint32_t mDec;     /* Pitch Decimal (.16) (used as delta forinterpolation) */
-	uint32_t mOrgP;    /* Original pitch rate converted from the DSP (16.16) */
-	uint32_t mOrgRate; /* Pitch Rate before modulation (16.16) */
-	uint32_t mRate;    /* Pitch Rate after modulation (16.16) */
+	int32_t  mChnL;     /* Channel Volume (-24.7) */
+	int32_t  mChnR;     /* Channel Volume (-24.7) */
+	int32_t  mOut;      /* Last sample output before chn vol (used forpitch mod) */
+	uint32_t mDec;      /* Pitch Decimal (.16) (used as delta forinterpolation) */
+	uint32_t mOrgP;     /* Original pitch rate converted from the DSP (16.16) */
+	uint32_t mOrgRate;  /* Pitch Rate before modulation (16.16) */
+	uint32_t mRate;     /* Pitch Rate after modulation (16.16) */
 } VoiceMix;
 
 static const struct
@@ -196,7 +199,15 @@ static void (*dspRegs[0x80])(int32_t, uint8_t) = /* Jump table for DSP register 
 	RNull, RNull, RNull,  RNull,  REndX,  REDl,   RNull,  RFCI
 };
 
-static const uint16_t rateTab[32] =
+static const uint32_t freqTab[32] = /* Frequency table; number of samples between updates. Used to determine envelope rates and noise frequencies */
+{
+	0,   2048, 1536, 1280, 1024, 768, 640, 512,
+	384, 320,  256,  192,  160,  128, 96,  80,
+	64,  48,   40,   32,   24,   20,  16,  12,
+	10,  8,    6,    5,    4,    3,   2,   1
+};
+
+static const uint16_t rate_table[32] =
 {
 	0x0000, 0x000F, 0x0014, 0x0018, 0x001E, 0x0028, 0x0030, 0x003C,
 	0x0050, 0x0060, 0x0078, 0x00A0, 0x00C0, 0x00F0, 0x0140, 0x0180,
@@ -209,6 +220,7 @@ static uint8_t src_buffer[9]; /* Temporary */
 /* Mixing */
 static VoiceMix mix[8];      /* Mixing settings for each voice and waveform playback */
 static uint8_t  voiceKon;    /* Voices that are currently being key on */
+static uint32_t rateTab[32]; /* Update Rate Table */
 
 /* DSP Options */
 static int32_t  dspRate;  /* Output sample rate */
@@ -240,18 +252,19 @@ static uint8_t firCur;  /* Index of the first sample to feed into the filter */
 static uint8_t disEcho; /* 0 if echo is enabled */
 
 /* Storage buffers */
+extern int32_t Echo[ECHOBUF];
 extern int16_t Loop[FIRBUF];
 extern int8_t  FilterTaps[8];
 
 /* Other */
-static Channel channels[NUM_CHANNELS];
+static int32_t SAtoEMode[256]; /* Used for converting envelope mode flags to Snes9x's enum */
 
 static INLINE void APUTimerPulse()
 {
 	int32_t i;
 	EXT.t64Cnt = (EXT.t64Cnt + 1) & 7;
 
-	if (EXT.t64Cnt == 7)
+	if (EXT.t64Cnt == 0)
 		i = 0;
 	else
 		i = 2;
@@ -274,11 +287,16 @@ static INLINE void APUTimerPulse()
 	}
 }
 
+int32_t APUGetCPUCycles()
+{
+	return CPU.Cycles;
+}
+
 void APUMainLoop()
 {
 	while (CPU.Cycles < EXT.NextAPUTimerPos)
 	{
-		APU_EXECUTE();
+		APUExecute();
 		APUTimerPulse();
 		EXT.APUTimerCounter_err += EXT.APUTimerCounter;
 		EXT.NextAPUTimerPos += (EXT.APUTimerCounter_err >> FIXED_POINT_SHIFT);
@@ -286,50 +304,63 @@ void APUMainLoop()
 	}
 }
 
-static INLINE uint8_t DSP_GET_BYTE(uint16_t addr)
+static INLINE uint8_t DSPGetByte(uint16_t addr)
 {
-	return IAPU.RAM[addr];
+	if (addr < 0xffc0)
+		return IAPU.RAM[addr];
+
+	return APU.ExtraRAM[addr - 0xffc0];
 }
 
-static INLINE uint16_t DSP_GET_WORD(uint16_t addr)
+static INLINE uint16_t DSPGetWord(uint16_t addr)
 {
-	return READ_WORD(&IAPU.RAM[addr]);
+	if (addr < 0xffbf)
+		return READ_WORD(IAPU.RAM + addr);
+
+	if (addr == 0xffbf)
+		return IAPU.RAM[addr] | (APU.ExtraRAM[0] << 8);
+
+	if (addr < 0xffff)
+		return READ_WORD(APU.ExtraRAM + addr - 0xffc0);
+
+	return APU.ExtraRAM[0x3f] | (IAPU.RAM[0] << 8);
 }
 
-static INLINE void DSP_SET_BYTE(uint16_t addr, uint8_t data)
+static INLINE uint16_t DSPGetSrc(int32_t i)
 {
-	IAPU.RAM[addr] = data;
+	return DSPGetWord((APU.DSP[APU_DIR] << 8) + (APU.DSP[chs[i].o + APU_SRCN] << 2));
 }
 
-static INLINE void DSP_SET_WORD(uint16_t addr, uint16_t data)
+static INLINE uint16_t DSPGetSrcLoop(int32_t i)
 {
-	WRITE_WORD(&IAPU.RAM[addr], data);
+	return DSPGetWord((APU.DSP[APU_DIR] << 8) + (APU.DSP[chs[i].o + APU_SRCN] << 2) + 2);
 }
 
-static INLINE uint16_t DSP_GET_SRC(int32_t i)
-{
-	return DSP_GET_WORD((APU.DSP[APU_DIR] << 8) + (APU.DSP[chs[i].o + APU_SRCN] << 2));
-}
-
-static INLINE uint16_t DSP_GET_SRC_LOOP(int32_t i)
-{
-	return DSP_GET_WORD((APU.DSP[APU_DIR] << 8) + (APU.DSP[chs[i].o + APU_SRCN] << 2) + 2);
-}
-
-static INLINE uint8_t* DSP_GET_SRC_P(uint16_t addr)
+static INLINE uint8_t* DSPGetSrcP(uint16_t addr)
 {
 	int32_t len;
 
+	if (addr <= (0xffc0 - 9))
+		return IAPU.RAM + addr;
+
+	if (addr < 0xffc0)
+	{
+		len = 0xffc0 - addr;
+		memcpy(src_buffer, IAPU.RAM + addr, len);
+		memcpy(src_buffer + len, APU.ExtraRAM, 9 - len);
+		return src_buffer;
+	}
+
 	if (addr <= (0x10000 - 9))
-		return &IAPU.RAM[addr];
+		return APU.ExtraRAM + addr - 0xffc0;
 
 	len = 0x10000 - addr;
-	memcpy(src_buffer, &IAPU.RAM[addr], (size_t) len);
-	memcpy(src_buffer + len, IAPU.RAM, (size_t) (9 - len));
+	memcpy(src_buffer, APU.ExtraRAM + addr - 0xffc0, len);
+	memcpy(src_buffer + len, IAPU.RAM, 9 - len);
 	return src_buffer;
 }
 
-static INLINE uint16_t DSP_GET_PITCH(int32_t i)
+static INLINE uint16_t DSPGetPitch(int32_t i)
 {
 	return ((APU.DSP[chs[i].o + APU_P_HIGH] << 8) | APU.DSP[chs[i].o + APU_P_LOW]) & FREQUENCY_MASK;
 }
@@ -340,20 +371,29 @@ static INLINE uint16_t DSP_GET_PITCH(int32_t i)
 static INLINE void StartSrc(int32_t ch)
 {
 	/* Initialize interpolation */
-	memset(&mix[ch].sBuf[0x10], 0, sizeof(int16_t) * 16);
-	mix[ch].bCur = mix[ch].bStart;
+	memset(mix[ch].sBuf + 0x10, 0, sizeof(int16_t) * 16);
+	mix[ch].bCur      = mix[ch].bStart;
 	mix[ch].bMixStart = mix[ch].bCur;
-	mix[ch].bHdr = DSP_GET_BYTE(mix[ch].bCur);
-	mix[ch].sIdx = -9;
-	mix[ch].sP1 = 0;
-	mix[ch].sP2 = 0;
+	mix[ch].bHdr      = DSPGetByte(mix[ch].bCur);
+	mix[ch].sIdx      = -9;
+	mix[ch].sP1       = 0;
+	mix[ch].sP2       = 0;
 
 	/* Start voice */
 	APU.DSP[APU_ENDX] &= ~chs[ch].m;
 	UnpckSrc(mix[ch].bHdr, &mix[ch].bCur, mix[ch].sBuf, &mix[ch].sP1, &mix[ch].sP2);
 }
 
-static INLINE void ChgSilence(int32_t ch);
+static INLINE void ChgSilence(int32_t ch)
+{
+	mix[ch].eMode = E_DIRECT;
+	mix[ch].eRIdx = 0;
+	mix[ch].eRate = rateTab[mix[ch].eRIdx];
+	mix[ch].eAdj = A_EXP;
+	mix[ch].eVal = mix[ch].eDest = D_MIN;
+	mix[ch].mFlg |= MFLG_OFF;
+	mix[ch].mFlg &= (MFLG_MUTE | MFLG_OFF);
+}
 
 static INLINE void UpdateSrc(int32_t ch)
 {
@@ -364,16 +404,16 @@ static INLINE void UpdateSrc(int32_t ch)
 		if (!(mix[ch].bHdr & 2)) /* Loop? */
 		{
 			mix[ch].mFlg |= MFLG_END;
-			memset(&mix[ch].sBuf[mix[ch].sIdx & 0x10], 0, sizeof(int16_t) * 16);
+			memset(mix[ch].sBuf + (mix[ch].sIdx & 0x10), 0, sizeof(int16_t) * 16);
 			mix[ch].eVal = D_MIN;
 			return;
 		}
 		else
-			mix[ch].bCur = DSP_GET_SRC_LOOP(ch);
+			mix[ch].bCur = DSPGetSrcLoop(ch);
 	}
 
 	/* Save block header */
-	mix[ch].bHdr = DSP_GET_BYTE(mix[ch].bCur);
+	mix[ch].bHdr = DSPGetByte(mix[ch].bCur);
 
 	if((mix[ch].bHdr & 1) && !(mix[ch].bHdr & 2)) /* Is this the end block? */
 	{
@@ -385,12 +425,12 @@ static INLINE void UpdateSrc(int32_t ch)
 	if (mix[ch].mFlg & MFLG_OFF)
 		mix[ch].bCur += 9;
 	else
-		UnpckSrc(mix[ch].bHdr, &mix[ch].bCur, &mix[ch].sBuf[mix[ch].sIdx & 0x10], &mix[ch].sP1, &mix[ch].sP2);
+		UnpckSrc(mix[ch].bHdr, &mix[ch].bCur, mix[ch].sBuf + (mix[ch].sIdx & 0x10), &mix[ch].sP1, &mix[ch].sP2);
 }
 
 static INLINE void SetNoiseHertz()
 {
-	nRate = rateTab[APU.DSP[APU_FLG] & 0x1f];
+	nRate = rate_table[APU.DSP[APU_FLG] & 0x1f];
 }
 
 static INLINE void InitReg(int32_t reg, uint8_t val)
@@ -411,23 +451,29 @@ void InitAPUDSP()
 	disEcho = 0;
 
 	for (i = 0; i < 8; i++) /* Erase all mixer settings */
-		memset(&mix[i], 0, sizeof(VoiceMix));
+		memset(mix + i, 0, sizeof(VoiceMix));
 
 	for (i = 0; i < 8; i++) /* Set pointers to reasonable default values. Otherwise savestates cause SEGVs! */
 	{
 		mix[i].sIdx = 0;
-		mix[i].bStart = DSP_GET_SRC(i);
+		mix[i].bStart = DSPGetSrc(i);
 		mix[i].bMixStart = mix[i].bStart;
-		mix[i].bCur = DSP_GET_SRC(i);
+		mix[i].bCur = DSPGetSrc(i);
 	}
 
-	for (i = 0; i < 13; i++) /* Build a look-up table for all possible expanded values in a BRR block. Range 0-12 */
+	/* Build a look-up table for all possible expanded values in a BRR block. */
+	for (i = 0; i < 13; i++) /* Range 0-12 */
 		for (c = 0; c < 16; c++)
-			brrTab[(i << 4) + c] = (int32_t) ((int16_t) (c << 12) >> 12) << i >> 1;
+			brrTab[(i << 4) + c] = (int32_t) (((c ^ 8) - 8) << i);
 
 	for (i = 13; i < 16; i++) /* Range 13-15 */
-		for (c = 0; c < 16; c++)
-			brrTab[(i << 4) + c] = (int32_t) ((int16_t) (c << 12) >> 12) & ~0x7ff;
+	{
+		for (c = 0; c < 8; c++)
+			brrTab[(i << 4) + c] = 0;
+
+		for (; c < 16; c++)
+			brrTab[(i << 4) + c] = -4096;
+	}
 
 	for (i = 0; i < 256; i++) /* Interleave Gaussian table */
 	{
@@ -436,39 +482,72 @@ void InitAPUDSP()
 		gaussTab[(i << 2) + 1] = gaussPre[511 - i];
 		gaussTab[(i << 2) + 0] = gaussPre[255 - i];
 	}
+
+	/* Create SAtoEMode table */
+	for (i = 0; i < 256; i++)
+		SAtoEMode[i] = SOUND_SILENT;
+
+	SAtoEMode[E_IDLE]           = SOUND_SILENT;
+	SAtoEMode[E_ATT]            = SOUND_ATTACK;
+	SAtoEMode[E_DECAY]          = SOUND_DECAY;
+	SAtoEMode[E_SUST]           = SOUND_SUSTAIN;
+	SAtoEMode[E_REL]            = SOUND_RELEASE;
+	SAtoEMode[E_DIRECT]         = SOUND_GAIN;
+	SAtoEMode[E_INC]            = SOUND_INCREASE_LINEAR;
+	SAtoEMode[E_BENT]           = SOUND_INCREASE_BENT_LINE;
+	SAtoEMode[E_DEC]            = SOUND_DECREASE_LINEAR;
+	SAtoEMode[E_EXP]            = SOUND_DECREASE_EXPONENTIAL;
+	SAtoEMode[E_ATT   | E_IDLE] = SOUND_GAIN;
+	SAtoEMode[E_DECAY | E_IDLE] = SOUND_GAIN;
+	SAtoEMode[E_SUST  | E_IDLE] = SOUND_GAIN;
+	SAtoEMode[E_DEC   | E_IDLE] = SOUND_GAIN;
+	SAtoEMode[E_EXP   | E_IDLE] = SOUND_GAIN;
+	SAtoEMode[E_INC   | E_IDLE] = SOUND_GAIN;
+	SAtoEMode[E_BENT  | E_IDLE] = SOUND_GAIN;
+	SAtoEMode[E_REL   | E_IDLE] = SOUND_GAIN;
 }
 
 void SetPlaybackRate(int32_t rate)
 {
 	int32_t i;
-	uint64_t r;
+	uint64_t r, rr;
 	rate = (rate >= 8000 && rate <= 192000) ? rate : SNES_SAMPLE_RATE;
 	disEcho = disEcho & ~DSP_NOECHO; /* Disable echo */
-	SetAPUDSPAmp(FIXED_POINT); /* Save option flags */
+	SetAPUDSPAmp(FIXED_POINT);       /* Save option flags */
 
 	if (rate == dspRate) /* Is the sample rate unchanged? */
 		return;
 
 	dspRate = rate;
-	pitchAdj = (uint32_t) (((uint64_t) SNES_SAMPLE_RATE << (FIXED_POINT_SHIFT + 4)) / dspRate);
+	pitchAdj = (uint32_t)(((uint64_t) SNES_SAMPLE_RATE << (FIXED_POINT_SHIFT + 4)) / dspRate);
 	r = (uint64_t) 0x1000 * pitchAdj;
+	rateTab[0] = 0;
+
+	for (i = 1; i < 32; i++)
+	{
+		rr = r / freqTab[i];
+		rateTab[i] = (uint32_t)((rr >> FIXED_POINT_SHIFT) + ((rr & FIXED_POINT_REMAINDER) ? 1 : 0));
+	}
 
 	for (i = 0; i < 7; i++) /* Adjust voice rates */
 	{
-		mix[i].mOrgP = DSP_GET_PITCH(i);
+		mix[i].mOrgP = DSPGetPitch(i);
 		r = (uint64_t) mix[i].mOrgP * pitchAdj;
-		mix[i].mOrgRate = (uint32_t) ((r >> FIXED_POINT_SHIFT) + ((r & FIXED_POINT_REMAINDER) ? 1 : 0));
+		mix[i].mOrgRate = (uint32_t)((r >> FIXED_POINT_SHIFT) + ((r & FIXED_POINT_REMAINDER) ? 1 : 0));
 		mix[i].mRate = mix[i].mOrgRate;
 		mix[i].mDec = 0;
 		mix[i].eRate = rateTab[mix[i].eRIdx];
 		mix[i].eDec = 0;
 	}
 
+	SetEchoDelay(rate, APU.DSP[APU_EDL] & 0xf);
+
 	/* Adjust echo delay */
 	InitReg(APU_ESA, APU.DSP[APU_ESA]);
 	InitReg(APU_EDL, APU.DSP[APU_EDL]);
 
-	/* Erase sample buffer */
+	/* Erase sample buffers */
+	memset(Echo, 0, sizeof(int32_t) * ECHOBUF);
 	memset(Loop, 0, sizeof(int16_t) * FIRBUF);
 }
 
@@ -482,23 +561,18 @@ void ResetAPUDSP()
 		mix[i].mFlg |= MFLG_OFF;
 	}
 
-	disEcho &= DSP_NOECHO; /* Disable echo */
-	disEcho |= 1; /* Disable echo if all taps are 0 */
-
-	/* Erase DSP Registers */
-	memset(APU.DSP, 0, 0x80);
-
-	/* Place DSP in power up mode */
-	APU.DSP[APU_FLG] = APU_SOFT_RESET | APU_MUTE | APU_ECHO_DISABLED;
-	EXT.t64Cnt = 0;
+	disEcho &= DSP_NOECHO;                        /* Disable echo */
+	disEcho |= 1;                                 /* Disable echo if all taps are 0 */
+	memset(APU.DSP, 0, 0x80);                     /* Erase DSP Registers */
+	APU.DSP[APU_FLG] = APU_SOFT_RESET | APU_MUTE; /* Place DSP in power up mode */
 
 	for (i = 0; i < 8; i++) /* Erase internal mixing settings. We'll just save-and-restore mFlg instead of selectively zeroing */
 	{
 		/* Set pointers to reasonable default values. Otherwise savestates cause SEGVs! */
-		mix[i].bStart = DSP_GET_SRC(i);
+		mix[i].bStart = DSPGetSrc(i);
 		mix[i].bMixStart = mix[i].bStart;
-		mix[i].bCur = DSP_GET_SRC(i);
-		mix[i].bHdr = DSP_GET_BYTE(mix[i].bCur);
+		mix[i].bCur = DSPGetSrc(i);
+		mix[i].bHdr = DSPGetByte(mix[i].bCur);
 
 		/* Envelope */
 		ChgSilence(i);
@@ -509,13 +583,8 @@ void ResetAPUDSP()
 		mix[i].sIdx = mix[i].sP1 = mix[i].sP2 = 0;
 
 		/* Mixing */
-		mix[i].mChnL = mix[i].mChnR = 0;
+		mix[i].mChnL = mix[i].mChnR = mix[i].mDec = mix[i].mOut = 0;
 		RPitch(i, APU.DSP[chs[i].o + APU_P_LOW]);
-		mix[i].mDec = mix[i].mOut = 0;
-
-		/* Channels */
-		channels[i].type  = SOUND_SAMPLE;
-		channels[i].envx  = 0;
 	}
 
 	/* Erase global volume settings */
@@ -524,6 +593,9 @@ void ResetAPUDSP()
 	/* Erase noise settings */
 	nDec = nRate = 0;
 	nSmp = 0x4000;
+
+	/* Erase echo region */
+	memset(Echo, 0, sizeof(int32_t) * ECHOBUF);
 
 	/* Reset echo variables */
 	echoStart = echoCur = echoFB = 0;
@@ -540,47 +612,69 @@ void ResetAPUDSP()
 	voiceKon = 0;
 }
 
+static INLINE void ChkStartSrc(int32_t i)
+{
+	if (!(mix[i].mFlg & MFLG_SSRC) && mix[i].bStart == mix[i].bMixStart)
+		return;
+
+	mix[i].mFlg &= ~MFLG_SSRC;
+	StartSrc(i);
+	mix[i].mFlg &= ~MFLG_END;
+	mix[i].mDec = 0;
+}
+
 void StoreAPUDSP()
 {
 	int32_t i, eVal;
-	SetFilterCoefficient(0, (int32_t) (int8_t) APU.DSP[APU_C0]); /* No filter */
+	APU.KeyedChannels            = voiceKon;
+	SoundData.echo_enable        = APU.DSP[APU_EON];
+	SoundData.echo_feedback      = (int32_t)(int8_t) APU.DSP[APU_EFB];
+	SoundData.echo_buffer_size   = 1024 * (APU.DSP[APU_EDL] & 0x0f);
+	SoundData.echo_ptr           = 0;
+	SoundData.echo_write_enabled = !(APU.DSP[APU_FLG] & APU_ECHO_DISABLED);
+	SoundData.pitch_mod          = APU.DSP[APU_PMON];
 
 	for (i = 0; i < 8; i++)
 	{
+		ChkStartSrc(i);
+
 		if (mix[i].mFlg & MFLG_OFF) /* Channel is inactive */
 		{
-			mix[i].eMode     = MODE_NONE;
-			channels[i].mode = MODE_NONE;
+			SoundData.channels[i].state = SOUND_SILENT;
+			SoundData.channels[i].mode = MODE_NONE;
 		}
 		else
 		{
+			SoundData.channels[i].state = SAtoEMode[mix[i].eMode];
+
 			if (mix[i].mFlg & MFLG_KOFF) /* Key off state */
-				channels[i].mode = MODE_RELEASE;
+				SoundData.channels[i].mode = MODE_RELEASE;
 			else if (APU.DSP[chs[i].o + APU_ADSR1] & 0x80) /* ADSR mode */
-				channels[i].mode = MODE_ADSR;
+				SoundData.channels[i].mode = MODE_ADSR;
 			else if (!(APU.DSP[chs[i].o + APU_GAIN] & 0x80)) /* Direct GAIN mode */
-				channels[i].mode = MODE_GAIN;
+				SoundData.channels[i].mode = MODE_GAIN;
 			else /* Indirect GAIN mode */
 			{
 				switch (APU.DSP[chs[i].o + APU_GAIN] & 0x60)
 				{
 					case 0x00:
-						channels[i].mode = MODE_DECREASE_LINEAR;
+						SoundData.channels[i].mode = MODE_DECREASE_LINEAR;
 						break;
 					case 0x20:
-						channels[i].mode = MODE_DECREASE_EXPONENTIAL;
+						SoundData.channels[i].mode = MODE_DECREASE_EXPONENTIAL;
 						break;
 					case 0x40:
-						channels[i].mode = MODE_INCREASE_LINEAR;
+						SoundData.channels[i].mode = MODE_INCREASE_LINEAR;
 						break;
 					case 0x60:
-						channels[i].mode = MODE_INCREASE_BENT_LINE;
+						SoundData.channels[i].mode = MODE_INCREASE_BENT_LINE;
 						break;
 				}
 			}
 		}
 
-		channels[i].type = (APU.DSP[APU_NON] & chs[i].m) ? SOUND_NOISE : SOUND_SAMPLE;
+		SoundData.channels[i].type = (APU.DSP[APU_NON] & chs[i].m) ? SOUND_NOISE : SOUND_SAMPLE;
+		SoundData.channels[i].count = 0;
 		eVal = mix[i].eVal;
 
 		if (eVal > D_ATTACK)
@@ -588,50 +682,66 @@ void StoreAPUDSP()
 		else if (eVal < 0)
 			eVal = 0;
 
-		channels[i].envx = eVal >> E_SHIFT;
+		SoundData.channels[i].envx = eVal >> E_SHIFT;
 
 		if (mix[i].sIdx >= 0)
 		{
-			memcpy(channels[i].decoded, &mix[i].sBuf[mix[i].sIdx & 0x10], sizeof(int16_t) * 16);
-			channels[i].sample_pointer = (uint32_t) (mix[i].sIdx & 0x0f);
+			memcpy(SoundData.channels[i].decoded, mix[i].sBuf + (mix[i].sIdx & 0x10), sizeof(int16_t) * 16);
+			SoundData.channels[i].next_sample = mix[i].sBuf[mix[i].sIdx + 1];
+			SoundData.channels[i].sample_pointer = (uint32_t)(mix[i].sIdx & 0x0f);
 		}
 		else
 		{
-			memset(channels[i].decoded, 0, sizeof(int16_t) * 16);
-			channels[i].sample_pointer = (uint32_t) (mix[i].sIdx & 0xff);
+			memset(SoundData.channels[i].decoded, 0, sizeof(int16_t) * 16);
+			SoundData.channels[i].next_sample = 0;
+			SoundData.channels[i].sample_pointer = (uint32_t)(mix[i].sIdx & 0xff);
 		}
 
-		channels[i].block = (int16_t*) &channels[i].decoded[channels[i].sample_pointer];
-		channels[i].block_pointer = (uint32_t) mix[i].bCur;
+		SoundData.channels[i].block = (int16_t*) SoundData.channels[i].decoded + (SoundData.channels[i].sample_pointer);
+		SoundData.channels[i].block_pointer = (uint32_t) mix[i].bCur;
 
 		/* Store OUTX ENVX */
-		APU.DSP[chs[i].o + APU_OUTX] = (uint8_t) ((mix[i].mFlg & (MFLG_OFF | MFLG_END)) ? 0 : (mix[i].mOut >> 8));
-		APU.DSP[chs[i].o + APU_ENVX] = (uint8_t) ((mix[i].mFlg & (MFLG_OFF | MFLG_END)) ? 0 : ((eVal >> E_SHIFT) & 0x7f));
+		APU.DSP[chs[i].o + APU_OUTX] = (uint8_t)((mix[i].mFlg & (MFLG_OFF | MFLG_END)) ? 0 : (mix[i].mOut >> 8));
+		APU.DSP[chs[i].o + APU_ENVX] = (uint8_t)((mix[i].mFlg & (MFLG_OFF | MFLG_END)) ? 0 : ((eVal >> E_SHIFT) & 0x7f));
 	}
 
 	IAPU.RAM[0xf3] = APU.DSP[IAPU.RAM[0xf2] & 0x7f]; /* Store 0xf3 */
 }
 
+static const uint8_t toSAEMode[10] =
+{
+	E_IDLE,   /* SOUND_SILENT */
+	E_ATT,    /* SOUND_ATTACK */
+	E_DECAY,  /* SOUND_DECAY */
+	E_SUST,   /* SOUND_SUSTAIN */
+	E_REL,    /* SOUND_RELEASE */
+	E_DIRECT, /* SOUND_GAIN */
+	E_INC,    /* SOUND_INCREASE_LINEAR */
+	E_BENT,   /* SOUND_INCREASE_BENT_LINE */
+	E_DEC,    /* SOUND_DECREASE_LINEAR */
+	E_EXP     /* SOUND_DECREASE_EXPONENTIAL */
+};
+
 void RestoreAPUDSP() /* Restore DSP's State of Operation */
 {
 	int32_t i;
 	uint8_t mFlg, flg;
-	voiceKon = APU.DSP[APU_KON];
+	voiceKon = APU.KeyedChannels;
 
 	for (i = 0; i < 8; i++)
 	{
-		mix[i].bStart = DSP_GET_SRC(i);
+		mix[i].bStart = DSPGetSrc(i);
 		mix[i].bMixStart = mix[i].bStart;
-		mix[i].bCur = (uint16_t) (channels[i].block_pointer & 0xffff);
-		memset(&mix[i].sBuf[0x10], 0, sizeof(int16_t) * 16);
-		memcpy(mix[i].sBuf, channels[i].decoded, sizeof(int16_t) * 16);
+		mix[i].bCur = (uint16_t)(SoundData.channels[i].block_pointer & 0xffff);
+		memset(mix[i].sBuf + 0x10, 0, sizeof(int16_t) * 16);
+		memcpy(mix[i].sBuf, SoundData.channels[i].decoded, sizeof(int16_t) * 16);
 
-		if (channels[i].sample_pointer >= 247 && channels[i].sample_pointer <= 255)
-			mix[i].sIdx = (int8_t) (channels[i].sample_pointer & 0xff);
+		if (SoundData.channels[i].sample_pointer >= 247 && SoundData.channels[i].sample_pointer <= 255)
+			mix[i].sIdx = (int8_t) (SoundData.channels[i].sample_pointer & 0xff);
 		else
-			mix[i].sIdx = (int8_t) (channels[i].sample_pointer & 0x0f);
+			mix[i].sIdx = (int8_t) (SoundData.channels[i].sample_pointer & 0x0f);
 
-		mFlg = ((mix[i].mFlg & MFLG_MUTE) | (channels[i].mode == MODE_NONE ? MFLG_OFF : 0) | (channels[i].mode == MODE_RELEASE ? MFLG_KOFF : 0));
+		mFlg = ((mix[i].mFlg & MFLG_MUTE) | MFLG_END | (SoundData.channels[i].state == SOUND_SILENT ? MFLG_OFF : 0) | (SoundData.channels[i].mode == MODE_RELEASE ? MFLG_KOFF : 0));
 
 		if (mFlg & MFLG_OFF)
 			mFlg &= ~(MFLG_KOFF | MFLG_END);
@@ -640,6 +750,7 @@ void RestoreAPUDSP() /* Restore DSP's State of Operation */
 		InitReg(chs[i].o + APU_VOL_LEFT, APU.DSP[chs[i].o + APU_VOL_LEFT]);
 		InitReg(chs[i].o + APU_VOL_RIGHT, APU.DSP[chs[i].o + APU_VOL_RIGHT]);
 		InitReg(chs[i].o + APU_P_LOW, APU.DSP[chs[i].o + APU_P_LOW]);
+		mix[i].eMode = toSAEMode[SoundData.channels[i].state];
 
 		/* Default to release mode settings */
 		mix[i].eRIdx = 31;
@@ -647,9 +758,9 @@ void RestoreAPUDSP() /* Restore DSP's State of Operation */
 		mix[i].eDec = 0;
 		mix[i].eAdj = A_KOF;
 		mix[i].eDest = D_MIN;
-		mix[i].eVal = channels[i].envx << E_SHIFT;
+		mix[i].eVal = SoundData.channels[i].envx << E_SHIFT;
 		InitReg(chs[i].o + APU_ADSR1, APU.DSP[chs[i].o + APU_ADSR1]);
-		mix[i].mOut = (int32_t) (int8_t) APU.DSP[chs[i].o + APU_OUTX] << 8;
+		mix[i].mOut = (int32_t)(int8_t) APU.DSP[chs[i].o + APU_OUTX] << 8;
 		mix[i].mDec = 0;
 	}
 
@@ -688,20 +799,20 @@ static INLINE void ChgSus(int32_t i)
 	if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal <= D_MIN)
 	{
 		mix[i].eMode = E_IDLE | E_SUST;
-		mix[i].eDec  = 0;
+		mix[i].eDec = 0;
 	}
 	else
 		mix[i].eMode = E_SUST;
 
 	mix[i].eRate = rateTab[mix[i].eRIdx];
-	mix[i].eAdj  = A_EXP;
+	mix[i].eAdj = A_EXP;
 	mix[i].eDest = D_MIN;
 }
 
 static INLINE void ChgDec(int32_t i)
 {
 	uint8_t sl = APU.DSP[chs[i].o + APU_ADSR2] >> 5;
-	int32_t eDest = (int32_t) (sl + 1) * D_EXP;
+	int32_t eDest = (int32_t)(sl + 1) * D_EXP;
 
 	if (sl == 7 || mix[i].eVal <= eDest)
 	{
@@ -711,7 +822,7 @@ static INLINE void ChgDec(int32_t i)
 
 	mix[i].eRIdx = ((APU.DSP[chs[i].o + APU_ADSR1] & 0x70) >> 3) + 0x10;
 	mix[i].eRate = rateTab[mix[i].eRIdx];
-	mix[i].eAdj  = A_EXP;
+	mix[i].eAdj = A_EXP;
 	mix[i].eDest = eDest;
 	mix[i].eMode = E_DECAY;
 }
@@ -728,7 +839,7 @@ static INLINE void ChgAtt(int32_t i)
 
 	mix[i].eRIdx = (ar << 1) + 1;
 	mix[i].eRate = rateTab[mix[i].eRIdx];
-	mix[i].eAdj  = (ar == 0x0f) ? A_NOATT : A_LIN;
+	mix[i].eAdj = (ar == 0x0f) ? A_NOATT : A_LIN;
 	mix[i].eDest = D_ATTACK;
 	mix[i].eMode = E_ATT;
 }
@@ -759,83 +870,83 @@ static INLINE void ChgGain(int32_t i)
 		mix[i].eMode = E_DIRECT;
 		mix[i].eRIdx = 0;
 		mix[i].eRate = rateTab[mix[i].eRIdx];
-		mix[i].eAdj  = A_EXP;
-		mix[i].eVal  = mix[i].eDest = (int32_t) (APU.DSP[chs[i].o + APU_GAIN] & 0x7f) * A_GAIN;
+		mix[i].eAdj = A_EXP;
+		mix[i].eVal = mix[i].eDest = (int32_t)(APU.DSP[chs[i].o + APU_GAIN] & 0x7f) * A_GAIN;
 		return;
 	}
 
 	switch (APU.DSP[chs[i].o + APU_GAIN] & 0x60)
 	{
-	case 0x00: /* GainDec */
-		mix[i].eRIdx = APU.DSP[chs[i].o + APU_GAIN] & 0x1f;
+		case 0x00: /* GainDec */
+			mix[i].eRIdx = APU.DSP[chs[i].o + APU_GAIN] & 0x1f;
 
-		if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal <= D_MIN)
-		{
-			mix[i].eMode = E_IDLE | E_DEC;
-			mix[i].eDec  = 0;
-		}
-		else
-			mix[i].eMode = E_DEC;
+			if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal <= D_MIN)
+			{
+				mix[i].eMode = E_IDLE | E_DEC;
+				mix[i].eDec = 0;
+			}
+			else
+				mix[i].eMode = E_DEC;
 
-		mix[i].eRate = rateTab[mix[i].eRIdx];
-		mix[i].eAdj  = A_LIN;
-		mix[i].eDest = D_MIN;
-		break;
-	case 0x20: /* GainExp */
-		mix[i].eRIdx = APU.DSP[chs[i].o + APU_GAIN] & 0x1f;
+			mix[i].eRate = rateTab[mix[i].eRIdx];
+			mix[i].eAdj = A_LIN;
+			mix[i].eDest = D_MIN;
+			break;
+		case 0x20: /* GainExp */
+			mix[i].eRIdx = APU.DSP[chs[i].o + APU_GAIN] & 0x1f;
 
-		if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal <= D_MIN)
-		{
-			mix[i].eMode = E_IDLE | E_EXP;
-			mix[i].eDec  = 0;
-		}
-		else
-			mix[i].eMode = E_EXP;
+			if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal <= D_MIN)
+			{
+				mix[i].eMode = E_IDLE | E_EXP;
+				mix[i].eDec = 0;
+			}
+			else
+				mix[i].eMode = E_EXP;
 
-		mix[i].eRate = rateTab[mix[i].eRIdx];
-		mix[i].eAdj  = A_EXP;
-		mix[i].eDest = D_MIN;
-		break;
-	case 0x40: /* GainInc */
-		mix[i].eRIdx = APU.DSP[chs[i].o + APU_GAIN] & 0x1f;
+			mix[i].eRate = rateTab[mix[i].eRIdx];
+			mix[i].eAdj = A_EXP;
+			mix[i].eDest = D_MIN;
+			break;
+		case 0x40: /* GainInc */
+			mix[i].eRIdx = APU.DSP[chs[i].o + APU_GAIN] & 0x1f;
 
-		if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal >= D_ATTACK)
-		{
-			mix[i].eMode = E_IDLE | E_INC;
-			mix[i].eDec  = 0;
-		}
-		else
-			mix[i].eMode = E_INC;
+			if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal >= D_ATTACK)
+			{
+				mix[i].eMode = E_IDLE | E_INC;
+				mix[i].eDec = 0;
+			}
+			else
+				mix[i].eMode = E_INC;
 
-		mix[i].eRate = rateTab[mix[i].eRIdx];
-		mix[i].eAdj  = A_LIN;
-		mix[i].eDest = D_ATTACK;
-		break;
-	case 0x60: /* GainBent */
-		mix[i].eRIdx = APU.DSP[chs[i].o + APU_GAIN] & 0x1f;
-
-		if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal >= D_ATTACK)
-		{
-			mix[i].eMode = E_IDLE | E_BENT;
-			mix[i].eDec  = 0;
-		}
-		else
-			mix[i].eMode = E_BENT;
-
-		mix[i].eRate = rateTab[mix[i].eRIdx];
-
-		if (mix[i].eVal < D_BENT)
-		{
-			mix[i].eAdj  = A_LIN;
-			mix[i].eDest = D_BENT;
-		}
-		else
-		{
-			mix[i].eAdj  = A_BENT;
+			mix[i].eRate = rateTab[mix[i].eRIdx];
+			mix[i].eAdj = A_LIN;
 			mix[i].eDest = D_ATTACK;
-		}
+			break;
+		case 0x60: /* GainBent */
+			mix[i].eRIdx = APU.DSP[chs[i].o + APU_GAIN] & 0x1f;
 
-		break;
+			if (rateTab[mix[i].eRIdx] == 0 || mix[i].eVal >= D_ATTACK)
+			{
+				mix[i].eMode = E_IDLE | E_BENT;
+				mix[i].eDec = 0;
+			}
+			else
+				mix[i].eMode = E_BENT;
+
+			mix[i].eRate = rateTab[mix[i].eRIdx];
+
+			if (mix[i].eVal < D_BENT)
+			{
+				mix[i].eAdj = A_LIN;
+				mix[i].eDest = D_BENT;
+			}
+			else
+			{
+				mix[i].eAdj = A_BENT;
+				mix[i].eDest = D_ATTACK;
+			}
+
+			break;
 	}
 }
 
@@ -865,8 +976,7 @@ static INLINE void UpdateEnv(int32_t i)
 			if (mix[i].eVal > mix[i].eDest)
 				return;
 
-			if (mix[i].eVal < mix[i].eDest)
-				mix[i].eVal = mix[i].eDest;
+			mix[i].eVal = mix[i].eDest;
 		}
 	}
 	else if (mix[i].eMode & E_DIR) /* Linear increase (mode 2, 6, or A) - E_INC, E_BENT, E_ATT */
@@ -878,8 +988,7 @@ static INLINE void UpdateEnv(int32_t i)
 			if (mix[i].eVal < mix[i].eDest)
 				return;
 
-			if (mix[i].eVal > mix[i].eDest)
-				mix[i].eVal = mix[i].eDest;
+			mix[i].eVal = mix[i].eDest;
 		}
 	}
 	else /* Linear decrease (mode 0 or 8) - E_DEC, E_REL */
@@ -956,21 +1065,10 @@ static INLINE void CalcEnv(int32_t i)
 	}
 }
 
-static INLINE void ChgSilence(int32_t ch)
-{
-	mix[ch].eMode = E_DIRECT;
-	mix[ch].eRIdx = 0;
-	mix[ch].eRate = rateTab[mix[ch].eRIdx];
-	mix[ch].eAdj = A_EXP;
-	mix[ch].eVal = mix[ch].eDest = D_MIN;
-	mix[ch].mFlg |= MFLG_OFF;
-	mix[ch].mFlg &= (MFLG_MUTE | MFLG_OFF);
-}
-
 static INLINE void ProcessSrc(int32_t i)
 {
 	/* Waveform Resizing */
-	int8_t sc = (int8_t) ((mix[i].mDec += mix[i].mRate) >> FIXED_POINT_SHIFT); /* MAX is 16 in 8000Hz Pitch 0x3FFF */
+	int8_t sc = (int8_t)((mix[i].mDec += mix[i].mRate) >> FIXED_POINT_SHIFT); /* MAX is 16 in 8000Hz Pitch 0x3FFF */
 	int8_t sIdx = (mix[i].sIdx + sc) & 0x1f;
 	mix[i].mDec &= FIXED_POINT_REMAINDER;
 
@@ -1002,51 +1100,42 @@ void APUDSPIn(uint8_t address, uint8_t data) /* DSP Data Port */
 
 	switch (address)
 	{
-	case APU_KON:
-	case APU_KOFF:
-		InitReg(address, data);
-		break;
-	case APU_FLG:
-		RFlg((address & 0x70) >> 4, data);
-		break;
-	case APU_ENDX:
-		REndX((address & 0x70) >> 4, data);
-		break;
-	default:
-		if (data == APU.DSP[address])
-			break;
-
-		if(!(address & 0x08))
-		{
-			APU.DSP[address] = data;
-			uint8_t i = ((address) & 0x70) >> 4;
-
-			if(!(mix[i].mFlg & MFLG_OFF))
-				(*dspRegs[address])(i, data);
-		}
-		else
+		case APU_KON:
+		case APU_KOFF:
 			InitReg(address, data);
+			break;
+		case APU_FLG:
+			RFlg((address & 0x70) >> 4, data);
+			break;
+		case APU_ENDX:
+			REndX((address & 0x70) >> 4, data);
+			break;
+		default:
+			if (data != APU.DSP[address])
+				InitReg(address, data);
+
+			break;
 	}
 }
 
 /* Channel volume */
 static void RVolL(int32_t i, uint8_t val)
 {
-	mix[i].mChnL = (int32_t) (int8_t) val;
+	mix[i].mChnL = (int32_t)(int8_t) val;
 }
 
 static void RVolR(int32_t i, uint8_t val)
 {
-	mix[i].mChnR = (int32_t) (int8_t) val;
+	mix[i].mChnR = (int32_t)(int8_t) val;
 }
 
 static void RPitch(int32_t i, uint8_t _2) /* Pitch */
 {
 	uint64_t r;
 	(void) _2;
-	mix[i].mOrgP = DSP_GET_PITCH(i);
+	mix[i].mOrgP = DSPGetPitch(i);
 	r = (uint64_t) mix[i].mOrgP * pitchAdj;
-	mix[i].mOrgRate = (uint32_t) ((r >> FIXED_POINT_SHIFT) + ((r & FIXED_POINT_REMAINDER) ? 1 : 0));
+	mix[i].mOrgRate = (uint32_t)((r >> FIXED_POINT_SHIFT) + ((r & FIXED_POINT_REMAINDER) ? 1 : 0));
 }
 
 /* Envelope */
@@ -1087,32 +1176,32 @@ static void RGain(int32_t i, uint8_t _2)
 static void RMVolL(int32_t _1, uint8_t val)
 {
 	(void) _1;
-	volMainL = ((int32_t) (int8_t) val * volAdj) >> FIXED_POINT_SHIFT;
+	volMainL = ((int32_t)(int8_t) val * volAdj) >> FIXED_POINT_SHIFT;
 }
 
 static void RMVolR(int32_t _1, uint8_t val)
 {
 	(void) _1;
-	volMainR = ((int32_t) (int8_t) val * volAdj) >> FIXED_POINT_SHIFT;
+	volMainR = ((int32_t)(int8_t) val * volAdj) >> FIXED_POINT_SHIFT;
 }
 
 static void REVolL(int32_t _1, uint8_t val)
 {
 	(void) _1;
-	volEchoL = ((int32_t) (int8_t) val * volAdj) >> FIXED_POINT_SHIFT;
+	volEchoL = ((int32_t)(int8_t) val * volAdj) >> FIXED_POINT_SHIFT;
 }
 
 static void REVolR(int32_t _1, uint8_t val)
 {
 	(void) _1;
-	volEchoR = ((int32_t) (int8_t) val * volAdj) >> FIXED_POINT_SHIFT;
+	volEchoR = ((int32_t)(int8_t) val * volAdj) >> FIXED_POINT_SHIFT;
 }
 
 /* Echo settings */
 static void REFB(int32_t _1, uint8_t val)
 {
 	(void) _1;
-	echoFB = (int32_t) (int8_t) val;
+	echoFB = (int32_t)(int8_t) val;
 }
 
 static void REDl(int32_t _1, uint8_t val)
@@ -1123,7 +1212,7 @@ static void REDl(int32_t _1, uint8_t val)
 	if (val == 0)
 		echoDel = 2;
 	else
-		echoDel = ((uint32_t) (val << 4) * dspRate / 1000) << 1;
+		echoDel = ((uint32_t)(val << 4) * dspRate / 1000) << 1;
 }
 
 static void RFCI(int32_t i, uint8_t val)
@@ -1150,7 +1239,7 @@ static void RKOn(int32_t i, uint8_t val)
 			StartEnv(i);
 
 			/* Start waveform decompression */
-			mix[i].bStart = DSP_GET_SRC(i);
+			mix[i].bStart = DSPGetSrc(i);
 			mix[i].mFlg |= MFLG_SSRC;
 			mix[i].mFlg &= ~(MFLG_KOFF | MFLG_OFF); /* Reset flags */
 
@@ -1250,7 +1339,7 @@ static INLINE int32_t GetCurSample(int32_t ch)
 
 	/* Gaussian Interpolation */
 	mDec = (mix[ch].mDec >> 8) << 2;
-	cursample = (int32_t) (int16_t) (
+	cursample = (int32_t)(int16_t)(
 	    (((int32_t) mix[ch].sBuf[(mix[ch].sIdx - 3) & 0x1f] * gaussTab[mDec + 0]) >> 16) + /* d0 */
 	    (((int32_t) mix[ch].sBuf[(mix[ch].sIdx - 2) & 0x1f] * gaussTab[mDec + 1]) >> 16) + /* d1 */
 	    (((int32_t) mix[ch].sBuf[(mix[ch].sIdx - 1) & 0x1f] * gaussTab[mDec + 2]) >> 16) + /* d2 */
@@ -1331,8 +1420,8 @@ static INLINE void FIRFilter(int32_t* l, int32_t* r)
 
 static INLINE void ECHOFilter(int32_t* l, int32_t* r, int32_t ll, int32_t rr)
 {
-	Loop[firCur + 0] = (int16_t) DSP_GET_WORD((echoStart + echoCur + 0) << 1) >> 1;
-	Loop[firCur + 1] = (int16_t) DSP_GET_WORD((echoStart + echoCur + 1) << 1) >> 1;
+	Loop[firCur + 0] = Echo[echoStart + echoCur + 0] >> 1;
+	Loop[firCur + 1] = Echo[echoStart + echoCur + 1] >> 1;
 
 	/* Filter echo */
 	FIRFilter(l, r);
@@ -1340,8 +1429,8 @@ static INLINE void ECHOFilter(int32_t* l, int32_t* r, int32_t ll, int32_t rr)
 
 	if (!(APU.DSP[APU_FLG] & APU_ECHO_DISABLED)) /* Add feedback */
 	{
-		DSP_SET_WORD((echoStart + echoCur + 0) << 1, INT16_CLAMP(ll + ((*l * echoFB) >> 7)) & ~1);
-		DSP_SET_WORD((echoStart + echoCur + 1) << 1, INT16_CLAMP(rr + ((*r * echoFB) >> 7)) & ~1);
+		Echo[echoStart + echoCur + 0] = INT16_CLAMP(ll + ((*l * echoFB) >> 7));
+		Echo[echoStart + echoCur + 1] = INT16_CLAMP(rr + ((*r * echoFB) >> 7));
 	}
 
 	echoCur = (echoCur + 2) % echoDel;
@@ -1349,7 +1438,7 @@ static INLINE void ECHOFilter(int32_t* l, int32_t* r, int32_t ll, int32_t rr)
 
 void MixSamples(int16_t* pBuf, int32_t num) /* Emulate DSP - Emulates the DSP of the SNES */
 {
-	int32_t ch, cnt, eVal;
+	int32_t ch, cnt;
 
 	for (cnt = 0; cnt < num; cnt++, pBuf += DSP_SIZE)
 	{
@@ -1367,13 +1456,8 @@ void MixSamples(int16_t* pBuf, int32_t num) /* Emulate DSP - Emulates the DSP of
 					ChgSilence(ch);
 			}
 
-			if ((mix[ch].mFlg & MFLG_SSRC) || mix[ch].bStart != mix[ch].bMixStart)
-			{
-				mix[ch].mFlg &= ~MFLG_SSRC;
-				StartSrc(ch);
-				mix[ch].mFlg &= ~MFLG_END;
-				mix[ch].mDec = 0;
-			}
+			int32_t eVal;
+			ChkStartSrc(ch);
 
 			if (!(mix[ch].mFlg & MFLG_OFF)) /* Is the current voice active? */
 			{
@@ -1444,32 +1528,40 @@ static INLINE int32_t UnpckSrcFilter(int32_t f, int32_t p1, int32_t p2)
 {
 	switch (f)
 	{
-		case 1: /* Method1 - [Delta]+[Smp-1](15/16) */
-			return ((p1 >> 1) + ((-p1) >> 5));
-		case 2: /* Method2 - [Delta]+[Smp-1](61/32)-[Smp-2](15/16) */
-			return (p1 - (p2 >> 1) + (p2 >> 5) + ((p1 * -3) >> 6));
-		case 3: /* Method3 - [Delta]+[Smp-1](115/64)-[Smp-2](13/16) */
-			return (p1 - (p2 >> 1) + ((p1 * -13) >> 7) + (((p2 >> 1) * 3) >> 4));
-		default: /* Method0 - [Smp] */
+		case 1:
+			return p1 + ((-p1) >> 4);
+		case 2:
+			return (p1 << 1) + (-((p1 << 1) + p1) >> 5) + (p2 >> 4) - p2;
+		case 3:
+			return (p1 << 1) + (-((p1 << 3) + (p1 << 2) + p1) >> 6) + (((p2 << 1) + p2) >> 4) - p2;
+		default:
 			return 0;
 	}
+}
+
+static INLINE void FixSmp(int32_t* smp)
+{
+	if (*smp < -65536 || *smp >= 65535)
+		*smp = 0;
+	else
+		*smp = (int32_t)(int16_t) *smp;
 }
 
 static void UnpckSrc(uint8_t blk_hdr, uint16_t* xsample_blk, int16_t* output_buf, int32_t* smp_1, int32_t* smp_2)
 {
 	int32_t i;
-	uint8_t* sample_blk = DSP_GET_SRC_P(*xsample_blk) + 1;
-	const int* BRR_row = &brrTab[(blk_hdr & 0xf0)];
+	uint8_t* sample_blk = DSPGetSrcP(*xsample_blk) + 1;
+	const int* BRR_row = brrTab + (blk_hdr & 0xf0);
 	int32_t f = (blk_hdr & 0x0c) >> 2;
 	*xsample_blk += 9;
 
 	for (i = 0; i < 8; i++)
 	{
 		*smp_2 = BRR_row[sample_blk[0] >> 4] + UnpckSrcFilter(f, *smp_1, *smp_2);
-		*smp_2 = (int16_t) (INT16_CLAMP(*smp_2) << 1);
+		FixSmp(smp_2);
 		output_buf[0] = *smp_2;
 		*smp_1 = BRR_row[sample_blk[0] & 0x0f] + UnpckSrcFilter(f, *smp_2, *smp_1);
-		*smp_1 = (int16_t) (INT16_CLAMP(*smp_1) << 1);
+		FixSmp(smp_1);
 		output_buf[1] = *smp_1;
 		sample_blk++;
 		output_buf += 2;

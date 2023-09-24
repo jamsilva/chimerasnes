@@ -7,16 +7,16 @@
 /* Mixing flags */
 #define MFLG_MUTE 0x01 /* Mute voice */
 #define MFLG_KOFF 0x02 /* Voice is in the process of keying off */
-#define MFLG_OFF  0x04 /* Voice is currently inactive */
-#define MFLG_END  0x08 /* End block was just played */
+#define MFLG_OFF 0x04 /* Voice is currently inactive */
+#define MFLG_END 0x08 /* End block was just played */
 #define MFLG_SSRC 0x10 /* StartSrc */
 
 /* Envelope precision */
-#define E_SHIFT 4 /* Amount to shift envelope */
+#define E_SHIFT 8 /* Amount to shift envelope to get 8-bit signed value */
 
-#define FIXED_POINT           0x10000
+#define FIXED_POINT 0x10000
 #define FIXED_POINT_REMAINDER 0xffff
-#define FIXED_POINT_SHIFT     16
+#define FIXED_POINT_SHIFT 16
 
 void InitAPUDSP();
 void ResetAPUDSP();

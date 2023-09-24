@@ -14,8 +14,7 @@ typedef struct
 	bool       Carry       : 1;
 	bool       Overflow    : 1;
 	bool       Zero        : 1;
-	bool       Executing   : 1;
-	int16_t    _SICPU_PAD1 : 12;
+	int16_t    _SICPU_PAD1 : 13;
 	uint8_t    Negative;
 	uint8_t    OpenBus;
 	uint32_t   ShiftedDB;
@@ -41,13 +40,13 @@ extern uint8_t  OpLengthsM1X0[256];
 extern uint8_t  OpLengthsM0X1[256];
 extern uint8_t  OpLengthsM0X0[256];
 
-void SetMainLoop();
-void Reset();
-void SoftReset();
-void DoHBlankProcessing_SFX();
-void DoHBlankProcessing_NoSFX();
-void ClearIRQSource(uint32_t source);
-void SetIRQSource(uint32_t source);
+void    SetMainLoop();
+void    Reset();
+void    SoftReset();
+void    DoHBlankProcessing_SFX();
+void    DoHBlankProcessing_NoSFX();
+void    ClearIRQSource(uint32_t source);
+void    SetIRQSource(uint32_t source);
 
 static INLINE void UnpackStatus()
 {

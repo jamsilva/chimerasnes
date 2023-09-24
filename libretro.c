@@ -1,6 +1,6 @@
 #ifdef PSP
-	#include <pspkernel.h>
 	#include <pspgu.h>
+	#include <pspkernel.h>
 #endif
 
 #include <libretro.h>
@@ -262,7 +262,7 @@ void retro_init()
 	InitAPU();
 	InitDisplay();
 	InitGFX();
-	ResetAPU();
+	ResetSound(true);
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL))
 		libretro_supports_bitmasks = true;
@@ -568,7 +568,7 @@ size_t retro_serialize_size()
 {
 	return sizeof(CPU) + sizeof(ICPU) + sizeof(PPU) + sizeof(DMA) +
 		0x10000 + 0x20000 + 0x20000 + 0x8000 +
-		sizeof(APU) + sizeof(IAPU) + 0x10000 +
+		sizeof(APU) + sizeof(IAPU) + 0x10000 + sizeof(SoundData) +
 		SA1SnapshotSize() + sizeof(s7r) + sizeof(rtc_f9);
 }
 
@@ -602,6 +602,8 @@ bool retro_serialize(void* data, size_t size)
 	buffer += sizeof(IAPU);
 	memcpy(buffer, IAPU.RAM, 0x10000);
 	buffer += 0x10000;
+	memcpy(buffer, &SoundData, sizeof(SoundData));
+	buffer += sizeof(SoundData);
 	SA1PackStatus();
 	memcpy(buffer, &SA1, SA1SnapshotSize());
 	buffer += SA1SnapshotSize();
@@ -649,6 +651,8 @@ bool retro_unserialize(const void* data, size_t size)
 	IAPU.RAM = IAPU_RAM_current;
 	memcpy(IAPU.RAM, buffer, 0x10000);
 	buffer += 0x10000;
+	memcpy(&SoundData, buffer, sizeof(SoundData));
+	buffer += sizeof(SoundData);
 	memcpy(&SA1, buffer, SA1SnapshotSize());
 	buffer += SA1SnapshotSize();
 	FixSA1AfterSnapshotLoad();
@@ -662,9 +666,10 @@ bool retro_unserialize(const void* data, size_t size)
 	FixColourBrightness();
 	SRTCPostLoadState();
 	SA1UnpackStatus();
-	SetPlaybackRate(SNES_SAMPLE_RATE);
 	APUUnpackStatus();
 	RestoreAPUDSP();
+	FixSoundAfterSnapshotLoad();
+	SetPlaybackRate(SNES_SAMPLE_RATE);
 	ICPU.ShiftedPB = ICPU.Registers.PB << 16;
 	ICPU.ShiftedDB = ICPU.Registers.DB << 16;
 	SetPCBase(ICPU.Registers.PBPC);

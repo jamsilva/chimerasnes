@@ -47,7 +47,6 @@ void ResetCPU()
 	SetPCBase(ICPU.Registers.PCw);
 	ICPU.Opcodes = OpcodesE1;
 	ICPU.OpLengths = OpLengthsM1X1;
-	ICPU.Executing = true;
 	CPU.NMICycleCount = 0;
 	CPU.IRQCycleCount = 0;
 	UnpackStatus();
@@ -59,7 +58,7 @@ static void CommonReset()
 
 	if ((Settings.Chip & BS) == BS)
 		ResetBSX();
-	if ((Settings.Chip & DSP) == DSP)
+	else if ((Settings.Chip & DSP) == DSP)
 		ResetDSP();
 	else if (Settings.Chip == GSU)
 		FxReset(&SuperFX);

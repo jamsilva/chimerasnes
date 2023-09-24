@@ -560,9 +560,6 @@ void DoDMA(uint8_t Channel)
 		} while (count);
 	}
 
-	IAPU.Executing = Settings.APUEnabled;
-	APU_EXECUTE();
-
 	HBlankProcessingLoop();
 
 	if (((Settings.Chip & SPC7110) == SPC7110) && spc7110_dma && s7_wrap)

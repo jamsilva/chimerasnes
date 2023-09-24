@@ -39,7 +39,7 @@
 					}                                                                                          \
 				}                                                                                              \
 				                                                                                               \
-				if (CPU.Flags & IRQ_FLAG)                                                              \
+				if (CPU.Flags & IRQ_FLAG)                                                                      \
 				{                                                                                              \
 					if (CPU.IRQCycleCount == 0)                                                                \
 					{                                                                                          \
@@ -50,7 +50,7 @@
 						}                                                                                      \
 						                                                                                       \
 						if (!CPU.IRQActive)                                                                    \
-							CPU.Flags &= ~IRQ_FLAG;                                                    \
+							CPU.Flags &= ~IRQ_FLAG;                                                            \
 						else if (!CheckIRQ())                                                                  \
 							OpcodeIRQ();                                                                       \
 					}                                                                                          \
@@ -93,10 +93,10 @@
 			if (CPU.Cycles >= CPU.NextEvent)                                                                   \
 				HBLANK_PROCESSING;                                                                             \
 			                                                                                                   \
-			APU_EXECUTE();                                                                                     \
-			                                                                                                   \
 			if (finishedFrame)                                                                                 \
 				break;                                                                                         \
+			                                                                                                   \
+			APUExecute();                                                                                      \
 		} while (true);                                                                                        \
 		                                                                                                       \
 		IAPU.Registers.PC = IAPU.PC - IAPU.RAM;                                                                \

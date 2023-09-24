@@ -22,10 +22,12 @@ uint32_t Work32 = 0;
 	{                                                                                        \
 		if (IAPU.WaitCounter == 0)                                                           \
 		{                                                                                    \
-			if (!ICPU.Executing)                                                             \
-				APU.Cycles = CPU.Cycles = CPU.NextEvent;                                     \
-			else                                                                             \
-				IAPU.Executing = false;                                                      \
+			if (APU.Cycles < EXT.NextAPUTimerPos && EXT.NextAPUTimerPos < CPU.Cycles)        \
+				APU.Cycles = EXT.NextAPUTimerPos;                                            \
+			else if (APU.Cycles < CPU.Cycles)                                                \
+				APU.Cycles = CPU.Cycles;                                                     \
+			                                                                                 \
+			IAPU.Executing = false;                                                          \
 		}                                                                                    \
 		else if (IAPU.WaitCounter >= 2)                                                      \
 			IAPU.WaitCounter = 1;                                                            \
@@ -795,7 +797,7 @@ void Apu0F() /* BRK */
 void ApuEF_FF() /* SLEEP / STOP */
 {
 	APU.TimerEnabled[0] = APU.TimerEnabled[1] = APU.TimerEnabled[2] = false;
-	IAPU.Executing                                                  = false;
+	IAPU.Executing = false;
 }
 
 void Apu10() /* BPL */
@@ -944,8 +946,8 @@ void Apu1A() /* DECW dp */
 
 void Apu5A() /* CMPW YA,dp */
 {
-	Work16     = APUGetByteDP(OP1) + (APUGetByteDP(OP1 + 1) << 8);
-	Int32      = (int32_t) IAPU.Registers.YA.W - (int32_t) Work16;
+	Work16 = APUGetByteDP(OP1) + (APUGetByteDP(OP1 + 1) << 8);
+	Int32 = (int32_t) IAPU.Registers.YA.W - (int32_t) Work16;
 	IAPU.Carry = Int32 >= 0;
 	APUSetZN16((uint16_t) Int32);
 	IAPU.PC += 2;
@@ -962,8 +964,8 @@ void Apu3A() /* INCW dp */
 
 void Apu7A() /* ADDW YA,dp */
 {
-	Work16     = APUGetByteDP(OP1) + (APUGetByteDP(OP1 + 1) << 8);
-	Work32     = (uint32_t) IAPU.Registers.YA.W + Work16;
+	Work16 = APUGetByteDP(OP1) + (APUGetByteDP(OP1 + 1) << 8);
+	Work32 = (uint32_t) IAPU.Registers.YA.W + Work16;
 	IAPU.Carry = Work32 >= 0x10000;
 
 	if (~(IAPU.Registers.YA.W ^ Work16) & (Work16 ^ (uint16_t) Work32) & 0x8000)
@@ -984,7 +986,7 @@ void Apu7A() /* ADDW YA,dp */
 void Apu9A() /* SUBW YA,dp */
 {
 	Work16 = APUGetByteDP(OP1) + (APUGetByteDP(OP1 + 1) << 8);
-	Int32  = (int32_t) IAPU.Registers.YA.W - (int32_t) Work16;
+	Int32 = (int32_t) IAPU.Registers.YA.W - (int32_t) Work16;
 	APUClearHalfCarry();
 	IAPU.Carry = Int32 >= 0;
 
@@ -1057,7 +1059,7 @@ void Apu68() /* CMP A,#00 */
 
 void Apu69() /* CMP dp(dest), dp(src) */
 {
-	W1    = APUGetByteDP(OP1);
+	W1 = APUGetByteDP(OP1);
 	Work8 = APUGetByteDP(OP2);
 	CMP(Work8, W1);
 	IAPU.PC += 3;
@@ -1097,14 +1099,14 @@ void Apu77() /* CMP A,(dp)+Y */
 void Apu78() /* CMP dp,#00 */
 {
 	Work8 = OP1;
-	W1    = APUGetByteDP(OP2);
+	W1 = APUGetByteDP(OP2);
 	CMP(W1, Work8);
 	IAPU.PC += 3;
 }
 
 void Apu79() /* CMP (X),(Y) */
 {
-	W1    = APUGetByteDP(IAPU.Registers.X);
+	W1 = APUGetByteDP(IAPU.Registers.X);
 	Work8 = APUGetByteDP(IAPU.Registers.YA.B.Y);
 	CMP(W1, Work8);
 	IAPU.PC++;
@@ -1725,7 +1727,7 @@ void Apu88() /* ADC A,#00 */
 void Apu89() /* ADC dp(dest),dp(src) */
 {
 	Work8 = APUGetByteDP(OP1);
-	W1    = APUGetByteDP(OP2);
+	W1 = APUGetByteDP(OP2);
 	ADC(W1, Work8);
 	APUSetByteDP(W1, OP2);
 	IAPU.PC += 3;
@@ -1765,7 +1767,7 @@ void Apu97() /* ADC A, (dp)+Y */
 void Apu98() /* ADC dp,#00 */
 {
 	Work8 = OP1;
-	W1    = APUGetByteDP(OP2);
+	W1 = APUGetByteDP(OP2);
 	ADC(W1, Work8);
 	APUSetByteDP(W1, OP2);
 	IAPU.PC += 3;
@@ -1773,7 +1775,7 @@ void Apu98() /* ADC dp,#00 */
 
 void Apu99() /* ADC (X),(Y) */
 {
-	W1    = APUGetByteDP(IAPU.Registers.X);
+	W1 = APUGetByteDP(IAPU.Registers.X);
 	Work8 = APUGetByteDP(IAPU.Registers.YA.B.Y);
 	ADC(W1, Work8);
 	APUSetByteDP(W1, IAPU.Registers.X);
@@ -1878,7 +1880,7 @@ void ApuA8() /* SBC A,#00 */
 void ApuA9() /* SBC dp(dest), dp(src) */
 {
 	Work8 = APUGetByteDP(OP1);
-	W1    = APUGetByteDP(OP2);
+	W1 = APUGetByteDP(OP2);
 	SBC(W1, Work8);
 	APUSetByteDP(W1, OP2);
 	IAPU.PC += 3;
@@ -1918,7 +1920,7 @@ void ApuB7() /* SBC A,(dp)+Y */
 void ApuB8() /* SBC dp,#00 */
 {
 	Work8 = OP1;
-	W1    = APUGetByteDP(OP2);
+	W1 = APUGetByteDP(OP2);
 	SBC(W1, Work8);
 	APUSetByteDP(W1, OP2);
 	IAPU.PC += 3;
@@ -1926,7 +1928,7 @@ void ApuB8() /* SBC dp,#00 */
 
 void ApuB9() /* SBC (X),(Y) */
 {
-	W1    = APUGetByteDP(IAPU.Registers.X);
+	W1 = APUGetByteDP(IAPU.Registers.X);
 	Work8 = APUGetByteDP(IAPU.Registers.YA.B.Y);
 	SBC(W1, Work8);
 	APUSetByteDP(W1, IAPU.Registers.X);

@@ -3,13 +3,27 @@
 
 enum
 {
-	SOUND_SAMPLE,
+	SOUND_SAMPLE = 0,
 	SOUND_NOISE
 };
 
 enum
 {
-	MODE_NONE,
+	SOUND_SILENT,
+	SOUND_ATTACK,
+	SOUND_DECAY,
+	SOUND_SUSTAIN,
+	SOUND_RELEASE,
+	SOUND_GAIN,
+	SOUND_INCREASE_LINEAR,
+	SOUND_INCREASE_BENT_LINE,
+	SOUND_DECREASE_LINEAR,
+	SOUND_DECREASE_EXPONENTIAL
+};
+
+enum
+{
+	MODE_NONE = SOUND_SILENT,
 	MODE_ADSR,
 	MODE_RELEASE,
 	MODE_GAIN,
@@ -19,17 +33,20 @@ enum
 	MODE_DECREASE_EXPONENTIAL
 };
 
-#define SNES_SAMPLE_RATE    32000
-#define MAX_SAMPLE_RATE     48000
-#define MAX_ENVELOPE_HEIGHT 127
-#define ENVELOPE_SHIFT      7
-#define MAX_VOLUME          127
-#define VOLUME_SHIFT        7
-#define SOUND_DECODE_LENGTH 16
-
-#define NUM_CHANNELS 8
-#define FIRBUF       16
-#define SOUND_BUFS   4
+enum
+{
+	SNES_SAMPLE_RATE    = 32000,
+	MAX_SAMPLE_RATE     = 48000,
+	MAX_ENVELOPE_HEIGHT = 127,
+	ENVELOPE_SHIFT      = 7,
+	MAX_VOLUME          = 127,
+	VOLUME_SHIFT        = 7,
+	SOUND_DECODE_LENGTH = 16,
+	NUM_CHANNELS        = 8,
+	FIRBUF              = 16,
+	SOUND_BUFS          = 4,
+	ECHOBUF             = (((255 * 64 * MAX_SAMPLE_RATE / SNES_SAMPLE_RATE) * 2) + ((240 * MAX_SAMPLE_RATE / 1000) * 2))
+};
 
 #define CLAMP(x, low, high) \
 	(((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
@@ -42,15 +59,35 @@ enum
 
 typedef struct
 {
+	int16_t  next_sample;
 	int16_t  decoded[16];
 	int32_t  envx;
 	int32_t  mode;
+	int32_t  state;
 	int32_t  type;
-	int32_t  _Channel_PAD1 : 32;
+	uint32_t count;
 	uint32_t block_pointer;
 	uint32_t sample_pointer;
 	int16_t* block;
 } Channel;
 
+typedef struct
+{
+	int32_t echo_buffer_size;
+	int32_t echo_enable;
+	int32_t echo_feedback;
+	int32_t echo_ptr;
+	int32_t echo_write_enabled;
+	int32_t pitch_mod;
+	Channel channels[NUM_CHANNELS];
+} SSoundData;
+
+extern SSoundData SoundData;
+
+void SetEchoFeedback(int32_t echo_feedback);
+void SetEchoEnable(uint8_t byte);
+void SetEchoDelay(int32_t rate, int32_t delay);
 void SetFilterCoefficient(int32_t tap, int32_t value);
+void ResetSound(bool full);
+void FixSoundAfterSnapshotLoad();
 #endif

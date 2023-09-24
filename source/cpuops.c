@@ -7,7 +7,6 @@
 #include "cpuaddr.h"
 #include "cpuops.h"
 #include "cpumacro.h"
-#include "apu.h"
 
 #include <retro_inline.h>
 
@@ -147,23 +146,6 @@
 #define bOPE1(OP, REL, BRACHK, COND) \
 	NOT_SA1(bOP(OP##E1, REL, BRACHK, COND, 1))
 
-NOT_SA1(
-static INLINE void APUExecute()
-{
-	if (!IAPU.Executing)
-		return;
-
-	ICPU.Executing = false;
-
-	do
-	{
-		APU_EXECUTE1();
-	} while (APU.Cycles < CPU.NextEvent);
-
-	ICPU.Executing = true;
-}
-)
-
 static INLINE void ForceShutdown() /* From the speed-hacks branch of CatSFC */
 {
 #ifdef SA1_OPCODES
@@ -171,7 +153,6 @@ static INLINE void ForceShutdown() /* From the speed-hacks branch of CatSFC */
 #else
 	CPU.WaitPC = 0;
 	CPU.Cycles = CPU.NextEvent;
-	APUExecute();
 #endif
 }
 
@@ -2748,7 +2729,6 @@ void OpcodeIRQ() /* IRQ */
 
 #ifdef SA1_OPCODES
 	SA1.OpenBus = Memory.FillRAM[0x2208];
-	AddCycles(2 * Settings.OneCycle);
 	SA1SetPCBase(Memory.FillRAM[0x2207] | (Memory.FillRAM[0x2208] << 8));
 #else
 	if (Settings.Chip == SA_1 && (Memory.FillRAM[0x2209] & 0x40))
@@ -2792,7 +2772,6 @@ void OpcodeNMI() /* NMI */
 
 #ifdef SA1_OPCODES
 	ICPU.OpenBus = Memory.FillRAM[0x2206];
-	AddCycles(2 * Settings.OneCycle);
 	SA1SetPCBase(Memory.FillRAM[0x2205] | (Memory.FillRAM[0x2206] << 8));
 #else
 	if (Settings.Chip == SA_1 && (Memory.FillRAM[0x2209] & 0x10))
@@ -3010,7 +2989,6 @@ static void Op20E0()
 static void Op20Slow()
 {
 	uint16_t addr = AbsoluteSlow(JSR);
-
 	AddCycles(Settings.OneCycle);
 
 	if (CheckEmulation())
@@ -3364,10 +3342,7 @@ static void OpCB() /* WAI */
 
 NOT_SA1(
 	if (Settings.Shutdown)
-	{
 		CPU.Cycles = CPU.NextEvent;
-		APUExecute();
-	}
 	else
 		AddCycles(Settings.OneCycle);
 )
