@@ -16,6 +16,7 @@
 #include "obc1.h"
 #include "srtc.h"
 #include "bsx.h"
+#include "pixform.h"
 
 MainLoopPtr MainLoop;
 SCPUState   CPU;
@@ -82,8 +83,6 @@ int16_t  Loop[FIRBUF];
 uint16_t SignExtend[2] = {0x0000, 0xff00};
 
 int32_t HDMA_ModeByteCounts[8] = {1, 2, 2, 4, 4, 4, 2, 4};
-
-uint8_t brightness_cap[64];
 
 uint8_t mul_brightness[16][32] =
 {{

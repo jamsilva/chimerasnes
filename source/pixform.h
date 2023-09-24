@@ -1,6 +1,16 @@
 #ifndef CHIMERASNES_PIXFORM_H_
 #define CHIMERASNES_PIXFORM_H_
 
+/* This is used to disable the 16-bit graphics mode checks sprinkled
+ * throughout the code, if the pixel format is always 16-bit. */
+#ifdef PSP
+	#define PIXEL_FORMAT BGR555
+	#define USE_RGB565   0
+#else
+	#define PIXEL_FORMAT RGB565
+	#define USE_RGB565   1
+#endif
+
 /* RGB565 format */
 #define BUILD_PIXEL_RGB565(R, G, B) \
 	(((int32_t) (R) << 11) | ((int32_t) (G) << 6) | (int32_t) (B))
@@ -22,6 +32,7 @@
 #define MAX_BLUE_RGB565           31
 #define RED_SHIFT_BITS_RGB565     11
 #define GREEN_SHIFT_BITS_RGB565   6
+#define BLUE_SHIFT_BITS_RGB565    0
 #define RED_LOW_BIT_MASK_RGB565   0x0800
 #define GREEN_LOW_BIT_MASK_RGB565 0x0020
 #define BLUE_LOW_BIT_MASK_RGB565  0x0001
@@ -33,39 +44,7 @@
 #define THIRD_COLOR_MASK_RGB565   0x001F
 #define ALPHA_BITS_MASK_RGB565    0x0000
 
-/* RGB555 format */
-#define BUILD_PIXEL_RGB555(R, G, B) \
-	(((int32_t) (R) << 10) | ((int32_t) (G) << 5) | (int32_t) (B))
-
-#define BUILD_PIXEL2_RGB555(R, G, B) \
-	(((int32_t) (R) << 10) | ((int32_t) (G) << 5) | (int32_t) (B))
-
-#define DECOMPOSE_PIXEL_RGB555(PIX, R, G, B) \
-	{ \
-		(R) = (PIX) >> 10; \
-		(G) = ((PIX) >> 5) & 0x1f; \
-		(B) = (PIX) & 0x1f; \
-	}
-
-#define SPARE_RGB_BIT_MASK_RGB555 (1 << 15)
-
-#define MAX_RED_RGB555            31
-#define MAX_GREEN_RGB555          31
-#define MAX_BLUE_RGB555           31
-#define RED_SHIFT_BITS_RGB555     10
-#define GREEN_SHIFT_BITS_RGB555   5
-#define RED_LOW_BIT_MASK_RGB555   0x0400
-#define GREEN_LOW_BIT_MASK_RGB555 0x0020
-#define BLUE_LOW_BIT_MASK_RGB555  0x0001
-#define RED_HI_BIT_MASK_RGB555    0x4000
-#define GREEN_HI_BIT_MASK_RGB555  0x0200
-#define BLUE_HI_BIT_MASK_RGB555   0x0010
-#define FIRST_COLOR_MASK_RGB555   0x7C00
-#define SECOND_COLOR_MASK_RGB555  0x03E0
-#define THIRD_COLOR_MASK_RGB555   0x001F
-#define ALPHA_BITS_MASK_RGB555    0x0000
-
-#if defined(PSP)
+#if !USE_RGB565
 /* BGR555 format */
 #define BUILD_PIXEL_BGR555(R, G, B) \
 	(((int32_t) (B) << 10) | ((int32_t) (G) << 5) | (int32_t) (R))
@@ -85,6 +64,9 @@
 #define MAX_RED_BGR555            31
 #define MAX_GREEN_BGR555          31
 #define MAX_BLUE_BGR555           31
+#define RED_SHIFT_BITS_BGR555     0
+#define GREEN_SHIFT_BITS_BGR555   5
+#define BLUE_SHIFT_BITS_BGR555    10
 #define RED_LOW_BIT_MASK_BGR555   0x0001
 #define GREEN_LOW_BIT_MASK_BGR555 0x0020
 #define BLUE_LOW_BIT_MASK_BGR555  0x0400
@@ -112,10 +94,9 @@
 #define MAX_RED_D(F)            CONCAT(MAX_RED_, F)
 #define MAX_GREEN_D(F)          CONCAT(MAX_GREEN_, F)
 #define MAX_BLUE_D(F)           CONCAT(MAX_BLUE_, F)
-#if !defined(PSP)
 #define RED_SHIFT_BITS_D(F)     CONCAT(RED_SHIFT_BITS_, F)
 #define GREEN_SHIFT_BITS_D(F)   CONCAT(GREEN_SHIFT_BITS_, F)
-#endif
+#define BLUE_SHIFT_BITS_D(F)    CONCAT(BLUE_SHIFT_BITS_, F)
 #define RED_LOW_BIT_MASK_D(F)   CONCAT(RED_LOW_BIT_MASK_, F)
 #define GREEN_LOW_BIT_MASK_D(F) CONCAT(GREEN_LOW_BIT_MASK_, F)
 #define BLUE_LOW_BIT_MASK_D(F)  CONCAT(BLUE_LOW_BIT_MASK_, F)
@@ -130,10 +111,9 @@
 #define MAX_RED            MAX_RED_D(PIXEL_FORMAT)
 #define MAX_GREEN          MAX_GREEN_D(PIXEL_FORMAT)
 #define MAX_BLUE           MAX_BLUE_D(PIXEL_FORMAT)
-#if !defined(PSP)
 #define RED_SHIFT_BITS     RED_SHIFT_BITS_D(PIXEL_FORMAT)
 #define GREEN_SHIFT_BITS   GREEN_SHIFT_BITS_D(PIXEL_FORMAT)
-#endif
+#define BLUE_SHIFT_BITS    BLUE_SHIFT_BITS_D(PIXEL_FORMAT)
 #define RED_LOW_BIT_MASK   RED_LOW_BIT_MASK_D(PIXEL_FORMAT)
 #define GREEN_LOW_BIT_MASK GREEN_LOW_BIT_MASK_D(PIXEL_FORMAT)
 #define BLUE_LOW_BIT_MASK  BLUE_LOW_BIT_MASK_D(PIXEL_FORMAT)

@@ -53,6 +53,10 @@ typedef struct
 	uint8_t*  ZBuffer;
 	uint8_t*  ZBuffer_buffer;
 	uint16_t* Zero;
+#if !USE_RGB565
+	uint16_t* X2;
+	uint16_t* ZeroOrX2;
+#endif
 	ClipData* pCurrentClip;
 
 	struct
@@ -120,7 +124,6 @@ extern uint32_t odd_high[4][16];
 extern uint32_t odd_low[4][16];
 extern SBG      BG;
 extern uint16_t DirectColourMaps[8][256];
-extern uint8_t  brightness_cap[64];
 extern uint8_t  mul_brightness[16][32];
 
 #define SUB_SCREEN_DEPTH  0
@@ -128,18 +131,61 @@ extern uint8_t  mul_brightness[16][32];
 
 static INLINE uint16_t COLOR_ADD(uint16_t C1, uint16_t C2)
 {
-	return ((brightness_cap[(C1 >> RED_SHIFT_BITS) + (C2 >> RED_SHIFT_BITS) ] << RED_SHIFT_BITS) |
-	        (brightness_cap[((C1 >> GREEN_SHIFT_BITS) & 0x1f) + ((C2 >> GREEN_SHIFT_BITS) & 0x1f)] << GREEN_SHIFT_BITS) |
-	        (brightness_cap[(C1 & 0x1f) + (C2 & 0x1f)]));
+#if USE_RGB565
+	const int32_t RED_MASK    = 0x1F << RED_SHIFT_BITS;
+	const int32_t GREEN_MASK  = 0x1F << GREEN_SHIFT_BITS;
+	const int32_t BLUE_MASK   = 0x1F;
+	int32_t  rb               = (C1 & (RED_MASK | BLUE_MASK)) + (C2 & (RED_MASK | BLUE_MASK));
+	int32_t  rbcarry          = rb & ((0x20 << RED_SHIFT_BITS) | (0x20 << 0));
+	int32_t  g                = (C1 & (GREEN_MASK)) + (C2 & (GREEN_MASK));
+	int32_t  rgbsaturate      = (((g & (0x20 << GREEN_SHIFT_BITS)) | rbcarry) >> 5) * 0x1f;
+	uint16_t retval           = (rb & (RED_MASK | BLUE_MASK)) | (g & GREEN_MASK) | rgbsaturate;
+
+#if GREEN_SHIFT_BITS == 6
+	retval |= (retval & 0x0400) >> 5;
+#endif
+
+	return retval;
+#else
+	if (C1 == 0)
+		return C2;
+
+	if (C2 == 0)
+		return C1;
+
+	return GFX.X2[(((C1 & RGB_REMOVE_LOW_BITS_MASK) + (C2 & RGB_REMOVE_LOW_BITS_MASK)) >> 1) + (C1 & C2 & RGB_LOW_BITS_MASK)] | ((C1 ^ C2) & RGB_LOW_BITS_MASK);
+#endif
 }
 
-#define COLOR_ADD1_2(C1, C2)                   \
-	(((((C1) & RGB_REMOVE_LOW_BITS_MASK) +     \
-	((C2) & RGB_REMOVE_LOW_BITS_MASK)) >> 1) + \
-	(((C1) & (C2) & RGB_LOW_BITS_MASK) | ALPHA_BITS_MASK))
+static INLINE uint16_t COLOR_ADD1_2(uint16_t C1, uint16_t C2)
+{
+#if USE_RGB565
+	return ((((C1 & RGB_REMOVE_LOW_BITS_MASK) +
+	          (C2 & RGB_REMOVE_LOW_BITS_MASK)) >> 1) +
+	         ((C1 & C2 & RGB_LOW_BITS_MASK) | ALPHA_BITS_MASK));
+#else
+	return C1 == C2 ? C1 : ((C1 + C2 - ((C1 ^ C2) & 0x0821)) >> 1);
+#endif
+}
 
 static INLINE uint16_t COLOR_SUB(uint16_t C1, uint16_t C2)
 {
+#if USE_RGB565
+	int32_t diff, low_bits, borrows, modulo, clamp;
+
+	if (C1 == 0)
+		return 0;
+
+	if (C2 == 0)
+		return C1;
+
+	diff     = C1 - C2 + 0x10820;
+	low_bits = (C1 ^ C2) & 0x10820;
+	borrows  = (diff - low_bits) & 0x10820;
+	modulo   = diff - borrows;
+	clamp    = borrows - (borrows >> 5);
+	return modulo & clamp;
+#else
 	int32_t rb1         = (C1 & (THIRD_COLOR_MASK | FIRST_COLOR_MASK)) | ((0x20 << 0) | (0x20 << RED_SHIFT_BITS));
 	int32_t rb2         = C2 & (THIRD_COLOR_MASK | FIRST_COLOR_MASK);
 	int32_t rb          = rb1 - rb2;
@@ -153,11 +199,13 @@ static INLINE uint16_t COLOR_SUB(uint16_t C1, uint16_t C2)
 #endif
 
 	return retval;
+#endif
 }
 
-#define COLOR_SUB1_2(C1, C2)                \
-	GFX.Zero[(((C1) | RGB_HI_BITS_MASKx2) - \
-	((C2) & RGB_REMOVE_LOW_BITS_MASK)) >> 1]
+static INLINE uint16_t COLOR_SUB1_2(uint16_t C1, uint16_t C2)
+{
+	return GFX.Zero[((C1 | RGB_HI_BITS_MASKx2) - (C2 & RGB_REMOVE_LOW_BITS_MASK)) >> 1];
+}
 
 typedef void (*NormalTileRenderer)(uint32_t Tile, int32_t Offset, uint32_t StartLine, uint32_t LineCount);
 typedef void (*ClippedTileRenderer)(uint32_t Tile, int32_t Offset, uint32_t StartPixel, uint32_t Width, uint32_t StartLine, uint32_t LineCount);

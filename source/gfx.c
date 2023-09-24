@@ -9,6 +9,7 @@
 #include "apu.h"
 #include "cheats.h"
 #include "math.h"
+#include "pixform.h"
 
 #define M7 19
 
@@ -249,8 +250,96 @@ bool InitGFX()
 	GFX.PPLx2                        =   GFX.Pitch;
 	FixColourBrightness();
 
-	if (!(GFX.Zero = (uint16_t*) malloc(sizeof(uint16_t) * 0x10000)))
+#if USE_RGB565
+	GFX.Zero = (uint16_t*) calloc(0x10000, sizeof(uint16_t));
+
+	if (!GFX.Zero)
 		return false;
+#else
+	GFX.X2 = (uint16_t*) calloc(0x10000, sizeof(uint16_t));
+	GFX.Zero = (uint16_t*) calloc(0x10000, sizeof(uint16_t));
+	GFX.ZeroOrX2 = (uint16_t*) calloc(0x10000, sizeof(uint16_t));
+
+	if (!GFX.X2 || !GFX.Zero || !GFX.ZeroOrX2)
+	{
+		if (GFX.X2)
+			free(GFX.X2);
+
+		if (GFX.Zero)
+			free(GFX.Zero);
+
+		if (GFX.ZeroOrX2)
+			free(GFX.ZeroOrX2);
+
+		GFX.X2 = GFX.Zero = GFX.ZeroOrX2 = NULL;
+		return false;
+	}
+
+   /* Build a lookup table that multiplies a packed RGB value by 2 with
+    * saturation. */
+	for (r = 0; r <= MAX_RED; r++)
+	{
+		uint32_t r2 = r << 1;
+
+		if (r2 > MAX_RED)
+			r2 = MAX_RED;
+
+		for (g = 0; g <= MAX_GREEN; g++)
+		{
+			uint32_t g2 = g << 1;
+
+			if (g2 > MAX_GREEN)
+				g2 = MAX_GREEN;
+
+			for (b = 0; b <= MAX_BLUE; b++)
+			{
+				uint32_t b2 = b << 1;
+
+				if (b2 > MAX_BLUE)
+					b2 = MAX_BLUE;
+
+				GFX.X2 [BUILD_PIXEL2(r, g, b)] = BUILD_PIXEL2(r2, g2, b2);
+				GFX.X2 [BUILD_PIXEL2(r, g, b) & ~ALPHA_BITS_MASK] = BUILD_PIXEL2(r2, g2, b2);
+			}
+		}
+	}
+
+	/* Build a lookup table that if the top bit of the color value is zero
+	 * then the value is zero, otherwise multiply the value by 2. Used by
+	 * the color subtraction code. */
+	for (r = 0; r <= MAX_RED; r++)
+	{
+		uint32_t r2 = r;
+
+		if ((r2 & 0x10) == 0)
+			r2 = 0;
+		else
+			r2 = (r2 << 1) & MAX_RED;
+
+		for (g = 0; g <= MAX_GREEN; g++)
+		{
+			uint32_t g2 = g;
+
+			if ((g2 & GREEN_HI_BIT) == 0)
+				g2 = 0;
+			else
+				g2 = (g2 << 1) & MAX_GREEN;
+
+			for (b = 0; b <= MAX_BLUE; b++)
+			{
+				uint32_t b2 = b;
+
+				if ((b2 & 0x10) == 0)
+					b2 = 0;
+				else
+					b2 = (b2 << 1) & MAX_BLUE;
+
+				GFX.ZeroOrX2[BUILD_PIXEL2(r, g, b)]                    = BUILD_PIXEL2(r2,              g2,              b2);
+				GFX.ZeroOrX2[BUILD_PIXEL2(r, g, b) & ~ALPHA_BITS_MASK] = BUILD_PIXEL2(MATH_MAX(1, r2), MATH_MAX(1, g2), MATH_MAX(1, b2));
+			}
+		}
+	}
+#endif
 
 	/* Build a lookup table that if the top bit of the color value is zero
 	 * then the value is zero, otherwise its just the value. */
@@ -292,6 +381,16 @@ bool InitGFX()
 
 void DeinitGFX() /* Free any memory allocated in InitGFX */
 {
+#if !USE_RGB565
+	if (GFX.X2)
+		free(GFX.X2);
+
+	if (GFX.ZeroOrX2)
+		free(GFX.ZeroOrX2);
+
+	GFX.X2 = GFX.ZeroOrX2 = NULL;
+#endif
+
 	if (GFX.Zero == NULL)
 		return;
 
