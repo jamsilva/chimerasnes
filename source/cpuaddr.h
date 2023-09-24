@@ -14,8 +14,8 @@ typedef enum
 	NONE   = 0,
 	READ   = 1,
 	WRITE  = 2,
-	MODIFY = 3,
-	JUMP   = 5,
+	MODIFY = WRITE | READ,
+	JUMP   = 4     | READ,
 	JSR    = 8
 } AccessMode;
 
@@ -196,7 +196,7 @@ static INLINE uint32_t DirectSlow(AccessMode a) /* d */
 {
 	uint16_t addr = Immediate8Slow(a) + ICPU.Registers.D.W;
 
-	if (ICPU.Registers.DL != 0)
+	if (ICPU.Registers.DL)
 		AddCycles(Settings.OneCycle);
 
 	return addr;
@@ -206,7 +206,7 @@ static INLINE uint32_t Direct(AccessMode a) /* d */
 {
 	uint16_t addr = Immediate8(a) + ICPU.Registers.D.W;
 
-	if (ICPU.Registers.DL != 0)
+	if (ICPU.Registers.DL)
 		AddCycles(Settings.OneCycle);
 
 	return addr;
@@ -259,6 +259,10 @@ static INLINE uint32_t DirectIndirectIndexedE0X0(AccessMode a) /* (d),Y */
 {
 	uint32_t addr = DirectIndirectE0(a);
 	AddCycles(Settings.OneCycle);
+
+	if (a & WRITE)
+		AddCycles(Settings.OneCycle);
+
 	return addr + ICPU.Registers.Y.W;
 }
 
@@ -367,7 +371,7 @@ static INLINE uint32_t DirectIndexedYE0(AccessMode a) /* d,Y */
 static INLINE uint32_t DirectIndexedYE1(AccessMode a) /* d,Y */
 {
 	if (ICPU.Registers.DL)
-		return (DirectIndexedYE0(a));
+		return DirectIndexedYE0(a);
 
 	pair addr;
 	addr.W = Direct(a);
