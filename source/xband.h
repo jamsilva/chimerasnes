@@ -12,6 +12,6 @@ static INLINE uint8_t* GetBasePointerXBAND(uint32_t Address)
 
 static INLINE uint8_t* GetMemPointerXBAND(uint32_t Address)
 {
-	return &Memory.SRAM[Address & 0xFFFF];
+	return Memory.SRAM + (Address & 0xFFFF);
 }
 #endif

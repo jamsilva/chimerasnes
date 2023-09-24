@@ -65,7 +65,7 @@ uint8_t* GetBasePointerOBC1(uint16_t Address)
 	if (Address >= 0x7ff0 && Address <= 0x7ff6)
 		return NULL;
 
-	return &Memory.OBC1RAM[-0x6000];
+	return Memory.OBC1RAM - 0x6000;
 }
 
 uint8_t* GetMemPointerOBC1(uint16_t Address)
@@ -73,5 +73,5 @@ uint8_t* GetMemPointerOBC1(uint16_t Address)
 	if (Address >= 0x7ff0 && Address <= 0x7ff6)
 		return NULL;
 
-	return &Memory.OBC1RAM[Address - 0x6000];
+	return Memory.OBC1RAM + Address - 0x6000;
 }

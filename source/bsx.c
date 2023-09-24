@@ -38,7 +38,6 @@ static void stream_close(stream_t* s)
 	s->file = NULL;
 }
 
-
 static void stream_open(stream_t* s, const char* path)
 {
 	int64_t strsize;
@@ -96,14 +95,14 @@ static void BSX_Map_LoROM()
 	for (c = 0; c < 0x400; c += 16) /* Banks 00->3F, 40->7F, 80->BF and C0->FF */
 	{
 		for (i = c; i < c + 8; i++)
-			Memory.Map[i + 0x400] = Memory.Map[i + 0xC00] = &MapROM[(c << 11) % FlashSize];
+			Memory.Map[i + 0x400] = Memory.Map[i + 0xC00] = MapROM + ((c << 11) % FlashSize);
 
 		for (i = c + 8; i < c + 16; i++)
 		{
-			Memory.Map[i] = Memory.Map[i + 0x800] = &MapROM[(c << 11) % FlashSize] - 0x8000;
+			Memory.Map[i] = Memory.Map[i + 0x800] = MapROM + ((c << 11) % FlashSize) - 0x8000;
 			Memory.BlockIsRAM[i] = Memory.BlockIsRAM[i + 0x800] = BSX.write_enable;
 			Memory.BlockIsROM[i] = Memory.BlockIsROM[i + 0x800] = !BSX.write_enable;
-			Memory.Map[i + 0x400] = Memory.Map[i + 0xC00] = &MapROM[(c << 11) % FlashSize] - 0x8000;
+			Memory.Map[i + 0x400] = Memory.Map[i + 0xC00] = MapROM + ((c << 11) % FlashSize) - 0x8000;
 		}
 
 		for (i = c; i < c + 16; i++)
@@ -123,14 +122,14 @@ static void BSX_Map_HiROM()
 	{
 		for (i = c + 8; i < c + 16; i++) /* Banks 00->3F and 80->BF */
 		{
-			Memory.Map[i] = Memory.Map[i + 0x800] = &MapROM[(c << 12) % FlashSize];
+			Memory.Map[i] = Memory.Map[i + 0x800] = MapROM + ((c << 12) % FlashSize);
 			Memory.BlockIsRAM[i] = Memory.BlockIsRAM[i + 0x800] = BSX.write_enable;
 			Memory.BlockIsROM[i] = Memory.BlockIsROM[i + 0x800] = !BSX.write_enable;
 		}
 
 		for (i = c; i < c + 16; i++) /* Banks 40->7F and C0->FF */
 		{
-			Memory.Map[i + 0x400] = Memory.Map[i + 0xC00] = &MapROM[(c << 12) % FlashSize];
+			Memory.Map[i + 0x400] = Memory.Map[i + 0xC00] = MapROM + ((c << 12) % FlashSize);
 			Memory.BlockIsRAM[i + 0x400] = Memory.BlockIsRAM[i + 0xC00] = BSX.write_enable;
 			Memory.BlockIsROM[i + 0x400] = Memory.BlockIsROM[i + 0xC00] = !BSX.write_enable;
 		}
@@ -198,7 +197,7 @@ static void map_psram_mirror_sub(uint32_t bank)
 			{
 				for (i = c; i < c + 16; i++)
 				{
-					Memory.Map[i + bank] = &Memory.PSRAM[(c << 12) % PSRAM_SIZE];
+					Memory.Map[i + bank] = Memory.PSRAM + ((c << 12) % PSRAM_SIZE);
 					Memory.BlockIsRAM[i + bank] = true;
 					Memory.BlockIsROM[i + bank] = false;
 				}
@@ -207,7 +206,7 @@ static void map_psram_mirror_sub(uint32_t bank)
 			{
 				for (i = c + 8; i < c + 16; i++)
 				{
-					Memory.Map[i + bank] = &Memory.PSRAM[(c << 12) % PSRAM_SIZE];
+					Memory.Map[i + bank] = Memory.PSRAM + ((c << 12) % PSRAM_SIZE);
 					Memory.BlockIsRAM[i + bank] = true;
 					Memory.BlockIsROM[i + bank] = false;
 				}
@@ -222,7 +221,7 @@ static void map_psram_mirror_sub(uint32_t bank)
 			{
 				for (i = c; i < c + 8; i++)
 				{
-					Memory.Map[i + bank] = &Memory.PSRAM[(c << 11) % PSRAM_SIZE];
+					Memory.Map[i + bank] = Memory.PSRAM + ((c << 11) % PSRAM_SIZE);
 					Memory.BlockIsRAM[i + bank] = true;
 					Memory.BlockIsROM[i + bank] = false;
 				}
@@ -230,7 +229,7 @@ static void map_psram_mirror_sub(uint32_t bank)
 
 			for (i = c + 8; i < c + 16; i++)
 			{
-				Memory.Map[i + bank] = &Memory.PSRAM[(c << 11) % PSRAM_SIZE] - 0x8000;
+				Memory.Map[i + bank] = Memory.PSRAM + ((c << 11) % PSRAM_SIZE) - 0x8000;
 				Memory.BlockIsRAM[i + bank] = true;
 				Memory.BlockIsROM[i + bank] = false;
 			}
@@ -305,8 +304,8 @@ static void BSX_Map_PSRAM(void)
 		{
 			for (c = 0x200; c < 0x400; c += 16)
 			{
-				Memory.Map[c + 6] = &Memory.PSRAM[((c & 0x70) << 12) % PSRAM_SIZE];
-				Memory.Map[c + 7] = &Memory.PSRAM[((c & 0x70) << 12) % PSRAM_SIZE];
+				Memory.Map[c + 6] = Memory.PSRAM + (((c & 0x70) << 12) % PSRAM_SIZE);
+				Memory.Map[c + 7] = Memory.PSRAM + (((c & 0x70) << 12) % PSRAM_SIZE);
 				Memory.BlockIsRAM[c + 6] = true;
 				Memory.BlockIsRAM[c + 7] = true;
 				Memory.BlockIsROM[c + 6] = false;
@@ -318,8 +317,8 @@ static void BSX_Map_PSRAM(void)
 		{
 			for (c = 0xA00; c < 0xC00; c += 16)
 			{
-				Memory.Map[c + 6] = &Memory.PSRAM[((c & 0x70) << 12) % PSRAM_SIZE];
-				Memory.Map[c + 7] = &Memory.PSRAM[((c & 0x70) << 12) % PSRAM_SIZE];
+				Memory.Map[c + 6] = Memory.PSRAM + (((c & 0x70) << 12) % PSRAM_SIZE);
+				Memory.Map[c + 7] = Memory.PSRAM + (((c & 0x70) << 12) % PSRAM_SIZE);
 				Memory.BlockIsRAM[c + 6] = true;
 				Memory.BlockIsRAM[c + 7] = true;
 				Memory.BlockIsROM[c + 6] = false;
@@ -381,7 +380,7 @@ static void BSX_Map_BIOS()
 		{
 			for (i = c + 8; i < c + 16; i++)
 			{
-				Memory.Map[i] = &Memory.BIOSROM[(c << 11) % BIOS_SIZE] - 0x8000;
+				Memory.Map[i] = Memory.BIOSROM + ((c << 11) % BIOS_SIZE) - 0x8000;
 				Memory.BlockIsRAM[i] = false;
 				Memory.BlockIsROM[i] = true;
 			}
@@ -394,7 +393,7 @@ static void BSX_Map_BIOS()
 		{
 			for (i = c + 8; i < c + 16; i++)
 			{
-				Memory.Map[i + 0x800] = &Memory.BIOSROM[(c << 11) % BIOS_SIZE] - 0x8000;
+				Memory.Map[i + 0x800] = Memory.BIOSROM + ((c << 11) % BIOS_SIZE) - 0x8000;
 				Memory.BlockIsRAM[i + 0x800] = false;
 				Memory.BlockIsROM[i + 0x800] = true;
 			}
@@ -856,7 +855,6 @@ static bool BSX_LoadBIOS()
 	char path[PATH_MAX + 1];
 	char* pathp = path;
 	const char* dir = GetBIOSDir();
-	printf("%s\n", dir);
 	uint32_t dirlen = strlen(dir);
 	uint32_t slashlen = strlen(SLASH_STR);
 	memcpy(pathp, dir, dirlen);

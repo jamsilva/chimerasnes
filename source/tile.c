@@ -7,7 +7,7 @@
 
 static uint8_t ConvertTile(uint8_t* pCache, uint32_t TileAddr)
 {
-	uint8_t*  tp       = &Memory.VRAM[TileAddr];
+	uint8_t*  tp       = Memory.VRAM + TileAddr;
 	uint32_t* p        = (uint32_t*) pCache;
 	uint32_t  non_zero = 0;
 	uint8_t   line;

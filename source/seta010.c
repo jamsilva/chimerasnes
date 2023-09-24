@@ -315,7 +315,11 @@ void SetST010(uint8_t Byte, uint32_t Address)
 			Memory.SRAM[0x0016] = (uint8_t) (y1 >> 16);
 			Memory.SRAM[0x0017] = (uint8_t) (y1 >> 24);
 		#else
-			ST010_Scale(*(int16_t*) &Memory.SRAM[0x0004], *(int16_t*) &Memory.SRAM[0x0000], *(int16_t*) &Memory.SRAM[0x0002], (int32_t*) &Memory.SRAM[0x0010], (int32_t*) &Memory.SRAM[0x0014]);
+			ST010_Scale(*(int16_t*) (Memory.SRAM + 0x04),
+			            *(int16_t*)  Memory.SRAM,
+			            *(int16_t*) (Memory.SRAM + 0x02),
+			             (int32_t*) (Memory.SRAM + 0x10),
+			             (int32_t*) (Memory.SRAM + 0x14));
 		#endif
 
 			break;
@@ -336,7 +340,9 @@ void SetST010(uint8_t Byte, uint32_t Address)
 			Memory.SRAM[0x0012] = (uint8_t) (Product >> 16);
 			Memory.SRAM[0x0013] = (uint8_t) (Product >> 24);
 		#else
-			ST010_Multiply(*(int16_t*) &Memory.SRAM[0x0000], *(int16_t*) &Memory.SRAM[0x0002], (int32_t*) &Memory.SRAM[0x0010]);
+			ST010_Multiply(*(int16_t*)  Memory.SRAM,
+			               *(int16_t*) (Memory.SRAM + 0x02),
+			                (int32_t*) (Memory.SRAM + 0x10));
 		#endif
 
 			break;
@@ -401,7 +407,11 @@ void SetST010(uint8_t Byte, uint32_t Address)
 			Memory.SRAM[0x0012] = (uint8_t)  y1;
 			Memory.SRAM[0x0013] = (uint8_t) (y1 >> 8);
 		#else
-			ST010_Rotate(*(int16_t*) &Memory.SRAM[0x0004], *(int16_t*) &Memory.SRAM[0x0000], *(int16_t*) &Memory.SRAM[0x0002], (int16_t*) &Memory.SRAM[0x0010], (int16_t*) &Memory.SRAM[0x0012]);
+			ST010_Rotate(*(int16_t*) (Memory.SRAM + 0x04),
+			             *(int16_t*)  Memory.SRAM,
+			             *(int16_t*) (Memory.SRAM + 0x02),
+			              (int16_t*) (Memory.SRAM + 0x10),
+			              (int16_t*) (Memory.SRAM + 0x12));
 		#endif
 
 			break;
@@ -431,7 +441,12 @@ void SetST010(uint8_t Byte, uint32_t Address)
 			Memory.SRAM[0x0010] = (uint8_t)  Theta;
 			Memory.SRAM[0x0011] = (uint8_t) (Theta >> 8);
 		#else
-			ST010_OP01(*(int16_t*) &Memory.SRAM[0x0000], *(int16_t*) &Memory.SRAM[0x0002], (int16_t*) &Memory.SRAM[0x0000], (int16_t*) &Memory.SRAM[0x0002], (int16_t*) &Memory.SRAM[0x0004], (int16_t*) &Memory.SRAM[0x0010]);
+			ST010_OP01(*(int16_t*)  Memory.SRAM,
+			           *(int16_t*) (Memory.SRAM + 0x02),
+			            (int16_t*)  Memory.SRAM,
+			            (int16_t*) (Memory.SRAM + 0x02),
+			            (int16_t*) (Memory.SRAM + 0x04),
+			            (int16_t*) (Memory.SRAM + 0x10));
 		#endif
 
 			break;
@@ -444,8 +459,8 @@ void SetST010(uint8_t Byte, uint32_t Address)
 			x = Memory.SRAM[0] | (Memory.SRAM[1] << 8);
 			y = Memory.SRAM[2] | (Memory.SRAM[3] << 8);
 		#else
-			x = *((int16_t*) Memory.SRAM);
-			y = *((int16_t*) &Memory.SRAM[2]);
+			x = *(int16_t*)  Memory.SRAM;
+			y = *(int16_t*) (Memory.SRAM + 0x02);
 		#endif
 
 			square = (int16_t) math_sqrt((int32_t) x * x + (int32_t) y * y);
@@ -454,7 +469,7 @@ void SetST010(uint8_t Byte, uint32_t Address)
 			Memory.SRAM[0x10] = (uint8_t)  square;
 			Memory.SRAM[0x11] = (uint8_t) (square >> 8);
 		#else
-			*((int16_t*) &Memory.SRAM[0x10]) = square;
+			*(int16_t*) (Memory.SRAM + 0x10) = square;
 		#endif
 
 			break;

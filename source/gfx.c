@@ -406,7 +406,7 @@ void RenderLine(uint8_t C)
 
 	if (PPU.BGMode == 7)
 	{
-		SLineMatrixData* p = &LineMatrixData[C];
+		SLineMatrixData* p = LineMatrixData + C;
 		p->MatrixA         = PPU.MatrixA;
 		p->MatrixB         = PPU.MatrixB;
 		p->MatrixC         = PPU.MatrixC;
@@ -769,7 +769,7 @@ static void DrawOBJS(bool OnMain, uint8_t D)
 			else
 			{
 				if (j < i) /* memmove required: Overlapping addresses [Neb] */
-					memmove(&Windows[j + 1], &Windows[j], sizeof(Windows[0]) * (i - j));
+					memmove(Windows + j + 1, Windows + j, sizeof(Windows[0]) * (i - j));
 
 				Windows[j].Pos   = GFX.pCurrentClip->Left[clip][4];
 				Windows[j].Value = true;
@@ -781,7 +781,7 @@ static void DrawOBJS(bool OnMain, uint8_t D)
 			if (j >= i || Windows[j].Pos != GFX.pCurrentClip->Right[clip][4])
 			{
 				if (j < i) /* memmove required: Overlapping addresses [Neb] */
-					memmove(&Windows[j + 1], &Windows[j], sizeof(Windows[0]) * (i - j));
+					memmove(Windows + j + 1, Windows + j, sizeof(Windows[0]) * (i - j));
 
 				Windows[j].Pos   = GFX.pCurrentClip->Right[clip][4];
 				Windows[j].Value = false;
@@ -928,7 +928,7 @@ static void DrawBackgroundMosaic(uint32_t BGMode, uint32_t bg, uint8_t Z1, uint8
 	else
 		BG.StartPalette = 0;
 
-	SC0 = (uint16_t*) &Memory.VRAM[PPU.BG[bg].SCBase << 1];
+	SC0 = (uint16_t*) (Memory.VRAM + (PPU.BG[bg].SCBase << 1));
 
 	if (PPU.BG[bg].SCSize & 1)
 		SC1 = SC0 + 1024;
@@ -1128,7 +1128,7 @@ static void DrawBackgroundOffset(uint32_t BGMode, uint32_t bg, uint8_t Z1, uint8
 	depths[0]       = Z1;
 	depths[1]       = Z2;
 	BG.StartPalette = 0;
-	BPS0            = (uint16_t*) &Memory.VRAM[PPU.BG[2].SCBase << 1];
+	BPS0            = (uint16_t*) (Memory.VRAM + (PPU.BG[2].SCBase << 1));
 
 	if (PPU.BG[2].SCSize & 1)
 		BPS1 = BPS0 + 1024;
@@ -1145,7 +1145,7 @@ static void DrawBackgroundOffset(uint32_t BGMode, uint32_t bg, uint8_t Z1, uint8
 	else
 		BPS3 = BPS2;
 
-	SC0 = (uint16_t*) &Memory.VRAM[PPU.BG[bg].SCBase << 1];
+	SC0 = (uint16_t*) (Memory.VRAM + (PPU.BG[bg].SCBase << 1));
 
 	if (PPU.BG[bg].SCSize & 1)
 		SC1 = SC0 + 1024;
@@ -1424,7 +1424,7 @@ static void DrawBackgroundMode5(uint32_t bg, uint8_t Z1, uint8_t Z2)
 	depths[1]       = Z2;
 	BG.StartPalette = 0;
 
-	SC0 = (uint16_t*) &Memory.VRAM[PPU.BG[bg].SCBase << 1];
+	SC0 = (uint16_t*) (Memory.VRAM + (PPU.BG[bg].SCBase << 1));
 
 	if ((PPU.BG[bg].SCSize & 1))
 		SC1 = SC0 + 1024;
@@ -1432,7 +1432,7 @@ static void DrawBackgroundMode5(uint32_t bg, uint8_t Z1, uint8_t Z2)
 		SC1 = SC0;
 
 	if ((SC1 - (uint16_t*) Memory.VRAM) > 0x10000)
-		SC1 = (uint16_t*) &Memory.VRAM[(((uint8_t*) SC1) - Memory.VRAM) % 0x10000];
+		SC1 = (uint16_t*) (Memory.VRAM + ((((uint8_t*) SC1) - Memory.VRAM) % 0x10000));
 
 	if ((PPU.BG[bg].SCSize & 2))
 		SC2 = SC1 + 1024;
@@ -1709,7 +1709,7 @@ static void DrawBackground(uint32_t BGMode, uint32_t bg, uint8_t Z1, uint8_t Z2)
 	else
 		BG.StartPalette = 0;
 
-	SC0 = (uint16_t*) &Memory.VRAM[PPU.BG[bg].SCBase << 1];
+	SC0 = (uint16_t*) (Memory.VRAM + (PPU.BG[bg].SCBase << 1));
 
 	if (PPU.BG[bg].SCSize & 1)
 		SC1 = SC0 + 1024;
@@ -1717,7 +1717,7 @@ static void DrawBackground(uint32_t BGMode, uint32_t bg, uint8_t Z1, uint8_t Z2)
 		SC1 = SC0;
 
 	if (SC1 >= (uint16_t*) (Memory.VRAM + 0x10000))
-		SC1 = (uint16_t*) &Memory.VRAM[((uint8_t*) SC1 - &Memory.VRAM[0]) % 0x10000];
+		SC1 = (uint16_t*) (Memory.VRAM + (((uint8_t*) SC1 - &Memory.VRAM[0]) % 0x10000));
 
 	if (PPU.BG[bg].SCSize & 2)
 		SC2 = SC1 + 1024;
@@ -1988,7 +1988,7 @@ static void DrawBackground(uint32_t BGMode, uint32_t bg, uint8_t Z1, uint8_t Z2)
 	                                                                                                       \
 	Screen += GFX.StartY * GFX.Pitch;                                                                      \
 	Depth   = GFX.DB + GFX.StartY * GFX.PPL;                                                               \
-	l       = &LineMatrixData[GFX.StartY];                                                                 \
+	l       = LineMatrixData + GFX.StartY;                                                                 \
 	                                                                                                       \
 	for (Line = GFX.StartY; Line <= GFX.EndY; Line++, Screen += GFX.Pitch, Depth += GFX.PPL, l++)          \
 	{                                                                                                      \
@@ -2162,7 +2162,7 @@ static void DrawBGMode7Background16Sub1_2(uint8_t* Screen, int32_t bg)
 	                                                                                                                    \
 	Screen += GFX.StartY * GFX.Pitch;                                                                                   \
 	Depth = GFX.DB + GFX.StartY * GFX.PPL;                                                                              \
-	l     = &LineMatrixData[GFX.StartY];                                                                                \
+	l     = LineMatrixData + GFX.StartY;                                                                                \
 	                                                                                                                    \
 	if (!l->MatrixB && !l->MatrixC && (l->MatrixA == 0x0100) && (l->MatrixD == 0x0100) &&                               \
 		!LineMatrixData[GFX.EndY].MatrixB && !LineMatrixData[GFX.EndY].MatrixC &&                                       \

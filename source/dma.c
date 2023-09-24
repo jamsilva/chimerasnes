@@ -30,7 +30,7 @@ void DoDMA(uint8_t Channel)
 		return;
 
 	CPU.InDMA = true;
-	d         = &DMA[Channel];
+	d         = DMA + Channel;
 	count     = d->TransferBytes;
 
 	/* Prepare for custom chip DMA */
@@ -108,7 +108,7 @@ void DoDMA(uint8_t Channel)
 		int32_t  char_line_bytes = bytes_per_char * num_chars;
 		uint32_t addr = (d->AAddress / char_line_bytes) * char_line_bytes;
 		uint8_t* base = GetBasePointer((d->ABank << 16) + addr) + addr;
-		uint8_t* buffer = &Memory.ROM[MAX_ROM_SIZE - 0x10000];
+		uint8_t* buffer = Memory.ROM + MAX_ROM_SIZE - 0x10000;
 		uint8_t* p = buffer;
 		uint32_t inc = char_line_bytes - (d->AAddress % char_line_bytes);
 		uint32_t char_count = inc / bytes_per_char;
@@ -230,7 +230,7 @@ void DoDMA(uint8_t Channel)
 
 		if (in_sa1_dma)
 		{
-			base = &Memory.ROM[MAX_ROM_SIZE - 0x10000];
+			base = Memory.ROM + MAX_ROM_SIZE - 0x10000;
 			p    = 0;
 		}
 		else if (in_sdd1_dma)
@@ -496,7 +496,7 @@ void DoDMA(uint8_t Channel)
 					Work = GetPPU(0x2101 + d->BAddress);
 					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
-					--count;
+					count--;
 					break;
 				case 3:
 				case 7:
@@ -524,7 +524,7 @@ void DoDMA(uint8_t Channel)
 					Work = GetPPU(0x2101 + d->BAddress);
 					SetByte(Work, (d->ABank << 16) + d->AAddress);
 					d->AAddress += inc;
-					--count;
+					count--;
 					break;
 				case 4:
 					Work = GetPPU(0x2100 + d->BAddress);
@@ -563,12 +563,7 @@ void DoDMA(uint8_t Channel)
 	IAPU.Executing = Settings.APUEnabled;
 	APU_EXECUTE();
 
-	if (Settings.Chip == GSU)
-		while (CPU.Cycles > CPU.NextEvent)
-			DoHBlankProcessing_SFX();
-	else
-		while (CPU.Cycles > CPU.NextEvent)
-			DoHBlankProcessing_NoSFX();
+	HBlankProcessingLoop();
 
 	if (((Settings.Chip & SPC7110) == SPC7110) && spc7110_dma && s7_wrap)
 		free(spc7110_dma);
@@ -615,7 +610,7 @@ void StartHDMA()
 uint8_t DoHDMA(uint8_t byte)
 {
 	uint8_t mask;
-	SDMA* p = &DMA[0];
+	SDMA* p = DMA;
 	int32_t d = 0;
 	CPU.InDMA = true;
 	CPU.Cycles += Settings.OneCycle * 3;
@@ -753,9 +748,9 @@ uint8_t DoHDMA(uint8_t byte)
 
 		p->IndirectAddress += HDMA_ModeByteCounts[p->TransferMode];
 		/* XXX: Check for p->IndirectAddress crossing a mapping boundary,
-			* XXX: and invalidate HDMAMemPointers[d] */
+		 * XXX: and invalidate HDMAMemPointers[d] */
 		p->FirstLine = false;
-		--p->LineCount;
+		p->LineCount--;
 	}
 
 	CPU.InDMA = false;

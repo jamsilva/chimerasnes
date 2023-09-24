@@ -125,4 +125,14 @@ static INLINE void Reschedule()
 	CPU.NextEvent = max;
 	CPU.WhichEvent = which;
 }
+
+static INLINE void HBlankProcessingLoop()
+{
+	if (Settings.Chip == GSU)
+		while (CPU.Cycles >= CPU.NextEvent)
+			DoHBlankProcessing_SFX();
+	else
+		while (CPU.Cycles >= CPU.NextEvent)
+			DoHBlankProcessing_NoSFX();
+}
 #endif

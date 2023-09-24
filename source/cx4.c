@@ -613,7 +613,7 @@ static void CX4ProcessSprites()
 
 void InitCX4()
 {
-	Memory.CX4RAM = &Memory.FillRAM [0x6000];
+	Memory.CX4RAM = Memory.FillRAM + 0x6000;
 }
 
 uint8_t GetCX4(uint16_t Address)
@@ -839,7 +839,7 @@ uint8_t* GetBasePointerCX4(uint16_t Address)
 	if (Address >= 0x7f40 && Address <= 0x7f5e)
 		return NULL;
 
-	return &Memory.CX4RAM[-0x6000];
+	return Memory.CX4RAM - 0x6000;
 }
 
 uint8_t* GetMemPointerCX4(uint16_t Address)
@@ -847,5 +847,5 @@ uint8_t* GetMemPointerCX4(uint16_t Address)
 	if (Address >= 0x7f40 && Address <= 0x7f5e)
 		return NULL;
 
-	return &Memory.CX4RAM[(Address & 0xffff) - 0x6000];
+	return Memory.CX4RAM + (Address & 0xffff) - 0x6000;
 }

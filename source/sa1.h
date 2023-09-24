@@ -64,7 +64,6 @@ typedef struct
 #define SA1ClearFlags(f)    (SA1.Registers.P.W &= ~(f))
 
 extern SSA1     SA1;
-
 extern SOpcodes SA1OpcodesM1X1[256];
 extern SOpcodes SA1OpcodesM1X0[256];
 extern SOpcodes SA1OpcodesM0X1[256];

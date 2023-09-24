@@ -109,7 +109,7 @@ else
         TARGET := $(TARGET_NAME)_libretro$(PLAT).$(EXT)
         fpic   := -fPIC
         LTO     = -flto=4 -fuse-linker-plugin
-        SHARED := -shared -Wl,--version-script=libretro-common/link.T
+        SHARED := -shared -Wl,--version-script=libretro-common/link.T -Wl,--no-undefined
 
         ifneq ($(findstring Haiku,$(shell uname -a)),)
             LIBM :=
@@ -118,7 +118,7 @@ else
         EXT    ?= so
         TARGET := $(TARGET_NAME)_libretro.$(EXT)
         fpic   := -fPIC -nostdlib
-        SHARED := -shared -Wl,--version-script=libretro-common/link.T
+        SHARED := -shared -Wl,--version-script=libretro-common/link.T -Wl,--no-undefined
         LIBM   :=
     else ifeq ($(platform), osx) # OS X
         EXT              ?= dylib
@@ -194,7 +194,7 @@ else
         EXT    ?= so
         TARGET := $(TARGET_NAME)_libretro_qnx.$(EXT)
         fpic   := -fPIC
-        SHARED := -shared -Wl,--version-script=libretro-common/link.T
+        SHARED := -shared -Wl,--version-script=libretro-common/link.T -Wl,--no-undefined
         CC      = qcc -Vgcc_ntoarmv7le
         AR      = qcc -Vgcc_ntoarmv7le
         CFLAGS += -D__BLACKBERRY_QNX__
@@ -393,7 +393,7 @@ else
         CC      = /opt/gcw0-toolchain/usr/bin/mipsel-linux-gcc
         AR      = /opt/gcw0-toolchain/usr/bin/mipsel-linux-ar
         fpic   := -fPIC -nostdlib
-        SHARED := -shared -Wl,--version-script=libretro-common/link.T
+        SHARED := -shared -Wl,--version-script=libretro-common/link.T -Wl,--no-undefined
         CFLAGS += $(PTHREAD_FLAGS)
         CFLAGS += -march=mips32 -mtune=mips32r2 -mhard-float
     else ifeq ($(platform), miyoo) # MIYOO
@@ -401,7 +401,7 @@ else
         CC      = /opt/miyoo/usr/bin/arm-linux-gcc
         AR      = /opt/miyoo/usr/bin/arm-linux-ar
         fpic   := -fPIC -nostdlib
-        SHARED := -shared -Wl,--version-script=libretro-common/link.T
+        SHARED := -shared -Wl,--version-script=libretro-common/link.T -Wl,--no-undefined
         LIBM   :=
         CFLAGS += -march=armv5te -mtune=arm926ej-s
         CFLAGS += -fno-unroll-loops
@@ -437,7 +437,7 @@ else
         EXT    ?= dll
         TARGET := $(TARGET_NAME)_libretro.$(EXT)
         CC     ?= gcc
-        SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=libretro-common/link.T
+        SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=libretro-common/link.T -Wl,--no-undefined
         CFLAGS += -D__WIN32__ -D__WIN32_LIBRETRO__
     endif
 
@@ -456,7 +456,7 @@ else
         FLTO     =
     endif
 
-    ifneq ($(DEBUG),)
+    ifeq ($(DEBUG), 1)
         WARNINGS_DEFINES =
         CODE_DEFINES     = -O0 -g
     else ifeq ($(platform), ios)

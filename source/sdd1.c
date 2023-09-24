@@ -72,7 +72,7 @@ void SetSDD1MemoryMap(uint32_t bank, uint32_t value)
 	for (c = 0; c < 0x100; c += 16)
 	{
 		int32_t i;
-		uint8_t* block = &Memory.ROM[value + (c << 12)];
+		uint8_t* block = Memory.ROM + (value + (c << 12));
 
 		for (i = c; i < c + 16; i++)
 			Memory.Map[i + bank] = block;
@@ -82,7 +82,7 @@ void SetSDD1MemoryMap(uint32_t bank, uint32_t value)
 void ResetSDD1()
 {
 	int32_t i;
-	memset(&Memory.FillRAM[0x4800], 0, 4);
+	memset(Memory.FillRAM + 0x4800, 0, 4);
 
 	for (i = 0; i < 4; i++)
 	{

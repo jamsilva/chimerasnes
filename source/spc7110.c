@@ -989,7 +989,7 @@ uint8_t* GetBasePointerSPC7110(uint32_t Address) /* allows DMA from the ROM (is 
 
 	i <<= 20;
 	i += Address & 0x0F0000;
-	return &Memory.ROM[i];
+	return Memory.ROM + i;
 }
 
 void DeinitSPC7110()

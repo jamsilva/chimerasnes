@@ -16,7 +16,7 @@ void SA1Init()
 	SA1.Flags               = 0;
 	SA1.Executing           = false;
 	SA1.WaitCounter         = 0;
-	memset(&Memory.FillRAM[0x2200], 0, 0x200);
+	memset(Memory.FillRAM + 0x2200, 0, 0x200);
 	Memory.FillRAM[0x2200]  = 0x20;
 	Memory.FillRAM[0x2220]  = 0x00;
 	Memory.FillRAM[0x2221]  = 0x01;
@@ -175,13 +175,13 @@ void SA1SetByte(uint8_t byte, uint32_t address)
 
 			if (SA1.UseVirtualBitmapFormat2)
 			{
-				uint8_t* ptr = &Memory.SRAM[(address >> 2) & 0x3ffff];
+				uint8_t* ptr = Memory.SRAM + ((address >> 2) & 0x3ffff);
 				*ptr &= ~(3 << ((address & 3) << 1));
 				*ptr |= (byte & 3) << ((address & 3) << 1);
 			}
 			else
 			{
-				uint8_t* ptr = &Memory.SRAM[(address >> 1) & 0x3ffff];
+				uint8_t* ptr = Memory.SRAM + ((address >> 1) & 0x3ffff);
 				*ptr &= ~(15 << ((address & 1) << 2));
 				*ptr |= (byte & 15) << ((address & 1) << 2);
 			}
@@ -255,18 +255,18 @@ void SA1SetPCBase(uint32_t address)
 			if ((Memory.SRAMMask & MEMMAP_MASK) != MEMMAP_MASK)
 				SA1.PCBase = NULL;
 			else
-				SA1.PCBase = &Memory.SRAM[((((address & 0xff0000) >> 1) | (address & 0x7fff)) & Memory.SRAMMask) - (address & 0xffff)];
+				SA1.PCBase = Memory.SRAM + ((((address & 0xff0000) >> 1) | (address & 0x7fff)) & Memory.SRAMMask) - (address & 0xffff);
 
 			return;
 		case MAP_HIROM_SRAM:
 			if ((Memory.SRAMMask & MEMMAP_MASK) != MEMMAP_MASK)
 				SA1.PCBase = NULL;
 			else
-				SA1.PCBase = &Memory.SRAM[(((address & 0x7fff) - 0x6000 + ((address & 0xf0000) >> 3)) & Memory.SRAMMask) - (address & 0xffff)];
+				SA1.PCBase = Memory.SRAM + (((address & 0x7fff) - 0x6000 + ((address & 0xf0000) >> 3)) & Memory.SRAMMask) - (address & 0xffff);
 
 			return;
 		case MAP_BWRAM:
-			SA1.PCBase = &SA1.BWRAM[-0x6000 - (address & 0x8000)];
+			SA1.PCBase = SA1.BWRAM - 0x6000 - (address & 0x8000);
 			return;
 		case MAP_SA1RAM:
 			SA1.PCBase = Memory.SRAM;
@@ -288,7 +288,7 @@ static void SetSA1MemMap(uint32_t which1, uint8_t map)
 
 	for (c = 0; c < 0x100; c += 16)
 	{
-		uint8_t* block = &Memory.ROM[(map & 7) * 0x100000 + (c << 12)];
+		uint8_t* block = Memory.ROM + ((map & 7) * 0x100000 + (c << 12));
 
 		for (i = c; i < c + 16; i++)
 			Memory.Map[start  + i] = SA1.Map[start  + i] = block;
@@ -483,7 +483,7 @@ void SetSA1(uint8_t byte, uint32_t address)
 			SetSA1MemMap(address - 0x2220, byte);
 			break;
 		case 0x2224:
-			Memory.BWRAM = &Memory.SRAM[(byte & 0x1f) * 0x2000];
+			Memory.BWRAM = Memory.SRAM + ((byte & 0x1f) * 0x2000);
 			break;
 		case 0x2225:
 			if (byte == Memory.FillRAM[address])
@@ -536,7 +536,7 @@ void SetSA1(uint8_t byte, uint32_t address)
 				break;
 
 			/* memmove converted: Same malloc but constant non-overlapping addresses [Neb] */
-			memcpy(&Memory.ROM[MAX_ROM_SIZE - 0x10000] + (SA1.in_char_dma << 4), &Memory.FillRAM[0x2240], 16);
+			memcpy(Memory.ROM + MAX_ROM_SIZE - 0x10000 + (SA1.in_char_dma << 4), Memory.FillRAM + 0x2240, 16);
 			SA1.in_char_dma = (SA1.in_char_dma + 1) & 7;
 
 			if ((SA1.in_char_dma & 3) != 0)
@@ -616,8 +616,8 @@ static void SA1CharConv2()
 	uint32_t dest    = Memory.FillRAM[0x2235] | (Memory.FillRAM[0x2236] << 8);
 	uint32_t offset  = (SA1.in_char_dma & 7) ? 0 : 1;
 	int32_t  depthX8 = (Memory.FillRAM[0x2231] & 3) == 0 ? 64 : (Memory.FillRAM[0x2231] & 3) == 1 ? 32 : 16;
-	uint8_t* p       = &Memory.FillRAM[0x3000] + (dest & 0x7ff) + offset * depthX8;
-	uint8_t* q       = &Memory.ROM[MAX_ROM_SIZE - 0x10000] + offset * 64;
+	uint8_t* p       = Memory.FillRAM + 0x3000 + (dest & 0x7ff) + offset * depthX8;
+	uint8_t* q       = Memory.ROM + MAX_ROM_SIZE - 0x10000 + offset * 64;
 	int      l, b;
 
 	switch (depthX8)
@@ -685,19 +685,19 @@ static void SA1DMA()
 			if (s >= (uint8_t*) MAP_LAST)
 				s += (src & 0xffff);
 			else
-				s = &Memory.ROM[src & 0xffff];
+				s = Memory.ROM + (src & 0xffff);
 
 			break;
 		case 1: /* BW-RAM */
 			src &= Memory.SRAMMask;
 			len &= Memory.SRAMMask;
-			s = &Memory.SRAM[src];
+			s = Memory.SRAM + src;
 			break;
 		default:
 		case 2:
 			src &= 0x3ff;
 			len &= 0x3ff;
-			s = &Memory.FillRAM[0x3000] + src;
+			s = Memory.FillRAM + 0x3000 + src;
 			break;
 	}
 
@@ -705,13 +705,13 @@ static void SA1DMA()
 	{
 		dst &= Memory.SRAMMask;
 		len &= Memory.SRAMMask;
-		d = &Memory.SRAM[dst];
+		d = Memory.SRAM + dst;
 	}
 	else
 	{
 		dst &= 0x3ff;
 		len &= 0x3ff;
-		d = &Memory.FillRAM[0x3000] + dst;
+		d = Memory.FillRAM + 0x3000 + dst;
 	}
 
 	/* memmove required: Can overlap arbitrarily [Neb] */
