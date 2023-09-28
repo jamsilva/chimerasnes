@@ -171,7 +171,8 @@ typedef struct
 	bool     Shutdown             : 1;
 	bool     SecretOfEvermoreHack : 1;
 	bool     GetSetDMATimingHacks : 1;
-	uint8_t  _SSettings_PAD1      : 2;
+	bool     LoadBSXBIOS          : 1;
+	uint8_t  _SSettings_PAD1      : 1;
 	uint8_t  OneCycle;
 	uint8_t  SlowOneCycle;
 	uint8_t  TwoCycles;

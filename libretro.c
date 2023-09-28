@@ -359,6 +359,16 @@ static void check_variables(bool first_run)
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 		frameskip_threshold = strtol(var.value, NULL, 10);
 
+	var.key = "chimerasnes_bsx_bios";
+	var.value = NULL;
+	Settings.LoadBSXBIOS = false;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		if (!strcmp(var.value, "load"))
+			Settings.LoadBSXBIOS = true;
+	}
+
 	var.key = "chimerasnes_overclock_cycles";
 	var.value = NULL;
 

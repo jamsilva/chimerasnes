@@ -52,6 +52,8 @@ CMemory* MemoryPtr = NULL;
 SPPU        PPU;
 InternalPPU IPPU;
 
+uint8_t (*ConvertTile)(uint8_t*, uint32_t);
+
 SDMA DMA[8];
 
 uint8_t* HDMAMemPointers[8];

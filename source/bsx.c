@@ -857,6 +857,10 @@ static bool BSX_LoadBIOS()
 	const char* dir = GetBIOSDir();
 	uint32_t dirlen = strlen(dir);
 	uint32_t slashlen = strlen(SLASH_STR);
+
+	if (!Settings.LoadBSXBIOS)
+		return false;
+
 	memcpy(pathp, dir, dirlen);
 	pathp += dirlen;
 	memcpy(pathp, SLASH_STR, slashlen);

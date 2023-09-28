@@ -10,6 +10,7 @@
 #include "cheats.h"
 #include "math.h"
 #include "pixform.h"
+#include "tile.h"
 
 #define M7 19
 
@@ -827,6 +828,7 @@ static void DrawOBJS(bool OnMain, uint8_t D)
 	int32_t  clipcount;
 	uint32_t Y, Offset;
 	BG.BitShift         = 4;
+	SelectConvertTile();
 	BG.TileShift        = 5;
 	BG.TileAddress      = PPU.OBJNameBase;
 	BG.StartPalette     = 128;
@@ -1774,6 +1776,7 @@ static void DrawBackground(uint32_t BGMode, uint32_t bg, uint8_t Z1, uint8_t Z2)
 	GFX.PixSize         = 1;
 	BG.TileSize         = 8 << PPU.BG[bg].BGSize;
 	BG.BitShift         = BitShifts[BGMode][bg];
+	SelectConvertTile();
 	BG.TileShift        = TileShifts[BGMode][bg];
 	BG.TileAddress      = PPU.BG[bg].NameBase << 1;
 	BG.NameSelect       = 0;

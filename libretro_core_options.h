@@ -100,6 +100,19 @@ struct retro_core_option_v2_definition option_defs_us[] =
 		"33"
 	},
 	{
+		"chimerasnes_bsx_bios",
+		"Load the BSX BIOS",
+		NULL,
+		"Many BSX games can run without the BSX BIOS. By disabling it the emulator will boot directly into the game.",
+		NULL,
+		NULL,
+		{
+			{ "skip", "Skip" },
+			{ "load", "Load (if available)" },
+		},
+		"skip"
+	},
+	{
 		"chimerasnes_overclock_cycles",
 		"Reduce Slowdown (Unsafe, Restart)",
 		NULL,

@@ -1722,7 +1722,7 @@ void ApplyROMFixes()
 	    match_na("PRIMAL RAGE") ||
 	    match_na("CLAY FIGHTER") ||
 	    match_na("ClayFighter 2") ||
-	    strncasecmp(Memory.ROMName, "MADDEN", 6) == 0 ||
+	    !strncasecmp(Memory.ROMName, "MADDEN", 6) ||
 	    match_na("NHL") ||
 	    match_na("WeaponLord") ||
 	    match_na("N-Warp Daisakusen") ||
@@ -1747,42 +1747,43 @@ void ApplyROMFixes()
 
 void APUTimingHacks()
 {
-	if (match_id("CQ  ") || /* Stunt Racer FX */
-	    strncmp(Memory.ROMId, "JG", 2) == 0 || /* Illusion of Gaia */
-	    match_na("GAIA GENSOUKI 1 JPN"))
+	if (match_id("CQ  ") ||                                            /* Stunt Racer FX */
+	    match_id("JG") ||                                              /* Illusion of Gaia */
+	    match_na("GAIA GENSOUKI 1 JPN"))                               /* Illusion of Gaia J */
 		IAPU.OneCycle = 13;
-	else if (!strcmp(Memory.ROMName, "UMIHARAKAWASE"))
+	else if (!strcmp(Memory.ROMName, "UMIHARAKAWASE"))                 /* Umihara Kawase */
 		IAPU.OneCycle = 20;
-	else if (match_id("AVCJ") || /* RENDERING RANGER R2 */
-	         match_na("THE FISHING MASTER") || /* Mark Davis - needs >= actual APU timing. (21 is .002 Mhz slower) */
-	         !strncmp(Memory.ROMId, "ARF", 3) || /* Star Ocean */
-	         !strncmp(Memory.ROMId, "ATV", 3) || /* Tales of Phantasia */
-	         !strncasecmp(Memory.ROMName, "ActRaiser", 9) || /* Act Raiser 1 & 2 */
-	         match_na("SOULBLAZER - 1 USA") || match_na("SOULBLADER - 1") || /* Soulblazer */
-	         !strncmp(Memory.ROMId, "AQT", 3) || /* Terranigma */
-	         !strncmp(Memory.ROMId, "E9 ", 3) || /* Robotrek */
-	         match_na("SLAP STICK 1 JPN") ||
-	         !strncmp(Memory.ROMId, "APR", 3) || /* ZENNIHON PURORESU2 */
-	         !strncmp(Memory.ROMId, "A4B", 3) || /* Bomberman 4 */
-	         !strncmp(Memory.ROMId, "Y7 ", 3) || /* UFO KAMEN YAKISOBAN */
-	         !strncmp(Memory.ROMId, "Y9 ", 3) || /* Panic Bomber World */
-	         !strncmp(Memory.ROMId, "APB", 3) ||
-	         ((!strncmp(Memory.ROMName, "Parlor", 6) ||
-	            match_na("HEIWA Parlor!Mini8") ||
-	            match_na("SANKYO Fever! \xCC\xA8\xB0\xCA\xDE\xB0!")) &&
-	            Memory.CompanyId == 0x168) ||
+	else if (match_id("AVCJ") ||                                       /* Rendering Ranger R2 */
+	         match_na("THE FISHING MASTER") ||                         /* Mark Davis - needs >= actual APU timing. (21 is .002 Mhz slower) */
+	         match_id("ARF") ||                                        /* Star Ocean */
+	         match_id("ATV") ||                                        /* Tales of Phantasia */
+	         !strncasecmp(Memory.ROMName, "ActRaiser", 9) ||           /* Act Raiser 1 & 2 */
+	         match_na("SOULBLAZER - 1 USA") ||                         /* Soulblazer */
+	         match_na("SOULBLADER - 1") ||                             /* Soulblazer J */
+	         match_id("AQT") ||                                        /* Terranigma */
+	         match_id("E9 ") ||                                        /* Robotrek */
+	         match_na("SLAP STICK 1 JPN") ||                           /* Robotrek J */
+	         match_id("APR") ||                                        /* ZENNIHON PURORESU2 */
+	         match_id("A4B") ||                                        /* Bomberman 4 */
+	         match_id("Y7 ") ||                                        /* UFO KAMEN YAKISOBAN */
+	         match_id("Y9 ") ||                                        /* Panic Bomber World */
+	         match_id("APB") ||
+	         ((match_na("Parlor") ||
+	           match_na("HEIWA Parlor!Mini8") ||
+	           match_na("SANKYO Fever! \xCC\xA8\xB0\xCA\xDE\xB0!")) &&
+	           Memory.CompanyId == 0x168) ||
 	         match_na("DARK KINGDOM") ||
 	         match_na("ZAN3 SFC") ||
 	         match_na("HIOUDEN") ||
-	         match_na("\xC3\xDD\xBC\xC9\xB3\xC0")                || /* Tenshi no Uta */
+	         match_na("\xC3\xDD\xBC\xC9\xB3\xC0") ||                   /* Tenshi no Uta */
 	         match_na("FORTUNE QUEST") ||
 	         match_na("FISHING TO BASSING") ||
 	         match_na("TokyoDome '95Battle 7") ||
 	         match_na("OHMONO BLACKBASS") ||
 	         match_na("SWORD WORLD SFC") ||
-	         match_na("MASTERS") || /* Augusta 2 J */
-	         match_na("SFC \xB6\xD2\xDD\xD7\xB2\xC0\xDE\xB0")    || /* Kamen Rider */
-	         match_na("LETs PACHINKO("))  /* A set of BS games */
+	         match_na("MASTERS") ||                                    /* Harukanaru Augusta 2 */
+	         match_na("SFC \xB6\xD2\xDD\xD7\xB2\xC0\xDE\xB0") ||       /* Kamen Rider */
+	         match_na("LETs PACHINKO("))                               /* A set of Pachinko BSX games */
 		IAPU.OneCycle = 15;
 	else
 		IAPU.OneCycle  = DEFAULT_ONE_APU_CYCLE;
@@ -1794,30 +1795,29 @@ void HDMATimingHacks()
 	Settings.GetSetDMATimingHacks = false;
 
 	/* A Couple of HDMA related hacks - Lantus */
-	if (match_na("SFX SUPERBUTOUDEN2")  ||
-	    match_na("ALIEN vs. PREDATOR")  ||
-	    match_na("ALIENS vs. PREDATOR") ||
-	    match_na("STONE PROTECTORS")    ||
-	    match_na("SUPER BATTLETANK 2"))
-		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 130) / 100;
-	else if (match_na("HOME IMPROVEMENT"))
-		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 200) / 100;
-	else if (match_id("ASRJ"))                                   /* Street Racer */
+	if (match_id("ASRJ"))                                        /* Street Racer */
 		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 95) / 100;
+	else if (match_na("\x0bd\x0da\x0b2\x0d4\x0b0\x0bd\x0de"))
+		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 101) / 100;
 	else if (match_id("A3R") ||                                  /* Power Rangers Fight */
 	         match_id("AJE"))                                    /* Clock Tower */
 		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 103) / 100;
 	else if (match_id("A9D") ||                                  /* Start Trek: Deep Sleep 9 */
 		     match_id("A3M"))                                    /* Mortal Kombat 3. Fixes cut off speech sample */
 		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 110) / 100;
-	else if (match_na("\x0bd\x0da\x0b2\x0d4\x0b0\x0bd\x0de"))
-		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 101) / 100;
+	else if (match_na("ALIEN vs. PREDATOR") ||
+	         match_na("ALIENS vs. PREDATOR") ||
+	         match_na("STONE PROTECTORS") ||
+	         match_na("SUPER BATTLETANK 2"))
+		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 130) / 100;
+	else if (match_na("HOME IMPROVEMENT"))
+		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 200) / 100;
 
 	Settings.HBlankStart = (256 * Settings.H_Max) / SNES_MAX_HCOUNTER;
 
-	if ((match_na("\?\?\?\?\?\?\?!") && Settings.Chip == DSP_1) || /* Ace O Nerae */
-	     match_na("BATMAN returns") ||                             /* Batman Returns */
-	     match_na("BS ZELDA REMIX"))                               /* BS Zelda MottZilla */
+	if ((match_na("??????\?!") && Settings.Chip == DSP_1) || /* Ace O Nerae */
+	     match_na("BATMAN returns") ||                       /* Batman Returns */
+	     match_na("BS ZELDA REMIX"))                         /* BS Zelda MottZilla */
 		Settings.GetSetDMATimingHacks = true;
 }
 
@@ -1839,7 +1839,9 @@ void SA1ShutdownAddressHacks()
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3000;
 	}
 	else if (match_id("A2DJ")) /* Derby Jockey 2 (J) */
+	{
 		SA1.WaitPC = 0x8b62;
+	}
 	else if (match_id("AZIJ")) /* Dragon Ball Z - Hyper Dimension (J) */
 	{
 		SA1.WaitPC = 0x8083;
@@ -1869,14 +1871,23 @@ void SA1ShutdownAddressHacks()
 		SA1.WaitByteAddress2 = Memory.SRAM + 0x1004;
 	}
 	else if (match_id("AITJ")) /* Takemiya Masaki Kudan no Igo Taishou (J) */
+	{
 		SA1.WaitPC = 0x80b7;
+	}
 	else if (match_id("AJ6J")) /* J. League '96 Dream Stadium (J) */
+	{
 		SA1.WaitPC = 0xf74a;
+	}
 	else if (match_id("AJUJ")) /* Jumpin' Derby (J) */
+	{
 		SA1.WaitPC = 0xd926;
+	}
 	else if (match_id("AKAJ")) /* Kakinoki Shougi (J) */
+	{
 		SA1.WaitPC = 0xf070;
-	else if (match_id("AFJJ") || match_id("AFJE")) /* Hoshi no Kirby 3 (J), Kirby's Dream Land 3 (U) */
+	}
+	else if (match_id("AFJJ") || /* Hoshi no Kirby 3 (J) */
+	         match_id("AFJE"))   /* Kirby's Dream Land 3 (U) */
 	{
 		SA1.WaitPC = 0x82d4;
 		SA1.WaitByteAddress1 = Memory.SRAM + 0x72a4;
@@ -1893,7 +1904,8 @@ void SA1ShutdownAddressHacks()
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x300a;
 		SA1.WaitByteAddress2 = Memory.FillRAM + 0x300e;
 	}
-	else if (match_id("ARWJ") || match_id("ARWE")) /* Super Mario RPG (J), (U) */
+	else if (match_id("ARWJ") || /* Super Mario RPG (J) */
+	         match_id("ARWE"))   /* Super Mario RPG (U) */
 	{
 		SA1.WaitPC = 0x816f;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3000;
@@ -1909,20 +1921,20 @@ void SA1ShutdownAddressHacks()
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x37b4;
 	}
 	else if (match_id("AJOJ")) /* Jikkyou Oshaberi Parodius (J) */
+	{
 		SA1.WaitPC = 0x84e5;
+	}
 	else if (match_id("APBJ")) /* Super Bomberman - Panic Bomber W (J) */
+	{
 		SA1.WaitPC = 0x857a;
+	}
 	else if (match_id("AONJ")) /* Pebble Beach no Hatou New - Tournament Edition (J) */
 	{
 		SA1.WaitPC = 0xdf33;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x37b4;
 	}
-	else if (match_id("AEPE")) /* PGA European Tour (U) */
-	{
-		SA1.WaitPC = 0x3700;
-		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3102;
-	}
-	else if (match_id("A3GE")) /* PGA Tour 96 (U) */
+	else if (match_id("AEPE") || /* PGA European Tour (U) */
+	         match_id("A3GE"))   /* PGA Tour 96 (U) */
 	{
 		SA1.WaitPC = 0x3700;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3102;
@@ -1933,7 +1945,9 @@ void SA1ShutdownAddressHacks()
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3000;
 	}
 	else if (match_id("AGFJ")) /* SD F-1 Grand Prix (J) */
+	{
 		SA1.WaitPC = 0x81bc;
+	}
 	else if (match_id("ASYJ")) /* Saikousoku Shikou Shougi Mahjong (J) */
 	{
 		SA1.WaitPC = 0xf2cc;
@@ -1941,9 +1955,13 @@ void SA1ShutdownAddressHacks()
 		SA1.WaitByteAddress2 = Memory.SRAM + 0x7ffc;
 	}
 	else if (match_id("AX2J")) /* Shougi Saikyou II (J) */
+	{
 		SA1.WaitPC = 0xd675;
+	}
 	else if (match_id("A4WJ")) /* Mini Yonku Shining Scorpion - Let's & Go!! (J) */
+	{
 		SA1.WaitPC = 0x48be;
+	}
 	else if (match_id("AHJJ")) /* Shin Shougi Club (J) */
 	{
 		SA1.WaitPC = 0x002a;
@@ -1951,14 +1969,20 @@ void SA1ShutdownAddressHacks()
 		SA1.WaitByteAddress2 = Memory.SRAM + 0x0808;
 	}
 	else if (match_id("AMSJ")) /* ｼｮｳｷﾞｻｲｷｮｳ */
+	{
 		SA1.WaitPC = 0xCD6A;
+	}
 	else if (match_id("IL")) /* ﾊﾌﾞﾒｲｼﾞﾝﾉｵﾓｼﾛｼｮｳｷﾞ */
+	{
 		SA1.WaitPC = 0x8549;
+	}
 	else if (match_id("ALXJ")) /* MASOUKISHIN */
 	{
 		SA1.WaitPC = 0xEC9C;
 		SA1.WaitByteAddress1 = Memory.FillRAM + 0x3072;
 	}
 	else if (match_id("A3IJ")) /* SUPER SHOGI3 */
+	{
 		SA1.WaitPC = 0xF669;
+	}
 }
