@@ -16,48 +16,115 @@
 	#define NOT_SA1(...) __VA_ARGS__
 #endif
 
-#define rOP8Body(OP, ADDR, WRAP, FUNC)                    \
+#define rOp8Body(Addr, Wrap, Func)                        \
 	{                                                     \
-		uint8_t val = ICPU.OpenBus = GetByte(ADDR(READ)); \
-		FUNC##8(val);                                     \
+		uint8_t val = ICPU.OpenBus = GetByte(Addr(READ)); \
+		Func##8(val);                                     \
 	}
 
-#define rOP16Body(OP, ADDR, WRAP, FUNC)           \
+#define rOp16Body(Addr, Wrap, Func)               \
 	{                                             \
-		uint16_t val = GetWord(ADDR(READ), WRAP); \
+		uint16_t val = GetWord(Addr(READ), Wrap); \
 		ICPU.OpenBus = (uint8_t) (val >> 8);      \
-		FUNC##16(val);                            \
+		Func##16(val);                            \
 	}
 
-#define wmOP8Body(OP, ADDR, WRAP, FUNC, MODE) \
-	{                                         \
-		FUNC##8(ADDR(MODE));                  \
+#define wmOp8Body(Addr, Wrap, Func, Mode) \
+	{                                     \
+		Func##8(Addr(Mode));              \
 	}
 
-#define wmOP16Body(OP, ADDR, WRAP, FUNC, MODE) \
-	{                                          \
-		FUNC##16(ADDR(MODE), WRAP);            \
+#define wmOp16Body(Addr, Wrap, Func, Mode) \
+	{                                      \
+		Func##16(Addr(Mode), Wrap);        \
 	}
 
-#define bOPBody(WVAL, BRACHK, COND, E)                                           \
+#define wmOpC(Name, Cond, Addr, Wrap, Func, Mode)  \
+	static void Op##Name()                         \
+	{                                              \
+		if (Check##Cond())                         \
+			wmOp8Body(Addr, Wrap, Func, Mode)      \
+		else                                       \
+			wmOp16Body(Addr, Wrap, Func, Mode)     \
+	}
+
+#define rOp8(Name, Addr, Wrap, Func) \
+	static void Op##Name() rOp8Body(Addr, Wrap, Func)
+
+#define rOp16(Name, Addr, Wrap, Func) \
+	static void Op##Name() rOp16Body(Addr, Wrap, Func)
+
+#define rOpE1(Name, Addr, Wrap, Func) \
+	NOT_SA1(rOp8(Name##E1, Addr, Wrap, Func))
+
+#define rOpC(Name, Cond, Addr, Wrap, Func) \
+	static void Op##Name()                 \
+	{                                      \
+		if (Check##Cond())                 \
+			rOp8Body(Addr, Wrap, Func)     \
+		else                               \
+			rOp16Body(Addr, Wrap, Func)    \
+	}
+
+#define rOpM(Name, Addr, Wrap, Func) \
+	rOpC(Name, Mem, Addr, Wrap, Func)
+
+#define rOpX(Name, Addr, Wrap, Func) \
+	rOpC(Name, Index, Addr, Wrap, Func)
+
+#define wOp8(Name, Addr, Wrap, Func) \
+	static void Op##Name() wmOp8Body(Addr, Wrap, Func, WRITE)
+
+#define wOp16(Name, Addr, Wrap, Func) \
+	static void Op##Name() wmOp16Body(Addr, Wrap, Func, WRITE)
+
+#define wOpE1(Name, Addr, Wrap, Func) \
+	NOT_SA1(wOp8(Name##E1, Addr, Wrap, Func))
+
+#define wOpC(Name, Cond, Addr, Wrap, Func) \
+	wmOpC(Name, Cond, Addr, Wrap, Func, WRITE)
+
+#define wOpM(Name, Addr, Wrap, Func) \
+	wOpC(Name, Mem, Addr, Wrap, Func)
+
+#define wOpX(Name, Addr, Wrap, Func) \
+	wOpC(Name, Index, Addr, Wrap, Func)
+
+#define mOp8(Name, Addr, Wrap, Func) \
+	static void Op##Name() wmOp8Body(Addr, Wrap, Func, MODIFY)
+
+#define mOp16(Name, Addr, Wrap, Func) \
+	static void Op##Name() wmOp16Body(Addr, Wrap, Func, MODIFY)
+
+#define mOpE1(Name, Addr, Wrap, Func) \
+	NOT_SA1(mOp8(Name##E1, Addr, Wrap, Func))
+
+#define mOpC(Name, Cond, Addr, Wrap, Func) \
+	wmOpC(Name, Cond, Addr, Wrap, Func, MODIFY)
+
+#define mOpM(Name, Addr, Wrap, Func) \
+	mOpC(Name, Mem, Addr, Wrap, Func)
+
+#define BranchCheck(OpAddress)                   \
+	NOT_SA1(                                     \
+		if (CPU.BranchSkip)                      \
+		{                                        \
+			CPU.BranchSkip = false;              \
+				                                 \
+			if (ICPU.Registers.PCw > OpAddress)  \
+				return;                          \
+		}                                        \
+	)
+
+#define NoCheck(OpAddress) /* Nothing */
+
+#define bOpBody(WVal, Check, Cond, E)                                            \
 	{                                                                            \
 		pair newPC;                                                              \
-		newPC.W = WVAL;                                                          \
+		newPC.W = WVal;                                                          \
+		Check(newPC.W)                                                           \
 		                                                                         \
-	NOT_SA1(                                                                     \
-		if (BRACHK)                                                              \
-		{                                                                        \
-			if (CPU.BranchSkip)                                                  \
-			{                                                                    \
-				CPU.BranchSkip = false;                                          \
-				                                                                 \
-				if (ICPU.Registers.PCw > newPC.W)                                \
-					return;                                                      \
-			}                                                                    \
-		}                                                                        \
-	)                                                                            \
-		                                                                         \
-		if (COND)                                                                \
+		if (Cond)                                                                \
 		{                                                                        \
 			AddCycles(Settings.OneCycle);                                        \
 			                                                                     \
@@ -73,78 +140,10 @@
 		}                                                                        \
 	}
 
-#define wmOPC(OP, COND, ADDR, WRAP, FUNC, MODE)    \
-	static void Op##OP (void)                      \
-	{                                              \
-		if (Check##COND())                         \
-			wmOP8Body(OP, ADDR, WRAP, FUNC, MODE)  \
-		else                                       \
-			wmOP16Body(OP, ADDR, WRAP, FUNC, MODE) \
-	}
-
-#define rOP8(OP, ADDR, WRAP, FUNC) \
-	static void Op##OP() rOP8Body(OP, ADDR, WRAP, FUNC)
-
-#define rOP16(OP, ADDR, WRAP, FUNC) \
-	static void Op##OP() rOP16Body(OP, ADDR, WRAP, FUNC)
-
-#define rOPE1(OP, ADDR, WRAP, FUNC) \
-	NOT_SA1(rOP8(OP##E1, ADDR, WRAP, FUNC))
-
-#define rOPC(OP, COND, ADDR, WRAP, FUNC)    \
-	static void Op##OP()                    \
-	{                                       \
-		if (Check##COND())                  \
-			rOP8Body(OP, ADDR, WRAP, FUNC)  \
-		else                                \
-			rOP16Body(OP, ADDR, WRAP, FUNC) \
-	}
-
-#define rOPM(OP, ADDR, WRAP, FUNC) \
-	rOPC(OP, Mem, ADDR, WRAP, FUNC)
-
-#define rOPX(OP, ADDR, WRAP, FUNC) \
-	rOPC(OP, Index, ADDR, WRAP, FUNC)
-
-#define wOP8(OP, ADDR, WRAP, FUNC) \
-	static void Op##OP() wmOP8Body(OP, ADDR, WRAP, FUNC, WRITE)
-
-#define wOP16(OP, ADDR, WRAP, FUNC) \
-	static void Op##OP() wmOP16Body(OP, ADDR, WRAP, FUNC, WRITE)
-
-#define wOPE1(OP, ADDR, WRAP, FUNC) \
-	NOT_SA1(wOP8(OP##E1, ADDR, WRAP, FUNC))
-
-#define wOPC(OP, COND, ADDR, WRAP, FUNC) \
-	wmOPC(OP, COND, ADDR, WRAP, FUNC, WRITE)
-
-#define wOPM(OP, ADDR, WRAP, FUNC) \
-	wOPC(OP, Mem, ADDR, WRAP, FUNC)
-
-#define wOPX(OP, ADDR, WRAP, FUNC) \
-	wOPC(OP, Index, ADDR, WRAP, FUNC)
-
-#define mOP8(OP, ADDR, WRAP, FUNC) \
-	static void Op##OP() wmOP8Body(OP, ADDR, WRAP, FUNC, MODIFY)
-
-#define mOP16(OP, ADDR, WRAP, FUNC) \
-	static void Op##OP() wmOP16Body(OP, ADDR, WRAP, FUNC, MODIFY)
-
-#define mOPE1(OP, ADDR, WRAP, FUNC) \
-	NOT_SA1(mOP8(OP##E1, ADDR, WRAP, FUNC))
-
-#define mOPC(OP, COND, ADDR, WRAP, FUNC) \
-	wmOPC(OP, COND, ADDR, WRAP, FUNC, MODIFY)
-
-#define mOPM(OP, ADDR, WRAP, FUNC) \
-	mOPC(OP, Mem, ADDR, WRAP, FUNC)
-
-#define bOP(OP, REL, BRACHK, COND, E) \
-	static void Op##OP()              \
-		bOPBody(REL(JUMP), BRACHK, COND, E)
-
-#define bOPE1(OP, REL, BRACHK, COND) \
-	NOT_SA1(bOP(OP##E1, REL, BRACHK, COND, 1))
+#define bOps(Name, Check, Cond) \
+	NOT_SA1(static void Op##Name##E1()   bOpBody(Relative    (JUMP), Check, Cond, true)) \
+	        static void Op##Name##E0()   bOpBody(Relative    (JUMP), Check, Cond, false) \
+	        static void Op##Name##Slow() bOpBody(RelativeSlow(JUMP), Check, Cond, CheckEmulation())
 
 static INLINE void ForceShutdown() /* From the speed-hacks branch of CatSFC */
 {
@@ -199,71 +198,69 @@ static void Op69Slow()
 		ADC16(Immediate16Slow(READ));
 }
 
-rOP8 (65M1,     Direct,                           WRAP_BANK, ADC)
-rOP16(65M0,     Direct,                           WRAP_BANK, ADC)
-rOPM (65Slow,   DirectSlow,                       WRAP_BANK, ADC)
+rOp8 (65M1,   Direct,                           WRAP_BANK, ADC)
+rOp16(65M0,   Direct,                           WRAP_BANK, ADC)
+rOpM (65Slow, DirectSlow,                       WRAP_BANK, ADC)
 
-rOPE1(75,       DirectIndexedXE1,                 WRAP_BANK, ADC)
-rOP8 (75E0M1,   DirectIndexedXE0,                 WRAP_BANK, ADC)
-rOP16(75E0M0,   DirectIndexedXE0,                 WRAP_BANK, ADC)
-rOPM (75Slow,   DirectIndexedXSlow,               WRAP_BANK, ADC)
+rOpE1(75,     DirectIndexedXE1,                 WRAP_BANK, ADC)
+rOp8 (75E0M1, DirectIndexedXE0,                 WRAP_BANK, ADC)
+rOp16(75E0M0, DirectIndexedXE0,                 WRAP_BANK, ADC)
+rOpM (75Slow, DirectIndexedXSlow,               WRAP_BANK, ADC)
 
-rOPE1(72,       DirectIndirectE1,                 WRAP_NONE, ADC)
-rOP8 (72E0M1,   DirectIndirectE0,                 WRAP_NONE, ADC)
-rOP16(72E0M0,   DirectIndirectE0,                 WRAP_NONE, ADC)
-rOPM (72Slow,   DirectIndirectSlow,               WRAP_NONE, ADC)
+rOpE1(72,     DirectIndirectE1,                 WRAP_NONE, ADC)
+rOp8 (72E0M1, DirectIndirectE0,                 WRAP_NONE, ADC)
+rOp16(72E0M0, DirectIndirectE0,                 WRAP_NONE, ADC)
+rOpM (72Slow, DirectIndirectSlow,               WRAP_NONE, ADC)
 
-rOPE1(61,       DirectIndexedIndirectE1,          WRAP_NONE, ADC)
-rOP8 (61E0M1,   DirectIndexedIndirectE0,          WRAP_NONE, ADC)
-rOP16(61E0M0,   DirectIndexedIndirectE0,          WRAP_NONE, ADC)
-rOPM (61Slow,   DirectIndexedIndirectSlow,        WRAP_NONE, ADC)
+rOpE1(61,     DirectIndexedIndirectE1,          WRAP_NONE, ADC)
+rOp8 (61E0M1, DirectIndexedIndirectE0,          WRAP_NONE, ADC)
+rOp16(61E0M0, DirectIndexedIndirectE0,          WRAP_NONE, ADC)
+rOpM (61Slow, DirectIndexedIndirectSlow,        WRAP_NONE, ADC)
 
-rOPE1(71,       DirectIndirectIndexedE1,          WRAP_NONE, ADC)
-rOP8 (71E0M1X1, DirectIndirectIndexedE0X1,        WRAP_NONE, ADC)
-rOP16(71E0M0X1, DirectIndirectIndexedE0X1,        WRAP_NONE, ADC)
-rOP8 (71E0M1X0, DirectIndirectIndexedE0X0,        WRAP_NONE, ADC)
-rOP16(71E0M0X0, DirectIndirectIndexedE0X0,        WRAP_NONE, ADC)
-rOPM (71Slow,   DirectIndirectIndexedSlow,        WRAP_NONE, ADC)
+rOpE1(71,     DirectIndirectIndexedE1,          WRAP_NONE, ADC)
+rOp8 (71E0M1, DirectIndirectIndexedE0,          WRAP_NONE, ADC)
+rOp16(71E0M0, DirectIndirectIndexedE0,          WRAP_NONE, ADC)
+rOpM (71Slow, DirectIndirectIndexedSlow,        WRAP_NONE, ADC)
 
-rOP8 (67M1,     DirectIndirectLong,               WRAP_NONE, ADC)
-rOP16(67M0,     DirectIndirectLong,               WRAP_NONE, ADC)
-rOPM (67Slow,   DirectIndirectLongSlow,           WRAP_NONE, ADC)
+rOp8 (67M1,   DirectIndirectLong,               WRAP_NONE, ADC)
+rOp16(67M0,   DirectIndirectLong,               WRAP_NONE, ADC)
+rOpM (67Slow, DirectIndirectLongSlow,           WRAP_NONE, ADC)
 
-rOP8 (77M1,     DirectIndirectIndexedLong,        WRAP_NONE, ADC)
-rOP16(77M0,     DirectIndirectIndexedLong,        WRAP_NONE, ADC)
-rOPM (77Slow,   DirectIndirectIndexedLongSlow,    WRAP_NONE, ADC)
+rOp8 (77M1,   DirectIndirectIndexedLong,        WRAP_NONE, ADC)
+rOp16(77M0,   DirectIndirectIndexedLong,        WRAP_NONE, ADC)
+rOpM (77Slow, DirectIndirectIndexedLongSlow,    WRAP_NONE, ADC)
 
-rOP8 (6DM1,     Absolute,                         WRAP_NONE, ADC)
-rOP16(6DM0,     Absolute,                         WRAP_NONE, ADC)
-rOPM (6DSlow,   AbsoluteSlow,                     WRAP_NONE, ADC)
+rOp8 (6DM1,   Absolute,                         WRAP_NONE, ADC)
+rOp16(6DM0,   Absolute,                         WRAP_NONE, ADC)
+rOpM (6DSlow, AbsoluteSlow,                     WRAP_NONE, ADC)
 
-rOP8 (7DM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, ADC)
-rOP16(7DM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, ADC)
-rOP8 (7DM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, ADC)
-rOP16(7DM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, ADC)
-rOPM (7DSlow,   AbsoluteIndexedXSlow,             WRAP_NONE, ADC)
+rOp8 (7DM1X1, AbsoluteIndexedXX1,               WRAP_NONE, ADC)
+rOp16(7DM0X1, AbsoluteIndexedXX1,               WRAP_NONE, ADC)
+rOp8 (7DM1X0, AbsoluteIndexedXX0,               WRAP_NONE, ADC)
+rOp16(7DM0X0, AbsoluteIndexedXX0,               WRAP_NONE, ADC)
+rOpM (7DSlow, AbsoluteIndexedXSlow,             WRAP_NONE, ADC)
 
-rOP8 (79M1X1,   AbsoluteIndexedYX1,               WRAP_NONE, ADC)
-rOP16(79M0X1,   AbsoluteIndexedYX1,               WRAP_NONE, ADC)
-rOP8 (79M1X0,   AbsoluteIndexedYX0,               WRAP_NONE, ADC)
-rOP16(79M0X0,   AbsoluteIndexedYX0,               WRAP_NONE, ADC)
-rOPM (79Slow,   AbsoluteIndexedYSlow,             WRAP_NONE, ADC)
+rOp8 (79M1X1, AbsoluteIndexedYX1,               WRAP_NONE, ADC)
+rOp16(79M0X1, AbsoluteIndexedYX1,               WRAP_NONE, ADC)
+rOp8 (79M1X0, AbsoluteIndexedYX0,               WRAP_NONE, ADC)
+rOp16(79M0X0, AbsoluteIndexedYX0,               WRAP_NONE, ADC)
+rOpM (79Slow, AbsoluteIndexedYSlow,             WRAP_NONE, ADC)
 
-rOP8 (6FM1,     AbsoluteLong,                     WRAP_NONE, ADC)
-rOP16(6FM0,     AbsoluteLong,                     WRAP_NONE, ADC)
-rOPM (6FSlow,   AbsoluteLongSlow,                 WRAP_NONE, ADC)
+rOp8 (6FM1,   AbsoluteLong,                     WRAP_NONE, ADC)
+rOp16(6FM0,   AbsoluteLong,                     WRAP_NONE, ADC)
+rOpM (6FSlow, AbsoluteLongSlow,                 WRAP_NONE, ADC)
 
-rOP8 (7FM1,     AbsoluteLongIndexedX,             WRAP_NONE, ADC)
-rOP16(7FM0,     AbsoluteLongIndexedX,             WRAP_NONE, ADC)
-rOPM (7FSlow,   AbsoluteLongIndexedXSlow,         WRAP_NONE, ADC)
+rOp8 (7FM1,   AbsoluteLongIndexedX,             WRAP_NONE, ADC)
+rOp16(7FM0,   AbsoluteLongIndexedX,             WRAP_NONE, ADC)
+rOpM (7FSlow, AbsoluteLongIndexedXSlow,         WRAP_NONE, ADC)
 
-rOP8 (63M1,     StackRelative,                    WRAP_NONE, ADC)
-rOP16(63M0,     StackRelative,                    WRAP_NONE, ADC)
-rOPM (63Slow,   StackRelativeSlow,                WRAP_NONE, ADC)
+rOp8 (63M1,   StackRelative,                    WRAP_NONE, ADC)
+rOp16(63M0,   StackRelative,                    WRAP_NONE, ADC)
+rOpM (63Slow, StackRelativeSlow,                WRAP_NONE, ADC)
 
-rOP8 (73M1,     StackRelativeIndirectIndexed,     WRAP_NONE, ADC)
-rOP16(73M0,     StackRelativeIndirectIndexed,     WRAP_NONE, ADC)
-rOPM (73Slow,   StackRelativeIndirectIndexedSlow, WRAP_NONE, ADC)
+rOp8 (73M1,   StackRelativeIndirectIndexed,     WRAP_NONE, ADC)
+rOp16(73M0,   StackRelativeIndirectIndexed,     WRAP_NONE, ADC)
+rOpM (73Slow, StackRelativeIndirectIndexedSlow, WRAP_NONE, ADC)
 
 /* AND */
 static void Op29M1()
@@ -292,77 +289,75 @@ static void Op29Slow()
 	}
 }
 
-rOP8 (25M1,     Direct,                           WRAP_BANK, AND)
-rOP16(25M0,     Direct,                           WRAP_BANK, AND)
-rOPM (25Slow,   DirectSlow,                       WRAP_BANK, AND)
+rOp8 (25M1,   Direct,                           WRAP_BANK, AND)
+rOp16(25M0,   Direct,                           WRAP_BANK, AND)
+rOpM (25Slow, DirectSlow,                       WRAP_BANK, AND)
 
-rOPE1(35,       DirectIndexedXE1,                 WRAP_BANK, AND)
-rOP8 (35E0M1,   DirectIndexedXE0,                 WRAP_BANK, AND)
-rOP16(35E0M0,   DirectIndexedXE0,                 WRAP_BANK, AND)
-rOPM (35Slow,   DirectIndexedXSlow,               WRAP_BANK, AND)
+rOpE1(35,     DirectIndexedXE1,                 WRAP_BANK, AND)
+rOp8 (35E0M1, DirectIndexedXE0,                 WRAP_BANK, AND)
+rOp16(35E0M0, DirectIndexedXE0,                 WRAP_BANK, AND)
+rOpM (35Slow, DirectIndexedXSlow,               WRAP_BANK, AND)
 
-rOPE1(32,       DirectIndirectE1,                 WRAP_NONE, AND)
-rOP8 (32E0M1,   DirectIndirectE0,                 WRAP_NONE, AND)
-rOP16(32E0M0,   DirectIndirectE0,                 WRAP_NONE, AND)
-rOPM (32Slow,   DirectIndirectSlow,               WRAP_NONE, AND)
+rOpE1(32,     DirectIndirectE1,                 WRAP_NONE, AND)
+rOp8 (32E0M1, DirectIndirectE0,                 WRAP_NONE, AND)
+rOp16(32E0M0, DirectIndirectE0,                 WRAP_NONE, AND)
+rOpM (32Slow, DirectIndirectSlow,               WRAP_NONE, AND)
 
-rOPE1(21,       DirectIndexedIndirectE1,          WRAP_NONE, AND)
-rOP8 (21E0M1,   DirectIndexedIndirectE0,          WRAP_NONE, AND)
-rOP16(21E0M0,   DirectIndexedIndirectE0,          WRAP_NONE, AND)
-rOPM (21Slow,   DirectIndexedIndirectSlow,        WRAP_NONE, AND)
+rOpE1(21,     DirectIndexedIndirectE1,          WRAP_NONE, AND)
+rOp8 (21E0M1, DirectIndexedIndirectE0,          WRAP_NONE, AND)
+rOp16(21E0M0, DirectIndexedIndirectE0,          WRAP_NONE, AND)
+rOpM (21Slow, DirectIndexedIndirectSlow,        WRAP_NONE, AND)
 
-rOPE1(31,       DirectIndirectIndexedE1,          WRAP_NONE, AND)
-rOP8 (31E0M1X1, DirectIndirectIndexedE0X1,        WRAP_NONE, AND)
-rOP16(31E0M0X1, DirectIndirectIndexedE0X1,        WRAP_NONE, AND)
-rOP8 (31E0M1X0, DirectIndirectIndexedE0X0,        WRAP_NONE, AND)
-rOP16(31E0M0X0, DirectIndirectIndexedE0X0,        WRAP_NONE, AND)
-rOPM (31Slow,   DirectIndirectIndexedSlow,        WRAP_NONE, AND)
+rOpE1(31,     DirectIndirectIndexedE1,          WRAP_NONE, AND)
+rOp8 (31E0M1, DirectIndirectIndexedE0,          WRAP_NONE, AND)
+rOp16(31E0M0, DirectIndirectIndexedE0,          WRAP_NONE, AND)
+rOpM (31Slow, DirectIndirectIndexedSlow,        WRAP_NONE, AND)
 
-rOP8 (27M1,     DirectIndirectLong,               WRAP_NONE, AND)
-rOP16(27M0,     DirectIndirectLong,               WRAP_NONE, AND)
-rOPM (27Slow,   DirectIndirectLongSlow,           WRAP_NONE, AND)
+rOp8 (27M1,   DirectIndirectLong,               WRAP_NONE, AND)
+rOp16(27M0,   DirectIndirectLong,               WRAP_NONE, AND)
+rOpM (27Slow, DirectIndirectLongSlow,           WRAP_NONE, AND)
 
-rOP8 (37M1,     DirectIndirectIndexedLong,        WRAP_NONE, AND)
-rOP16(37M0,     DirectIndirectIndexedLong,        WRAP_NONE, AND)
-rOPM (37Slow,   DirectIndirectIndexedLongSlow,    WRAP_NONE, AND)
+rOp8 (37M1,   DirectIndirectIndexedLong,        WRAP_NONE, AND)
+rOp16(37M0,   DirectIndirectIndexedLong,        WRAP_NONE, AND)
+rOpM (37Slow, DirectIndirectIndexedLongSlow,    WRAP_NONE, AND)
 
-rOP8 (2DM1,     Absolute,                         WRAP_NONE, AND)
-rOP16(2DM0,     Absolute,                         WRAP_NONE, AND)
-rOPM (2DSlow,   AbsoluteSlow,                     WRAP_NONE, AND)
+rOp8 (2DM1,   Absolute,                         WRAP_NONE, AND)
+rOp16(2DM0,   Absolute,                         WRAP_NONE, AND)
+rOpM (2DSlow, AbsoluteSlow,                     WRAP_NONE, AND)
 
-rOP8 (3DM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, AND)
-rOP16(3DM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, AND)
-rOP8 (3DM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, AND)
-rOP16(3DM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, AND)
-rOPM (3DSlow,   AbsoluteIndexedXSlow,             WRAP_NONE, AND)
+rOp8 (3DM1X1, AbsoluteIndexedXX1,               WRAP_NONE, AND)
+rOp16(3DM0X1, AbsoluteIndexedXX1,               WRAP_NONE, AND)
+rOp8 (3DM1X0, AbsoluteIndexedXX0,               WRAP_NONE, AND)
+rOp16(3DM0X0, AbsoluteIndexedXX0,               WRAP_NONE, AND)
+rOpM (3DSlow, AbsoluteIndexedXSlow,             WRAP_NONE, AND)
 
-rOP8 (39M1X1,   AbsoluteIndexedYX1,               WRAP_NONE, AND)
-rOP16(39M0X1,   AbsoluteIndexedYX1,               WRAP_NONE, AND)
-rOP8 (39M1X0,   AbsoluteIndexedYX0,               WRAP_NONE, AND)
-rOP16(39M0X0,   AbsoluteIndexedYX0,               WRAP_NONE, AND)
-rOPM (39Slow,   AbsoluteIndexedYSlow,             WRAP_NONE, AND)
+rOp8 (39M1X1, AbsoluteIndexedYX1,               WRAP_NONE, AND)
+rOp16(39M0X1, AbsoluteIndexedYX1,               WRAP_NONE, AND)
+rOp8 (39M1X0, AbsoluteIndexedYX0,               WRAP_NONE, AND)
+rOp16(39M0X0, AbsoluteIndexedYX0,               WRAP_NONE, AND)
+rOpM (39Slow, AbsoluteIndexedYSlow,             WRAP_NONE, AND)
 
-rOP8 (2FM1,     AbsoluteLong,                     WRAP_NONE, AND)
-rOP16(2FM0,     AbsoluteLong,                     WRAP_NONE, AND)
-rOPM (2FSlow,   AbsoluteLongSlow,                 WRAP_NONE, AND)
+rOp8 (2FM1,   AbsoluteLong,                     WRAP_NONE, AND)
+rOp16(2FM0,   AbsoluteLong,                     WRAP_NONE, AND)
+rOpM (2FSlow, AbsoluteLongSlow,                 WRAP_NONE, AND)
 
-rOP8 (3FM1,     AbsoluteLongIndexedX,             WRAP_NONE, AND)
-rOP16(3FM0,     AbsoluteLongIndexedX,             WRAP_NONE, AND)
-rOPM (3FSlow,   AbsoluteLongIndexedXSlow,         WRAP_NONE, AND)
+rOp8 (3FM1,   AbsoluteLongIndexedX,             WRAP_NONE, AND)
+rOp16(3FM0,   AbsoluteLongIndexedX,             WRAP_NONE, AND)
+rOpM (3FSlow, AbsoluteLongIndexedXSlow,         WRAP_NONE, AND)
 
-rOP8 (23M1,     StackRelative,                    WRAP_NONE, AND)
-rOP16(23M0,     StackRelative,                    WRAP_NONE, AND)
-rOPM (23Slow,   StackRelativeSlow,                WRAP_NONE, AND)
+rOp8 (23M1,   StackRelative,                    WRAP_NONE, AND)
+rOp16(23M0,   StackRelative,                    WRAP_NONE, AND)
+rOpM (23Slow, StackRelativeSlow,                WRAP_NONE, AND)
 
-rOP8 (33M1,     StackRelativeIndirectIndexed,     WRAP_NONE, AND)
-rOP16(33M0,     StackRelativeIndirectIndexed,     WRAP_NONE, AND)
-rOPM (33Slow,   StackRelativeIndirectIndexedSlow, WRAP_NONE, AND)
+rOp8 (33M1,   StackRelativeIndirectIndexed,     WRAP_NONE, AND)
+rOp16(33M0,   StackRelativeIndirectIndexed,     WRAP_NONE, AND)
+rOpM (33Slow, StackRelativeIndirectIndexedSlow, WRAP_NONE, AND)
 
 /* ASL */
 static void Op0AM1()
 {
 	AddCycles(Settings.OneCycle);
-	ICPU.Carry = (ICPU.Registers.AL & 0x80) != 0;
+	ICPU.Carry = (bool) (ICPU.Registers.AL & 0x80);
 	ICPU.Registers.AL <<= 1;
 	SetZN8(ICPU.Registers.AL);
 }
@@ -370,7 +365,7 @@ static void Op0AM1()
 static void Op0AM0()
 {
 	AddCycles(Settings.OneCycle);
-	ICPU.Carry = (ICPU.Registers.AH & 0x80) != 0;
+	ICPU.Carry = (bool) (ICPU.Registers.AH & 0x80);
 	ICPU.Registers.A.W <<= 1;
 	SetZN16(ICPU.Registers.A.W);
 }
@@ -381,74 +376,74 @@ static void Op0ASlow()
 
 	if (CheckMem())
 	{
-		ICPU.Carry = (ICPU.Registers.AL & 0x80) != 0;
+		ICPU.Carry = (bool) (ICPU.Registers.AL & 0x80);
 		ICPU.Registers.AL <<= 1;
 		SetZN8(ICPU.Registers.AL);
 	}
 	else
 	{
-		ICPU.Carry = (ICPU.Registers.AH & 0x80) != 0;
+		ICPU.Carry = (bool) (ICPU.Registers.AH & 0x80);
 		ICPU.Registers.A.W <<= 1;
 		SetZN16(ICPU.Registers.A.W);
 	}
 }
 
-mOP8 (06M1,     Direct,                           WRAP_BANK, ASL)
-mOP16(06M0,     Direct,                           WRAP_BANK, ASL)
-mOPM (06Slow,   DirectSlow,                       WRAP_BANK, ASL)
+mOp8 (06M1,   Direct,                           WRAP_BANK, ASL)
+mOp16(06M0,   Direct,                           WRAP_BANK, ASL)
+mOpM (06Slow, DirectSlow,                       WRAP_BANK, ASL)
 
-mOPE1(16,       DirectIndexedXE1,                 WRAP_BANK, ASL)
-mOP8 (16E0M1,   DirectIndexedXE0,                 WRAP_BANK, ASL)
-mOP16(16E0M0,   DirectIndexedXE0,                 WRAP_BANK, ASL)
-mOPM (16Slow,   DirectIndexedXSlow,               WRAP_BANK, ASL)
+mOpE1(16,     DirectIndexedXE1,                 WRAP_BANK, ASL)
+mOp8 (16E0M1, DirectIndexedXE0,                 WRAP_BANK, ASL)
+mOp16(16E0M0, DirectIndexedXE0,                 WRAP_BANK, ASL)
+mOpM (16Slow, DirectIndexedXSlow,               WRAP_BANK, ASL)
 
-mOP8 (0EM1,     Absolute,                         WRAP_NONE, ASL)
-mOP16(0EM0,     Absolute,                         WRAP_NONE, ASL)
-mOPM (0ESlow,   AbsoluteSlow,                     WRAP_NONE, ASL)
+mOp8 (0EM1,   Absolute,                         WRAP_NONE, ASL)
+mOp16(0EM0,   Absolute,                         WRAP_NONE, ASL)
+mOpM (0ESlow, AbsoluteSlow,                     WRAP_NONE, ASL)
 
-mOP8 (1EM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, ASL)
-mOP16(1EM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, ASL)
-mOP8 (1EM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, ASL)
-mOP16(1EM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, ASL)
-mOPM (1ESlow,   AbsoluteIndexedXSlow,             WRAP_NONE, ASL)
+mOp8 (1EM1X1, AbsoluteIndexedXX1,               WRAP_NONE, ASL)
+mOp16(1EM0X1, AbsoluteIndexedXX1,               WRAP_NONE, ASL)
+mOp8 (1EM1X0, AbsoluteIndexedXX0,               WRAP_NONE, ASL)
+mOp16(1EM0X0, AbsoluteIndexedXX0,               WRAP_NONE, ASL)
+mOpM (1ESlow, AbsoluteIndexedXSlow,             WRAP_NONE, ASL)
 
 /* BIT */
 static void Op89M1()
 {
-	ICPU.Zero = ICPU.Registers.AL & Immediate8(READ);
+	ICPU.Zero = (bool) (ICPU.Registers.AL & Immediate8(READ));
 }
 
 static void Op89M0()
 {
-	ICPU.Zero = (ICPU.Registers.A.W & Immediate16(READ)) != 0;
+	ICPU.Zero = (bool) (ICPU.Registers.A.W & Immediate16(READ));
 }
 
 static void Op89Slow()
 {
 	if (CheckMem())
-		ICPU.Zero = ICPU.Registers.AL & Immediate8Slow(READ);
+		ICPU.Zero = (bool) (ICPU.Registers.AL & Immediate8Slow(READ));
 	else
-		ICPU.Zero = (ICPU.Registers.A.W & Immediate16Slow(READ)) != 0;
+		ICPU.Zero = (bool) (ICPU.Registers.A.W & Immediate16Slow(READ));
 }
 
-rOP8 (24M1,     Direct,                           WRAP_BANK, BIT)
-rOP16(24M0,     Direct,                           WRAP_BANK, BIT)
-rOPM (24Slow,   DirectSlow,                       WRAP_BANK, BIT)
+rOp8 (24M1,   Direct,                           WRAP_BANK, BIT)
+rOp16(24M0,   Direct,                           WRAP_BANK, BIT)
+rOpM (24Slow, DirectSlow,                       WRAP_BANK, BIT)
 
-rOPE1(34,       DirectIndexedXE1,                 WRAP_BANK, BIT)
-rOP8 (34E0M1,   DirectIndexedXE0,                 WRAP_BANK, BIT)
-rOP16(34E0M0,   DirectIndexedXE0,                 WRAP_BANK, BIT)
-rOPM (34Slow,   DirectIndexedXSlow,               WRAP_BANK, BIT)
+rOpE1(34,     DirectIndexedXE1,                 WRAP_BANK, BIT)
+rOp8 (34E0M1, DirectIndexedXE0,                 WRAP_BANK, BIT)
+rOp16(34E0M0, DirectIndexedXE0,                 WRAP_BANK, BIT)
+rOpM (34Slow, DirectIndexedXSlow,               WRAP_BANK, BIT)
 
-rOP8 (2CM1,     Absolute,                         WRAP_NONE, BIT)
-rOP16(2CM0,     Absolute,                         WRAP_NONE, BIT)
-rOPM (2CSlow,   AbsoluteSlow,                     WRAP_NONE, BIT)
+rOp8 (2CM1,   Absolute,                         WRAP_NONE, BIT)
+rOp16(2CM0,   Absolute,                         WRAP_NONE, BIT)
+rOpM (2CSlow, AbsoluteSlow,                     WRAP_NONE, BIT)
 
-rOP8 (3CM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, BIT)
-rOP16(3CM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, BIT)
-rOP8 (3CM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, BIT)
-rOP16(3CM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, BIT)
-rOPM (3CSlow,   AbsoluteIndexedXSlow,             WRAP_NONE, BIT)
+rOp8 (3CM1X1, AbsoluteIndexedXX1,               WRAP_NONE, BIT)
+rOp16(3CM0X1, AbsoluteIndexedXX1,               WRAP_NONE, BIT)
+rOp8 (3CM1X0, AbsoluteIndexedXX0,               WRAP_NONE, BIT)
+rOp16(3CM0X0, AbsoluteIndexedXX0,               WRAP_NONE, BIT)
+rOpM (3CSlow, AbsoluteIndexedXSlow,             WRAP_NONE, BIT)
 
 /* CMP */
 static void OpC9M1()
@@ -481,71 +476,69 @@ static void OpC9Slow()
 	}
 }
 
-rOP8 (C5M1,     Direct,                           WRAP_BANK, CMP)
-rOP16(C5M0,     Direct,                           WRAP_BANK, CMP)
-rOPM (C5Slow,   DirectSlow,                       WRAP_BANK, CMP)
+rOp8 (C5M1,   Direct,                           WRAP_BANK, CMP)
+rOp16(C5M0,   Direct,                           WRAP_BANK, CMP)
+rOpM (C5Slow, DirectSlow,                       WRAP_BANK, CMP)
 
-rOPE1(D5,       DirectIndexedXE1,                 WRAP_BANK, CMP)
-rOP8 (D5E0M1,   DirectIndexedXE0,                 WRAP_BANK, CMP)
-rOP16(D5E0M0,   DirectIndexedXE0,                 WRAP_BANK, CMP)
-rOPM (D5Slow,   DirectIndexedXSlow,               WRAP_BANK, CMP)
+rOpE1(D5,     DirectIndexedXE1,                 WRAP_BANK, CMP)
+rOp8 (D5E0M1, DirectIndexedXE0,                 WRAP_BANK, CMP)
+rOp16(D5E0M0, DirectIndexedXE0,                 WRAP_BANK, CMP)
+rOpM (D5Slow, DirectIndexedXSlow,               WRAP_BANK, CMP)
 
-rOPE1(D2,       DirectIndirectE1,                 WRAP_NONE, CMP)
-rOP8 (D2E0M1,   DirectIndirectE0,                 WRAP_NONE, CMP)
-rOP16(D2E0M0,   DirectIndirectE0,                 WRAP_NONE, CMP)
-rOPM (D2Slow,   DirectIndirectSlow,               WRAP_NONE, CMP)
+rOpE1(D2,     DirectIndirectE1,                 WRAP_NONE, CMP)
+rOp8 (D2E0M1, DirectIndirectE0,                 WRAP_NONE, CMP)
+rOp16(D2E0M0, DirectIndirectE0,                 WRAP_NONE, CMP)
+rOpM (D2Slow, DirectIndirectSlow,               WRAP_NONE, CMP)
 
-rOPE1(C1,       DirectIndexedIndirectE1,          WRAP_NONE, CMP)
-rOP8 (C1E0M1,   DirectIndexedIndirectE0,          WRAP_NONE, CMP)
-rOP16(C1E0M0,   DirectIndexedIndirectE0,          WRAP_NONE, CMP)
-rOPM (C1Slow,   DirectIndexedIndirectSlow,        WRAP_NONE, CMP)
+rOpE1(C1,     DirectIndexedIndirectE1,          WRAP_NONE, CMP)
+rOp8 (C1E0M1, DirectIndexedIndirectE0,          WRAP_NONE, CMP)
+rOp16(C1E0M0, DirectIndexedIndirectE0,          WRAP_NONE, CMP)
+rOpM (C1Slow, DirectIndexedIndirectSlow,        WRAP_NONE, CMP)
 
-rOPE1(D1,       DirectIndirectIndexedE1,          WRAP_NONE, CMP)
-rOP8 (D1E0M1X1, DirectIndirectIndexedE0X1,        WRAP_NONE, CMP)
-rOP16(D1E0M0X1, DirectIndirectIndexedE0X1,        WRAP_NONE, CMP)
-rOP8 (D1E0M1X0, DirectIndirectIndexedE0X0,        WRAP_NONE, CMP)
-rOP16(D1E0M0X0, DirectIndirectIndexedE0X0,        WRAP_NONE, CMP)
-rOPM (D1Slow,   DirectIndirectIndexedSlow,        WRAP_NONE, CMP)
+rOpE1(D1,     DirectIndirectIndexedE1,          WRAP_NONE, CMP)
+rOp8 (D1E0M1, DirectIndirectIndexedE0,          WRAP_NONE, CMP)
+rOp16(D1E0M0, DirectIndirectIndexedE0,          WRAP_NONE, CMP)
+rOpM (D1Slow, DirectIndirectIndexedSlow,        WRAP_NONE, CMP)
 
-rOP8 (C7M1,     DirectIndirectLong,               WRAP_NONE, CMP)
-rOP16(C7M0,     DirectIndirectLong,               WRAP_NONE, CMP)
-rOPM (C7Slow,   DirectIndirectLongSlow,           WRAP_NONE, CMP)
+rOp8 (C7M1,   DirectIndirectLong,               WRAP_NONE, CMP)
+rOp16(C7M0,   DirectIndirectLong,               WRAP_NONE, CMP)
+rOpM (C7Slow, DirectIndirectLongSlow,           WRAP_NONE, CMP)
 
-rOP8 (D7M1,     DirectIndirectIndexedLong,        WRAP_NONE, CMP)
-rOP16(D7M0,     DirectIndirectIndexedLong,        WRAP_NONE, CMP)
-rOPM (D7Slow,   DirectIndirectIndexedLongSlow,    WRAP_NONE, CMP)
+rOp8 (D7M1,   DirectIndirectIndexedLong,        WRAP_NONE, CMP)
+rOp16(D7M0,   DirectIndirectIndexedLong,        WRAP_NONE, CMP)
+rOpM (D7Slow, DirectIndirectIndexedLongSlow,    WRAP_NONE, CMP)
 
-rOP8 (CDM1,     Absolute,                         WRAP_NONE, CMP)
-rOP16(CDM0,     Absolute,                         WRAP_NONE, CMP)
-rOPM (CDSlow,   AbsoluteSlow,                     WRAP_NONE, CMP)
+rOp8 (CDM1,   Absolute,                         WRAP_NONE, CMP)
+rOp16(CDM0,   Absolute,                         WRAP_NONE, CMP)
+rOpM (CDSlow, AbsoluteSlow,                     WRAP_NONE, CMP)
 
-rOP8 (DDM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, CMP)
-rOP16(DDM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, CMP)
-rOP8 (DDM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, CMP)
-rOP16(DDM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, CMP)
-rOPM (DDSlow,   AbsoluteIndexedXSlow,             WRAP_NONE, CMP)
+rOp8 (DDM1X1, AbsoluteIndexedXX1,               WRAP_NONE, CMP)
+rOp16(DDM0X1, AbsoluteIndexedXX1,               WRAP_NONE, CMP)
+rOp8 (DDM1X0, AbsoluteIndexedXX0,               WRAP_NONE, CMP)
+rOp16(DDM0X0, AbsoluteIndexedXX0,               WRAP_NONE, CMP)
+rOpM (DDSlow, AbsoluteIndexedXSlow,             WRAP_NONE, CMP)
 
-rOP8 (D9M1X1,   AbsoluteIndexedYX1,               WRAP_NONE, CMP)
-rOP16(D9M0X1,   AbsoluteIndexedYX1,               WRAP_NONE, CMP)
-rOP8 (D9M1X0,   AbsoluteIndexedYX0,               WRAP_NONE, CMP)
-rOP16(D9M0X0,   AbsoluteIndexedYX0,               WRAP_NONE, CMP)
-rOPM (D9Slow,   AbsoluteIndexedYSlow,             WRAP_NONE, CMP)
+rOp8 (D9M1X1, AbsoluteIndexedYX1,               WRAP_NONE, CMP)
+rOp16(D9M0X1, AbsoluteIndexedYX1,               WRAP_NONE, CMP)
+rOp8 (D9M1X0, AbsoluteIndexedYX0,               WRAP_NONE, CMP)
+rOp16(D9M0X0, AbsoluteIndexedYX0,               WRAP_NONE, CMP)
+rOpM (D9Slow, AbsoluteIndexedYSlow,             WRAP_NONE, CMP)
 
-rOP8 (CFM1,     AbsoluteLong,                     WRAP_NONE, CMP)
-rOP16(CFM0,     AbsoluteLong,                     WRAP_NONE, CMP)
-rOPM (CFSlow,   AbsoluteLongSlow,                 WRAP_NONE, CMP)
+rOp8 (CFM1,   AbsoluteLong,                     WRAP_NONE, CMP)
+rOp16(CFM0,   AbsoluteLong,                     WRAP_NONE, CMP)
+rOpM (CFSlow, AbsoluteLongSlow,                 WRAP_NONE, CMP)
 
-rOP8 (DFM1,     AbsoluteLongIndexedX,             WRAP_NONE, CMP)
-rOP16(DFM0,     AbsoluteLongIndexedX,             WRAP_NONE, CMP)
-rOPM (DFSlow,   AbsoluteLongIndexedXSlow,         WRAP_NONE, CMP)
+rOp8 (DFM1,   AbsoluteLongIndexedX,             WRAP_NONE, CMP)
+rOp16(DFM0,   AbsoluteLongIndexedX,             WRAP_NONE, CMP)
+rOpM (DFSlow, AbsoluteLongIndexedXSlow,         WRAP_NONE, CMP)
 
-rOP8 (C3M1,     StackRelative,                    WRAP_NONE, CMP)
-rOP16(C3M0,     StackRelative,                    WRAP_NONE, CMP)
-rOPM (C3Slow,   StackRelativeSlow,                WRAP_NONE, CMP)
+rOp8 (C3M1,   StackRelative,                    WRAP_NONE, CMP)
+rOp16(C3M0,   StackRelative,                    WRAP_NONE, CMP)
+rOpM (C3Slow, StackRelativeSlow,                WRAP_NONE, CMP)
 
-rOP8 (D3M1,     StackRelativeIndirectIndexed,     WRAP_NONE, CMP)
-rOP16(D3M0,     StackRelativeIndirectIndexed,     WRAP_NONE, CMP)
-rOPM (D3Slow,   StackRelativeIndirectIndexedSlow, WRAP_NONE, CMP)
+rOp8 (D3M1,   StackRelativeIndirectIndexed,     WRAP_NONE, CMP)
+rOp16(D3M0,   StackRelativeIndirectIndexed,     WRAP_NONE, CMP)
+rOpM (D3Slow, StackRelativeIndirectIndexedSlow, WRAP_NONE, CMP)
 
 /* CPX */
 static void OpE0X1()
@@ -578,13 +571,13 @@ static void OpE0Slow()
 	}
 }
 
-rOP8 (E4X1,     Direct,                           WRAP_BANK, CPX)
-rOP16(E4X0,     Direct,                           WRAP_BANK, CPX)
-rOPX (E4Slow,   DirectSlow,                       WRAP_BANK, CPX)
+rOp8 (E4X1,   Direct,                           WRAP_BANK, CPX)
+rOp16(E4X0,   Direct,                           WRAP_BANK, CPX)
+rOpX (E4Slow, DirectSlow,                       WRAP_BANK, CPX)
 
-rOP8 (ECX1,     Absolute,                         WRAP_NONE, CPX)
-rOP16(ECX0,     Absolute,                         WRAP_NONE, CPX)
-rOPX (ECSlow,   AbsoluteSlow,                     WRAP_NONE, CPX)
+rOp8 (ECX1,   Absolute,                         WRAP_NONE, CPX)
+rOp16(ECX0,   Absolute,                         WRAP_NONE, CPX)
+rOpX (ECSlow, AbsoluteSlow,                     WRAP_NONE, CPX)
 
 /* CPY */
 static void OpC0X1()
@@ -617,13 +610,13 @@ static void OpC0Slow()
 	}
 }
 
-rOP8 (C4X1,     Direct,                           WRAP_BANK, CPY)
-rOP16(C4X0,     Direct,                           WRAP_BANK, CPY)
-rOPX (C4Slow,   DirectSlow,                       WRAP_BANK, CPY)
+rOp8 (C4X1,   Direct,                           WRAP_BANK, CPY)
+rOp16(C4X0,   Direct,                           WRAP_BANK, CPY)
+rOpX (C4Slow, DirectSlow,                       WRAP_BANK, CPY)
 
-rOP8 (CCX1,     Absolute,                         WRAP_NONE, CPY)
-rOP16(CCX0,     Absolute,                         WRAP_NONE, CPY)
-rOPX (CCSlow,   AbsoluteSlow,                     WRAP_NONE, CPY)
+rOp8 (CCX1,   Absolute,                         WRAP_NONE, CPY)
+rOp16(CCX0,   Absolute,                         WRAP_NONE, CPY)
+rOpX (CCSlow, AbsoluteSlow,                     WRAP_NONE, CPY)
 
 /* DEC */
 static void Op3AM1()
@@ -659,24 +652,24 @@ static void Op3ASlow()
 	}
 }
 
-mOP8 (C6M1,     Direct,                           WRAP_BANK, DEC)
-mOP16(C6M0,     Direct,                           WRAP_BANK, DEC)
-mOPM (C6Slow,   DirectSlow,                       WRAP_BANK, DEC)
+mOp8 (C6M1,   Direct,                           WRAP_BANK, DEC)
+mOp16(C6M0,   Direct,                           WRAP_BANK, DEC)
+mOpM (C6Slow, DirectSlow,                       WRAP_BANK, DEC)
 
-mOPE1(D6,       DirectIndexedXE1,                 WRAP_BANK, DEC)
-mOP8 (D6E0M1,   DirectIndexedXE0,                 WRAP_BANK, DEC)
-mOP16(D6E0M0,   DirectIndexedXE0,                 WRAP_BANK, DEC)
-mOPM (D6Slow,   DirectIndexedXSlow,               WRAP_BANK, DEC)
+mOpE1(D6,     DirectIndexedXE1,                 WRAP_BANK, DEC)
+mOp8 (D6E0M1, DirectIndexedXE0,                 WRAP_BANK, DEC)
+mOp16(D6E0M0, DirectIndexedXE0,                 WRAP_BANK, DEC)
+mOpM (D6Slow, DirectIndexedXSlow,               WRAP_BANK, DEC)
 
-mOP8 (CEM1,     Absolute,                         WRAP_NONE, DEC)
-mOP16(CEM0,     Absolute,                         WRAP_NONE, DEC)
-mOPM (CESlow,   AbsoluteSlow,                     WRAP_NONE, DEC)
+mOp8 (CEM1,   Absolute,                         WRAP_NONE, DEC)
+mOp16(CEM0,   Absolute,                         WRAP_NONE, DEC)
+mOpM (CESlow, AbsoluteSlow,                     WRAP_NONE, DEC)
 
-mOP8 (DEM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, DEC)
-mOP16(DEM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, DEC)
-mOP8 (DEM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, DEC)
-mOP16(DEM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, DEC)
-mOPM (DESlow,   AbsoluteIndexedXSlow,             WRAP_NONE, DEC)
+mOp8 (DEM1X1, AbsoluteIndexedXX1,               WRAP_NONE, DEC)
+mOp16(DEM0X1, AbsoluteIndexedXX1,               WRAP_NONE, DEC)
+mOp8 (DEM1X0, AbsoluteIndexedXX0,               WRAP_NONE, DEC)
+mOp16(DEM0X0, AbsoluteIndexedXX0,               WRAP_NONE, DEC)
+mOpM (DESlow, AbsoluteIndexedXSlow,             WRAP_NONE, DEC)
 
 /* EOR */
 static void Op49M1()
@@ -705,71 +698,69 @@ static void Op49Slow()
 	}
 }
 
-rOP8 (45M1,     Direct,                           WRAP_BANK, EOR)
-rOP16(45M0,     Direct,                           WRAP_BANK, EOR)
-rOPM (45Slow,   DirectSlow,                       WRAP_BANK, EOR)
+rOp8 (45M1,   Direct,                           WRAP_BANK, EOR)
+rOp16(45M0,   Direct,                           WRAP_BANK, EOR)
+rOpM (45Slow, DirectSlow,                       WRAP_BANK, EOR)
 
-rOPE1(55,       DirectIndexedXE1,                 WRAP_BANK, EOR)
-rOP8 (55E0M1,   DirectIndexedXE0,                 WRAP_BANK, EOR)
-rOP16(55E0M0,   DirectIndexedXE0,                 WRAP_BANK, EOR)
-rOPM (55Slow,   DirectIndexedXSlow,               WRAP_BANK, EOR)
+rOpE1(55,     DirectIndexedXE1,                 WRAP_BANK, EOR)
+rOp8 (55E0M1, DirectIndexedXE0,                 WRAP_BANK, EOR)
+rOp16(55E0M0, DirectIndexedXE0,                 WRAP_BANK, EOR)
+rOpM (55Slow, DirectIndexedXSlow,               WRAP_BANK, EOR)
 
-rOPE1(52,       DirectIndirectE1,                 WRAP_NONE, EOR)
-rOP8 (52E0M1,   DirectIndirectE0,                 WRAP_NONE, EOR)
-rOP16(52E0M0,   DirectIndirectE0,                 WRAP_NONE, EOR)
-rOPM (52Slow,   DirectIndirectSlow,               WRAP_NONE, EOR)
+rOpE1(52,     DirectIndirectE1,                 WRAP_NONE, EOR)
+rOp8 (52E0M1, DirectIndirectE0,                 WRAP_NONE, EOR)
+rOp16(52E0M0, DirectIndirectE0,                 WRAP_NONE, EOR)
+rOpM (52Slow, DirectIndirectSlow,               WRAP_NONE, EOR)
 
-rOPE1(41,       DirectIndexedIndirectE1,          WRAP_NONE, EOR)
-rOP8 (41E0M1,   DirectIndexedIndirectE0,          WRAP_NONE, EOR)
-rOP16(41E0M0,   DirectIndexedIndirectE0,          WRAP_NONE, EOR)
-rOPM (41Slow,   DirectIndexedIndirectSlow,        WRAP_NONE, EOR)
+rOpE1(41,     DirectIndexedIndirectE1,          WRAP_NONE, EOR)
+rOp8 (41E0M1, DirectIndexedIndirectE0,          WRAP_NONE, EOR)
+rOp16(41E0M0, DirectIndexedIndirectE0,          WRAP_NONE, EOR)
+rOpM (41Slow, DirectIndexedIndirectSlow,        WRAP_NONE, EOR)
 
-rOPE1(51,       DirectIndirectIndexedE1,          WRAP_NONE, EOR)
-rOP8 (51E0M1X1, DirectIndirectIndexedE0X1,        WRAP_NONE, EOR)
-rOP16(51E0M0X1, DirectIndirectIndexedE0X1,        WRAP_NONE, EOR)
-rOP8 (51E0M1X0, DirectIndirectIndexedE0X0,        WRAP_NONE, EOR)
-rOP16(51E0M0X0, DirectIndirectIndexedE0X0,        WRAP_NONE, EOR)
-rOPM (51Slow,   DirectIndirectIndexedSlow,        WRAP_NONE, EOR)
+rOpE1(51,     DirectIndirectIndexedE1,          WRAP_NONE, EOR)
+rOp8 (51E0M1, DirectIndirectIndexedE0,          WRAP_NONE, EOR)
+rOp16(51E0M0, DirectIndirectIndexedE0,          WRAP_NONE, EOR)
+rOpM (51Slow, DirectIndirectIndexedSlow,        WRAP_NONE, EOR)
 
-rOP8 (47M1,     DirectIndirectLong,               WRAP_NONE, EOR)
-rOP16(47M0,     DirectIndirectLong,               WRAP_NONE, EOR)
-rOPM (47Slow,   DirectIndirectLongSlow,           WRAP_NONE, EOR)
+rOp8 (47M1,   DirectIndirectLong,               WRAP_NONE, EOR)
+rOp16(47M0,   DirectIndirectLong,               WRAP_NONE, EOR)
+rOpM (47Slow, DirectIndirectLongSlow,           WRAP_NONE, EOR)
 
-rOP8 (57M1,     DirectIndirectIndexedLong,        WRAP_NONE, EOR)
-rOP16(57M0,     DirectIndirectIndexedLong,        WRAP_NONE, EOR)
-rOPM (57Slow,   DirectIndirectIndexedLongSlow,    WRAP_NONE, EOR)
+rOp8 (57M1,   DirectIndirectIndexedLong,        WRAP_NONE, EOR)
+rOp16(57M0,   DirectIndirectIndexedLong,        WRAP_NONE, EOR)
+rOpM (57Slow, DirectIndirectIndexedLongSlow,    WRAP_NONE, EOR)
 
-rOP8 (4DM1,     Absolute,                         WRAP_NONE, EOR)
-rOP16(4DM0,     Absolute,                         WRAP_NONE, EOR)
-rOPM (4DSlow,   AbsoluteSlow,                     WRAP_NONE, EOR)
+rOp8 (4DM1,   Absolute,                         WRAP_NONE, EOR)
+rOp16(4DM0,   Absolute,                         WRAP_NONE, EOR)
+rOpM (4DSlow, AbsoluteSlow,                     WRAP_NONE, EOR)
 
-rOP8 (5DM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, EOR)
-rOP16(5DM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, EOR)
-rOP8 (5DM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, EOR)
-rOP16(5DM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, EOR)
-rOPM (5DSlow,   AbsoluteIndexedXSlow,             WRAP_NONE, EOR)
+rOp8 (5DM1X1, AbsoluteIndexedXX1,               WRAP_NONE, EOR)
+rOp16(5DM0X1, AbsoluteIndexedXX1,               WRAP_NONE, EOR)
+rOp8 (5DM1X0, AbsoluteIndexedXX0,               WRAP_NONE, EOR)
+rOp16(5DM0X0, AbsoluteIndexedXX0,               WRAP_NONE, EOR)
+rOpM (5DSlow, AbsoluteIndexedXSlow,             WRAP_NONE, EOR)
 
-rOP8 (59M1X1,   AbsoluteIndexedYX1,               WRAP_NONE, EOR)
-rOP16(59M0X1,   AbsoluteIndexedYX1,               WRAP_NONE, EOR)
-rOP8 (59M1X0,   AbsoluteIndexedYX0,               WRAP_NONE, EOR)
-rOP16(59M0X0,   AbsoluteIndexedYX0,               WRAP_NONE, EOR)
-rOPM (59Slow,   AbsoluteIndexedYSlow,             WRAP_NONE, EOR)
+rOp8 (59M1X1, AbsoluteIndexedYX1,               WRAP_NONE, EOR)
+rOp16(59M0X1, AbsoluteIndexedYX1,               WRAP_NONE, EOR)
+rOp8 (59M1X0, AbsoluteIndexedYX0,               WRAP_NONE, EOR)
+rOp16(59M0X0, AbsoluteIndexedYX0,               WRAP_NONE, EOR)
+rOpM (59Slow, AbsoluteIndexedYSlow,             WRAP_NONE, EOR)
 
-rOP8 (4FM1,     AbsoluteLong,                     WRAP_NONE, EOR)
-rOP16(4FM0,     AbsoluteLong,                     WRAP_NONE, EOR)
-rOPM (4FSlow,   AbsoluteLongSlow,                 WRAP_NONE, EOR)
+rOp8 (4FM1,   AbsoluteLong,                     WRAP_NONE, EOR)
+rOp16(4FM0,   AbsoluteLong,                     WRAP_NONE, EOR)
+rOpM (4FSlow, AbsoluteLongSlow,                 WRAP_NONE, EOR)
 
-rOP8 (5FM1,     AbsoluteLongIndexedX,             WRAP_NONE, EOR)
-rOP16(5FM0,     AbsoluteLongIndexedX,             WRAP_NONE, EOR)
-rOPM (5FSlow,   AbsoluteLongIndexedXSlow,         WRAP_NONE, EOR)
+rOp8 (5FM1,   AbsoluteLongIndexedX,             WRAP_NONE, EOR)
+rOp16(5FM0,   AbsoluteLongIndexedX,             WRAP_NONE, EOR)
+rOpM (5FSlow, AbsoluteLongIndexedXSlow,         WRAP_NONE, EOR)
 
-rOP8 (43M1,     StackRelative,                    WRAP_NONE, EOR)
-rOP16(43M0,     StackRelative,                    WRAP_NONE, EOR)
-rOPM (43Slow,   StackRelativeSlow,                WRAP_NONE, EOR)
+rOp8 (43M1,   StackRelative,                    WRAP_NONE, EOR)
+rOp16(43M0,   StackRelative,                    WRAP_NONE, EOR)
+rOpM (43Slow, StackRelativeSlow,                WRAP_NONE, EOR)
 
-rOP8 (53M1,     StackRelativeIndirectIndexed,     WRAP_NONE, EOR)
-rOP16(53M0,     StackRelativeIndirectIndexed,     WRAP_NONE, EOR)
-rOPM (53Slow,   StackRelativeIndirectIndexedSlow, WRAP_NONE, EOR)
+rOp8 (53M1,   StackRelativeIndirectIndexed,     WRAP_NONE, EOR)
+rOp16(53M0,   StackRelativeIndirectIndexed,     WRAP_NONE, EOR)
+rOpM (53Slow, StackRelativeIndirectIndexedSlow, WRAP_NONE, EOR)
 
 /* INC */
 static void Op1AM1()
@@ -805,24 +796,24 @@ static void Op1ASlow()
 	}
 }
 
-mOP8 (E6M1,     Direct,                           WRAP_BANK, INC)
-mOP16(E6M0,     Direct,                           WRAP_BANK, INC)
-mOPM (E6Slow,   DirectSlow,                       WRAP_BANK, INC)
+mOp8 (E6M1,   Direct,                           WRAP_BANK, INC)
+mOp16(E6M0,   Direct,                           WRAP_BANK, INC)
+mOpM (E6Slow, DirectSlow,                       WRAP_BANK, INC)
 
-mOPE1(F6,       DirectIndexedXE1,                 WRAP_BANK, INC)
-mOP8 (F6E0M1,   DirectIndexedXE0,                 WRAP_BANK, INC)
-mOP16(F6E0M0,   DirectIndexedXE0,                 WRAP_BANK, INC)
-mOPM (F6Slow,   DirectIndexedXSlow,               WRAP_BANK, INC)
+mOpE1(F6,     DirectIndexedXE1,                 WRAP_BANK, INC)
+mOp8 (F6E0M1, DirectIndexedXE0,                 WRAP_BANK, INC)
+mOp16(F6E0M0, DirectIndexedXE0,                 WRAP_BANK, INC)
+mOpM (F6Slow, DirectIndexedXSlow,               WRAP_BANK, INC)
 
-mOP8 (EEM1,     Absolute,                         WRAP_NONE, INC)
-mOP16(EEM0,     Absolute,                         WRAP_NONE, INC)
-mOPM (EESlow,   AbsoluteSlow,                     WRAP_NONE, INC)
+mOp8 (EEM1,   Absolute,                         WRAP_NONE, INC)
+mOp16(EEM0,   Absolute,                         WRAP_NONE, INC)
+mOpM (EESlow, AbsoluteSlow,                     WRAP_NONE, INC)
 
-mOP8 (FEM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, INC)
-mOP16(FEM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, INC)
-mOP8 (FEM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, INC)
-mOP16(FEM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, INC)
-mOPM (FESlow,   AbsoluteIndexedXSlow,             WRAP_NONE, INC)
+mOp8 (FEM1X1, AbsoluteIndexedXX1,               WRAP_NONE, INC)
+mOp16(FEM0X1, AbsoluteIndexedXX1,               WRAP_NONE, INC)
+mOp8 (FEM1X0, AbsoluteIndexedXX0,               WRAP_NONE, INC)
+mOp16(FEM0X0, AbsoluteIndexedXX0,               WRAP_NONE, INC)
+mOpM (FESlow, AbsoluteIndexedXSlow,             WRAP_NONE, INC)
 
 /* LDA */
 static void OpA9M1()
@@ -851,71 +842,69 @@ static void OpA9Slow()
 	}
 }
 
-rOP8 (A5M1,     Direct,                           WRAP_BANK, LDA)
-rOP16(A5M0,     Direct,                           WRAP_BANK, LDA)
-rOPM (A5Slow,   DirectSlow,                       WRAP_BANK, LDA)
+rOp8 (A5M1,   Direct,                           WRAP_BANK, LDA)
+rOp16(A5M0,   Direct,                           WRAP_BANK, LDA)
+rOpM (A5Slow, DirectSlow,                       WRAP_BANK, LDA)
 
-rOPE1(B5,       DirectIndexedXE1,                 WRAP_BANK, LDA)
-rOP8 (B5E0M1,   DirectIndexedXE0,                 WRAP_BANK, LDA)
-rOP16(B5E0M0,   DirectIndexedXE0,                 WRAP_BANK, LDA)
-rOPM (B5Slow,   DirectIndexedXSlow,               WRAP_BANK, LDA)
+rOpE1(B5,     DirectIndexedXE1,                 WRAP_BANK, LDA)
+rOp8 (B5E0M1, DirectIndexedXE0,                 WRAP_BANK, LDA)
+rOp16(B5E0M0, DirectIndexedXE0,                 WRAP_BANK, LDA)
+rOpM (B5Slow, DirectIndexedXSlow,               WRAP_BANK, LDA)
 
-rOPE1(B2,       DirectIndirectE1,                 WRAP_NONE, LDA)
-rOP8 (B2E0M1,   DirectIndirectE0,                 WRAP_NONE, LDA)
-rOP16(B2E0M0,   DirectIndirectE0,                 WRAP_NONE, LDA)
-rOPM (B2Slow,   DirectIndirectSlow,               WRAP_NONE, LDA)
+rOpE1(B2,     DirectIndirectE1,                 WRAP_NONE, LDA)
+rOp8 (B2E0M1, DirectIndirectE0,                 WRAP_NONE, LDA)
+rOp16(B2E0M0, DirectIndirectE0,                 WRAP_NONE, LDA)
+rOpM (B2Slow, DirectIndirectSlow,               WRAP_NONE, LDA)
 
-rOPE1(A1,       DirectIndexedIndirectE1,          WRAP_NONE, LDA)
-rOP8 (A1E0M1,   DirectIndexedIndirectE0,          WRAP_NONE, LDA)
-rOP16(A1E0M0,   DirectIndexedIndirectE0,          WRAP_NONE, LDA)
-rOPM (A1Slow,   DirectIndexedIndirectSlow,        WRAP_NONE, LDA)
+rOpE1(A1,     DirectIndexedIndirectE1,          WRAP_NONE, LDA)
+rOp8 (A1E0M1, DirectIndexedIndirectE0,          WRAP_NONE, LDA)
+rOp16(A1E0M0, DirectIndexedIndirectE0,          WRAP_NONE, LDA)
+rOpM (A1Slow, DirectIndexedIndirectSlow,        WRAP_NONE, LDA)
 
-rOPE1(B1,       DirectIndirectIndexedE1,          WRAP_NONE, LDA)
-rOP8 (B1E0M1X1, DirectIndirectIndexedE0X1,        WRAP_NONE, LDA)
-rOP16(B1E0M0X1, DirectIndirectIndexedE0X1,        WRAP_NONE, LDA)
-rOP8 (B1E0M1X0, DirectIndirectIndexedE0X0,        WRAP_NONE, LDA)
-rOP16(B1E0M0X0, DirectIndirectIndexedE0X0,        WRAP_NONE, LDA)
-rOPM (B1Slow,   DirectIndirectIndexedSlow,        WRAP_NONE, LDA)
+rOpE1(B1,     DirectIndirectIndexedE1,          WRAP_NONE, LDA)
+rOp8 (B1E0M1, DirectIndirectIndexedE0,          WRAP_NONE, LDA)
+rOp16(B1E0M0, DirectIndirectIndexedE0,          WRAP_NONE, LDA)
+rOpM (B1Slow, DirectIndirectIndexedSlow,        WRAP_NONE, LDA)
 
-rOP8 (A7M1,     DirectIndirectLong,               WRAP_NONE, LDA)
-rOP16(A7M0,     DirectIndirectLong,               WRAP_NONE, LDA)
-rOPM (A7Slow,   DirectIndirectLongSlow,           WRAP_NONE, LDA)
+rOp8 (A7M1,   DirectIndirectLong,               WRAP_NONE, LDA)
+rOp16(A7M0,   DirectIndirectLong,               WRAP_NONE, LDA)
+rOpM (A7Slow, DirectIndirectLongSlow,           WRAP_NONE, LDA)
 
-rOP8 (B7M1,     DirectIndirectIndexedLong,        WRAP_NONE, LDA)
-rOP16(B7M0,     DirectIndirectIndexedLong,        WRAP_NONE, LDA)
-rOPM (B7Slow,   DirectIndirectIndexedLongSlow,    WRAP_NONE, LDA)
+rOp8 (B7M1,   DirectIndirectIndexedLong,        WRAP_NONE, LDA)
+rOp16(B7M0,   DirectIndirectIndexedLong,        WRAP_NONE, LDA)
+rOpM (B7Slow, DirectIndirectIndexedLongSlow,    WRAP_NONE, LDA)
 
-rOP8 (ADM1,     Absolute,                         WRAP_NONE, LDA)
-rOP16(ADM0,     Absolute,                         WRAP_NONE, LDA)
-rOPM (ADSlow,   AbsoluteSlow,                     WRAP_NONE, LDA)
+rOp8 (ADM1,   Absolute,                         WRAP_NONE, LDA)
+rOp16(ADM0,   Absolute,                         WRAP_NONE, LDA)
+rOpM (ADSlow, AbsoluteSlow,                     WRAP_NONE, LDA)
 
-rOP8 (BDM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, LDA)
-rOP16(BDM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, LDA)
-rOP8 (BDM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, LDA)
-rOP16(BDM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, LDA)
-rOPM (BDSlow,   AbsoluteIndexedXSlow,             WRAP_NONE, LDA)
+rOp8 (BDM1X1, AbsoluteIndexedXX1,               WRAP_NONE, LDA)
+rOp16(BDM0X1, AbsoluteIndexedXX1,               WRAP_NONE, LDA)
+rOp8 (BDM1X0, AbsoluteIndexedXX0,               WRAP_NONE, LDA)
+rOp16(BDM0X0, AbsoluteIndexedXX0,               WRAP_NONE, LDA)
+rOpM (BDSlow, AbsoluteIndexedXSlow,             WRAP_NONE, LDA)
 
-rOP8 (B9M1X1,   AbsoluteIndexedYX1,               WRAP_NONE, LDA)
-rOP16(B9M0X1,   AbsoluteIndexedYX1,               WRAP_NONE, LDA)
-rOP8 (B9M1X0,   AbsoluteIndexedYX0,               WRAP_NONE, LDA)
-rOP16(B9M0X0,   AbsoluteIndexedYX0,               WRAP_NONE, LDA)
-rOPM (B9Slow,   AbsoluteIndexedYSlow,             WRAP_NONE, LDA)
+rOp8 (B9M1X1, AbsoluteIndexedYX1,               WRAP_NONE, LDA)
+rOp16(B9M0X1, AbsoluteIndexedYX1,               WRAP_NONE, LDA)
+rOp8 (B9M1X0, AbsoluteIndexedYX0,               WRAP_NONE, LDA)
+rOp16(B9M0X0, AbsoluteIndexedYX0,               WRAP_NONE, LDA)
+rOpM (B9Slow, AbsoluteIndexedYSlow,             WRAP_NONE, LDA)
 
-rOP8 (AFM1,     AbsoluteLong,                     WRAP_NONE, LDA)
-rOP16(AFM0,     AbsoluteLong,                     WRAP_NONE, LDA)
-rOPM (AFSlow,   AbsoluteLongSlow,                 WRAP_NONE, LDA)
+rOp8 (AFM1,   AbsoluteLong,                     WRAP_NONE, LDA)
+rOp16(AFM0,   AbsoluteLong,                     WRAP_NONE, LDA)
+rOpM (AFSlow, AbsoluteLongSlow,                 WRAP_NONE, LDA)
 
-rOP8 (BFM1,     AbsoluteLongIndexedX,             WRAP_NONE, LDA)
-rOP16(BFM0,     AbsoluteLongIndexedX,             WRAP_NONE, LDA)
-rOPM (BFSlow,   AbsoluteLongIndexedXSlow,         WRAP_NONE, LDA)
+rOp8 (BFM1,   AbsoluteLongIndexedX,             WRAP_NONE, LDA)
+rOp16(BFM0,   AbsoluteLongIndexedX,             WRAP_NONE, LDA)
+rOpM (BFSlow, AbsoluteLongIndexedXSlow,         WRAP_NONE, LDA)
 
-rOP8 (A3M1,     StackRelative,                    WRAP_NONE, LDA)
-rOP16(A3M0,     StackRelative,                    WRAP_NONE, LDA)
-rOPM (A3Slow,   StackRelativeSlow,                WRAP_NONE, LDA)
+rOp8 (A3M1,   StackRelative,                    WRAP_NONE, LDA)
+rOp16(A3M0,   StackRelative,                    WRAP_NONE, LDA)
+rOpM (A3Slow, StackRelativeSlow,                WRAP_NONE, LDA)
 
-rOP8 (B3M1,     StackRelativeIndirectIndexed,     WRAP_NONE, LDA)
-rOP16(B3M0,     StackRelativeIndirectIndexed,     WRAP_NONE, LDA)
-rOPM (B3Slow,   StackRelativeIndirectIndexedSlow, WRAP_NONE, LDA)
+rOp8 (B3M1,   StackRelativeIndirectIndexed,     WRAP_NONE, LDA)
+rOp16(B3M0,   StackRelativeIndirectIndexed,     WRAP_NONE, LDA)
+rOpM (B3Slow, StackRelativeIndirectIndexedSlow, WRAP_NONE, LDA)
 
 /* LDX */
 static void OpA2X1()
@@ -944,22 +933,22 @@ static void OpA2Slow()
 	}
 }
 
-rOP8 (A6X1,     Direct,                           WRAP_BANK, LDX)
-rOP16(A6X0,     Direct,                           WRAP_BANK, LDX)
-rOPX (A6Slow,   DirectSlow,                       WRAP_BANK, LDX)
+rOp8 (A6X1,   Direct,                           WRAP_BANK, LDX)
+rOp16(A6X0,   Direct,                           WRAP_BANK, LDX)
+rOpX (A6Slow, DirectSlow,                       WRAP_BANK, LDX)
 
-rOPE1(B6,       DirectIndexedYE1,                 WRAP_BANK, LDX)
-rOP8 (B6E0X1,   DirectIndexedYE0,                 WRAP_BANK, LDX)
-rOP16(B6E0X0,   DirectIndexedYE0,                 WRAP_BANK, LDX)
-rOPX (B6Slow,   DirectIndexedYSlow,               WRAP_BANK, LDX)
+rOpE1(B6,     DirectIndexedYE1,                 WRAP_BANK, LDX)
+rOp8 (B6E0X1, DirectIndexedYE0,                 WRAP_BANK, LDX)
+rOp16(B6E0X0, DirectIndexedYE0,                 WRAP_BANK, LDX)
+rOpX (B6Slow, DirectIndexedYSlow,               WRAP_BANK, LDX)
 
-rOP8 (AEX1,     Absolute,                         WRAP_BANK, LDX)
-rOP16(AEX0,     Absolute,                         WRAP_BANK, LDX)
-rOPX (AESlow,   AbsoluteSlow,                     WRAP_BANK, LDX)
+rOp8 (AEX1,   Absolute,                         WRAP_BANK, LDX)
+rOp16(AEX0,   Absolute,                         WRAP_BANK, LDX)
+rOpX (AESlow, AbsoluteSlow,                     WRAP_BANK, LDX)
 
-rOP8 (BEX1,     AbsoluteIndexedYX1,               WRAP_BANK, LDX)
-rOP16(BEX0,     AbsoluteIndexedYX0,               WRAP_BANK, LDX)
-rOPX (BESlow,   AbsoluteIndexedYSlow,             WRAP_BANK, LDX)
+rOp8 (BEX1,   AbsoluteIndexedYX1,               WRAP_BANK, LDX)
+rOp16(BEX0,   AbsoluteIndexedYX0,               WRAP_BANK, LDX)
+rOpX (BESlow, AbsoluteIndexedYSlow,             WRAP_BANK, LDX)
 
 /* LDY */
 static void OpA0X1()
@@ -988,22 +977,22 @@ static void OpA0Slow()
 	}
 }
 
-rOP8 (A4X1,     Direct,                           WRAP_BANK, LDY)
-rOP16(A4X0,     Direct,                           WRAP_BANK, LDY)
-rOPX (A4Slow,   DirectSlow,                       WRAP_BANK, LDY)
+rOp8 (A4X1,   Direct,                           WRAP_BANK, LDY)
+rOp16(A4X0,   Direct,                           WRAP_BANK, LDY)
+rOpX (A4Slow, DirectSlow,                       WRAP_BANK, LDY)
 
-rOPE1(B4,       DirectIndexedXE1,                 WRAP_BANK, LDY)
-rOP8 (B4E0X1,   DirectIndexedXE0,                 WRAP_BANK, LDY)
-rOP16(B4E0X0,   DirectIndexedXE0,                 WRAP_BANK, LDY)
-rOPX (B4Slow,   DirectIndexedXSlow,               WRAP_BANK, LDY)
+rOpE1(B4,     DirectIndexedXE1,                 WRAP_BANK, LDY)
+rOp8 (B4E0X1, DirectIndexedXE0,                 WRAP_BANK, LDY)
+rOp16(B4E0X0, DirectIndexedXE0,                 WRAP_BANK, LDY)
+rOpX (B4Slow, DirectIndexedXSlow,               WRAP_BANK, LDY)
 
-rOP8 (ACX1,     Absolute,                         WRAP_BANK, LDY)
-rOP16(ACX0,     Absolute,                         WRAP_BANK, LDY)
-rOPX (ACSlow,   AbsoluteSlow,                     WRAP_BANK, LDY)
+rOp8 (ACX1,   Absolute,                         WRAP_BANK, LDY)
+rOp16(ACX0,   Absolute,                         WRAP_BANK, LDY)
+rOpX (ACSlow, AbsoluteSlow,                     WRAP_BANK, LDY)
 
-rOP8 (BCX1,     AbsoluteIndexedXX1,               WRAP_BANK, LDY)
-rOP16(BCX0,     AbsoluteIndexedXX0,               WRAP_BANK, LDY)
-rOPX (BCSlow,   AbsoluteIndexedXSlow,             WRAP_BANK, LDY)
+rOp8 (BCX1,   AbsoluteIndexedXX1,               WRAP_BANK, LDY)
+rOp16(BCX0,   AbsoluteIndexedXX0,               WRAP_BANK, LDY)
+rOpX (BCSlow, AbsoluteIndexedXSlow,             WRAP_BANK, LDY)
 
 /* LSR */
 static void Op4AM1()
@@ -1040,24 +1029,24 @@ static void Op4ASlow()
 	}
 }
 
-mOP8 (46M1,     Direct,                           WRAP_BANK, LSR)
-mOP16(46M0,     Direct,                           WRAP_BANK, LSR)
-mOPM (46Slow,   DirectSlow,                       WRAP_BANK, LSR)
+mOp8 (46M1,   Direct,                           WRAP_BANK, LSR)
+mOp16(46M0,   Direct,                           WRAP_BANK, LSR)
+mOpM (46Slow, DirectSlow,                       WRAP_BANK, LSR)
 
-mOPE1(56,       DirectIndexedXE1,                 WRAP_BANK, LSR)
-mOP8 (56E0M1,   DirectIndexedXE0,                 WRAP_BANK, LSR)
-mOP16(56E0M0,   DirectIndexedXE0,                 WRAP_BANK, LSR)
-mOPM (56Slow,   DirectIndexedXSlow,               WRAP_BANK, LSR)
+mOpE1(56,     DirectIndexedXE1,                 WRAP_BANK, LSR)
+mOp8 (56E0M1, DirectIndexedXE0,                 WRAP_BANK, LSR)
+mOp16(56E0M0, DirectIndexedXE0,                 WRAP_BANK, LSR)
+mOpM (56Slow, DirectIndexedXSlow,               WRAP_BANK, LSR)
 
-mOP8 (4EM1,     Absolute,                         WRAP_NONE, LSR)
-mOP16(4EM0,     Absolute,                         WRAP_NONE, LSR)
-mOPM (4ESlow,   AbsoluteSlow,                     WRAP_NONE, LSR)
+mOp8 (4EM1,   Absolute,                         WRAP_NONE, LSR)
+mOp16(4EM0,   Absolute,                         WRAP_NONE, LSR)
+mOpM (4ESlow, AbsoluteSlow,                     WRAP_NONE, LSR)
 
-mOP8 (5EM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, LSR)
-mOP16(5EM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, LSR)
-mOP8 (5EM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, LSR)
-mOP16(5EM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, LSR)
-mOPM (5ESlow,   AbsoluteIndexedXSlow,             WRAP_NONE, LSR)
+mOp8 (5EM1X1, AbsoluteIndexedXX1,               WRAP_NONE, LSR)
+mOp16(5EM0X1, AbsoluteIndexedXX1,               WRAP_NONE, LSR)
+mOp8 (5EM1X0, AbsoluteIndexedXX0,               WRAP_NONE, LSR)
+mOp16(5EM0X0, AbsoluteIndexedXX0,               WRAP_NONE, LSR)
+mOpM (5ESlow, AbsoluteIndexedXSlow,             WRAP_NONE, LSR)
 
 /* ORA */
 static void Op09M1()
@@ -1086,71 +1075,69 @@ static void Op09Slow()
 	}
 }
 
-rOP8 (05M1,     Direct,                           WRAP_BANK, ORA)
-rOP16(05M0,     Direct,                           WRAP_BANK, ORA)
-rOPM (05Slow,   DirectSlow,                       WRAP_BANK, ORA)
+rOp8 (05M1,   Direct,                           WRAP_BANK, ORA)
+rOp16(05M0,   Direct,                           WRAP_BANK, ORA)
+rOpM (05Slow, DirectSlow,                       WRAP_BANK, ORA)
 
-rOPE1(15,       DirectIndexedXE1,                 WRAP_BANK, ORA)
-rOP8 (15E0M1,   DirectIndexedXE0,                 WRAP_BANK, ORA)
-rOP16(15E0M0,   DirectIndexedXE0,                 WRAP_BANK, ORA)
-rOPM (15Slow,   DirectIndexedXSlow,               WRAP_BANK, ORA)
+rOpE1(15,     DirectIndexedXE1,                 WRAP_BANK, ORA)
+rOp8 (15E0M1, DirectIndexedXE0,                 WRAP_BANK, ORA)
+rOp16(15E0M0, DirectIndexedXE0,                 WRAP_BANK, ORA)
+rOpM (15Slow, DirectIndexedXSlow,               WRAP_BANK, ORA)
 
-rOPE1(12,       DirectIndirectE1,                 WRAP_NONE, ORA)
-rOP8 (12E0M1,   DirectIndirectE0,                 WRAP_NONE, ORA)
-rOP16(12E0M0,   DirectIndirectE0,                 WRAP_NONE, ORA)
-rOPM (12Slow,   DirectIndirectSlow,               WRAP_NONE, ORA)
+rOpE1(12,     DirectIndirectE1,                 WRAP_NONE, ORA)
+rOp8 (12E0M1, DirectIndirectE0,                 WRAP_NONE, ORA)
+rOp16(12E0M0, DirectIndirectE0,                 WRAP_NONE, ORA)
+rOpM (12Slow, DirectIndirectSlow,               WRAP_NONE, ORA)
 
-rOPE1(01,       DirectIndexedIndirectE1,          WRAP_NONE, ORA)
-rOP8 (01E0M1,   DirectIndexedIndirectE0,          WRAP_NONE, ORA)
-rOP16(01E0M0,   DirectIndexedIndirectE0,          WRAP_NONE, ORA)
-rOPM (01Slow,   DirectIndexedIndirectSlow,        WRAP_NONE, ORA)
+rOpE1(01,     DirectIndexedIndirectE1,          WRAP_NONE, ORA)
+rOp8 (01E0M1, DirectIndexedIndirectE0,          WRAP_NONE, ORA)
+rOp16(01E0M0, DirectIndexedIndirectE0,          WRAP_NONE, ORA)
+rOpM (01Slow, DirectIndexedIndirectSlow,        WRAP_NONE, ORA)
 
-rOPE1(11,       DirectIndirectIndexedE1,          WRAP_NONE, ORA)
-rOP8 (11E0M1X1, DirectIndirectIndexedE0X1,        WRAP_NONE, ORA)
-rOP16(11E0M0X1, DirectIndirectIndexedE0X1,        WRAP_NONE, ORA)
-rOP8 (11E0M1X0, DirectIndirectIndexedE0X0,        WRAP_NONE, ORA)
-rOP16(11E0M0X0, DirectIndirectIndexedE0X0,        WRAP_NONE, ORA)
-rOPM (11Slow,   DirectIndirectIndexedSlow,        WRAP_NONE, ORA)
+rOpE1(11,     DirectIndirectIndexedE1,          WRAP_NONE, ORA)
+rOp8 (11E0M1, DirectIndirectIndexedE0,          WRAP_NONE, ORA)
+rOp16(11E0M0, DirectIndirectIndexedE0,          WRAP_NONE, ORA)
+rOpM (11Slow, DirectIndirectIndexedSlow,        WRAP_NONE, ORA)
 
-rOP8 (07M1,     DirectIndirectLong,               WRAP_NONE, ORA)
-rOP16(07M0,     DirectIndirectLong,               WRAP_NONE, ORA)
-rOPM (07Slow,   DirectIndirectLongSlow,           WRAP_NONE, ORA)
+rOp8 (07M1,   DirectIndirectLong,               WRAP_NONE, ORA)
+rOp16(07M0,   DirectIndirectLong,               WRAP_NONE, ORA)
+rOpM (07Slow, DirectIndirectLongSlow,           WRAP_NONE, ORA)
 
-rOP8 (17M1,     DirectIndirectIndexedLong,        WRAP_NONE, ORA)
-rOP16(17M0,     DirectIndirectIndexedLong,        WRAP_NONE, ORA)
-rOPM (17Slow,   DirectIndirectIndexedLongSlow,    WRAP_NONE, ORA)
+rOp8 (17M1,   DirectIndirectIndexedLong,        WRAP_NONE, ORA)
+rOp16(17M0,   DirectIndirectIndexedLong,        WRAP_NONE, ORA)
+rOpM (17Slow, DirectIndirectIndexedLongSlow,    WRAP_NONE, ORA)
 
-rOP8 (0DM1,     Absolute,                         WRAP_NONE, ORA)
-rOP16(0DM0,     Absolute,                         WRAP_NONE, ORA)
-rOPM (0DSlow,   AbsoluteSlow,                     WRAP_NONE, ORA)
+rOp8 (0DM1,   Absolute,                         WRAP_NONE, ORA)
+rOp16(0DM0,   Absolute,                         WRAP_NONE, ORA)
+rOpM (0DSlow, AbsoluteSlow,                     WRAP_NONE, ORA)
 
-rOP8 (1DM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, ORA)
-rOP16(1DM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, ORA)
-rOP8 (1DM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, ORA)
-rOP16(1DM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, ORA)
-rOPM (1DSlow,   AbsoluteIndexedXSlow,             WRAP_NONE, ORA)
+rOp8 (1DM1X1, AbsoluteIndexedXX1,               WRAP_NONE, ORA)
+rOp16(1DM0X1, AbsoluteIndexedXX1,               WRAP_NONE, ORA)
+rOp8 (1DM1X0, AbsoluteIndexedXX0,               WRAP_NONE, ORA)
+rOp16(1DM0X0, AbsoluteIndexedXX0,               WRAP_NONE, ORA)
+rOpM (1DSlow, AbsoluteIndexedXSlow,             WRAP_NONE, ORA)
 
-rOP8 (19M1X1,   AbsoluteIndexedYX1,               WRAP_NONE, ORA)
-rOP16(19M0X1,   AbsoluteIndexedYX1,               WRAP_NONE, ORA)
-rOP8 (19M1X0,   AbsoluteIndexedYX0,               WRAP_NONE, ORA)
-rOP16(19M0X0,   AbsoluteIndexedYX0,               WRAP_NONE, ORA)
-rOPM (19Slow,   AbsoluteIndexedYSlow,             WRAP_NONE, ORA)
+rOp8 (19M1X1, AbsoluteIndexedYX1,               WRAP_NONE, ORA)
+rOp16(19M0X1, AbsoluteIndexedYX1,               WRAP_NONE, ORA)
+rOp8 (19M1X0, AbsoluteIndexedYX0,               WRAP_NONE, ORA)
+rOp16(19M0X0, AbsoluteIndexedYX0,               WRAP_NONE, ORA)
+rOpM (19Slow, AbsoluteIndexedYSlow,             WRAP_NONE, ORA)
 
-rOP8 (0FM1,     AbsoluteLong,                     WRAP_NONE, ORA)
-rOP16(0FM0,     AbsoluteLong,                     WRAP_NONE, ORA)
-rOPM (0FSlow,   AbsoluteLongSlow,                 WRAP_NONE, ORA)
+rOp8 (0FM1,   AbsoluteLong,                     WRAP_NONE, ORA)
+rOp16(0FM0,   AbsoluteLong,                     WRAP_NONE, ORA)
+rOpM (0FSlow, AbsoluteLongSlow,                 WRAP_NONE, ORA)
 
-rOP8 (1FM1,     AbsoluteLongIndexedX,             WRAP_NONE, ORA)
-rOP16(1FM0,     AbsoluteLongIndexedX,             WRAP_NONE, ORA)
-rOPM (1FSlow,   AbsoluteLongIndexedXSlow,         WRAP_NONE, ORA)
+rOp8 (1FM1,   AbsoluteLongIndexedX,             WRAP_NONE, ORA)
+rOp16(1FM0,   AbsoluteLongIndexedX,             WRAP_NONE, ORA)
+rOpM (1FSlow, AbsoluteLongIndexedXSlow,         WRAP_NONE, ORA)
 
-rOP8 (03M1,     StackRelative,                    WRAP_NONE, ORA)
-rOP16(03M0,     StackRelative,                    WRAP_NONE, ORA)
-rOPM (03Slow,   StackRelativeSlow,                WRAP_NONE, ORA)
+rOp8 (03M1,   StackRelative,                    WRAP_NONE, ORA)
+rOp16(03M0,   StackRelative,                    WRAP_NONE, ORA)
+rOpM (03Slow, StackRelativeSlow,                WRAP_NONE, ORA)
 
-rOP8 (13M1,     StackRelativeIndirectIndexed,     WRAP_NONE, ORA)
-rOP16(13M0,     StackRelativeIndirectIndexed,     WRAP_NONE, ORA)
-rOPM (13Slow,   StackRelativeIndirectIndexedSlow, WRAP_NONE, ORA)
+rOp8 (13M1,   StackRelativeIndirectIndexed,     WRAP_NONE, ORA)
+rOp16(13M0,   StackRelativeIndirectIndexed,     WRAP_NONE, ORA)
+rOpM (13Slow, StackRelativeIndirectIndexedSlow, WRAP_NONE, ORA)
 
 /* ROL */
 static void Op2AM1()
@@ -1180,37 +1167,37 @@ static void Op2ASlow()
 	if (CheckMem())
 	{
 		uint16_t w = (((uint16_t) ICPU.Registers.AL) << 1) | CheckCarry();
-		ICPU.Carry = w >= 0x100;
+		ICPU.Carry = (w > 0xff);
 		ICPU.Registers.AL = (uint8_t) w;
 		SetZN8(ICPU.Registers.AL);
 	}
 	else
 	{
 		uint32_t w = (((uint32_t) ICPU.Registers.A.W) << 1) | CheckCarry();
-		ICPU.Carry = w >= 0x10000;
+		ICPU.Carry = (w > 0xffff);
 		ICPU.Registers.A.W = (uint16_t) w;
 		SetZN16(ICPU.Registers.A.W);
 	}
 }
 
-mOP8 (26M1,     Direct,                           WRAP_BANK, ROL)
-mOP16(26M0,     Direct,                           WRAP_BANK, ROL)
-mOPM (26Slow,   DirectSlow,                       WRAP_BANK, ROL)
+mOp8 (26M1,   Direct,                           WRAP_BANK, ROL)
+mOp16(26M0,   Direct,                           WRAP_BANK, ROL)
+mOpM (26Slow, DirectSlow,                       WRAP_BANK, ROL)
 
-mOPE1(36,       DirectIndexedXE1,                 WRAP_BANK, ROL)
-mOP8 (36E0M1,   DirectIndexedXE0,                 WRAP_BANK, ROL)
-mOP16(36E0M0,   DirectIndexedXE0,                 WRAP_BANK, ROL)
-mOPM (36Slow,   DirectIndexedXSlow,               WRAP_BANK, ROL)
+mOpE1(36,     DirectIndexedXE1,                 WRAP_BANK, ROL)
+mOp8 (36E0M1, DirectIndexedXE0,                 WRAP_BANK, ROL)
+mOp16(36E0M0, DirectIndexedXE0,                 WRAP_BANK, ROL)
+mOpM (36Slow, DirectIndexedXSlow,               WRAP_BANK, ROL)
 
-mOP8 (2EM1,     Absolute,                         WRAP_NONE, ROL)
-mOP16(2EM0,     Absolute,                         WRAP_NONE, ROL)
-mOPM (2ESlow,   AbsoluteSlow,                     WRAP_NONE, ROL)
+mOp8 (2EM1,   Absolute,                         WRAP_NONE, ROL)
+mOp16(2EM0,   Absolute,                         WRAP_NONE, ROL)
+mOpM (2ESlow, AbsoluteSlow,                     WRAP_NONE, ROL)
 
-mOP8 (3EM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, ROL)
-mOP16(3EM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, ROL)
-mOP8 (3EM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, ROL)
-mOP16(3EM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, ROL)
-mOPM (3ESlow,   AbsoluteIndexedXSlow,             WRAP_NONE, ROL)
+mOp8 (3EM1X1, AbsoluteIndexedXX1,               WRAP_NONE, ROL)
+mOp16(3EM0X1, AbsoluteIndexedXX1,               WRAP_NONE, ROL)
+mOp8 (3EM1X0, AbsoluteIndexedXX0,               WRAP_NONE, ROL)
+mOp16(3EM0X0, AbsoluteIndexedXX0,               WRAP_NONE, ROL)
+mOpM (3ESlow, AbsoluteIndexedXSlow,             WRAP_NONE, ROL)
 
 /* ROR */
 static void Op6AM1()
@@ -1218,7 +1205,7 @@ static void Op6AM1()
 	uint16_t w;
 	AddCycles(Settings.OneCycle);
 	w = ((uint16_t) ICPU.Registers.AL) | (((uint16_t) CheckCarry()) << 8);
-	ICPU.Carry = w & 1;
+	ICPU.Carry = (bool) (w & 1);
 	w >>= 1;
 	ICPU.Registers.AL = (uint8_t) w;
 	SetZN8(ICPU.Registers.AL);
@@ -1229,7 +1216,7 @@ static void Op6AM0()
 	uint32_t w;
 	AddCycles(Settings.OneCycle);
 	w = ((uint32_t) ICPU.Registers.A.W) | (((uint32_t) CheckCarry()) << 16);
-	ICPU.Carry = w & 1;
+	ICPU.Carry = (bool) (w & 1);
 	w >>= 1;
 	ICPU.Registers.A.W = (uint16_t) w;
 	SetZN16(ICPU.Registers.A.W);
@@ -1242,7 +1229,7 @@ static void Op6ASlow()
 	if (CheckMem())
 	{
 		uint16_t w = ((uint16_t) ICPU.Registers.AL) | (((uint16_t) CheckCarry()) << 8);
-		ICPU.Carry = w & 1;
+		ICPU.Carry = (bool) (w & 1);
 		w >>= 1;
 		ICPU.Registers.AL = (uint8_t) w;
 		SetZN8(ICPU.Registers.AL);
@@ -1250,31 +1237,31 @@ static void Op6ASlow()
 	else
 	{
 		uint32_t w = ((uint32_t) ICPU.Registers.A.W) | (((uint32_t) CheckCarry()) << 16);
-		ICPU.Carry = w & 1;
+		ICPU.Carry = (bool) (w & 1);
 		w >>= 1;
 		ICPU.Registers.A.W = (uint16_t) w;
 		SetZN16(ICPU.Registers.A.W);
 	}
 }
 
-mOP8 (66M1,     Direct,                           WRAP_BANK, ROR)
-mOP16(66M0,     Direct,                           WRAP_BANK, ROR)
-mOPM (66Slow,   DirectSlow,                       WRAP_BANK, ROR)
+mOp8 (66M1,   Direct,                           WRAP_BANK, ROR)
+mOp16(66M0,   Direct,                           WRAP_BANK, ROR)
+mOpM (66Slow, DirectSlow,                       WRAP_BANK, ROR)
 
-mOPE1(76,       DirectIndexedXE1,                 WRAP_BANK, ROR)
-mOP8 (76E0M1,   DirectIndexedXE0,                 WRAP_BANK, ROR)
-mOP16(76E0M0,   DirectIndexedXE0,                 WRAP_BANK, ROR)
-mOPM (76Slow,   DirectIndexedXSlow,               WRAP_BANK, ROR)
+mOpE1(76,     DirectIndexedXE1,                 WRAP_BANK, ROR)
+mOp8 (76E0M1, DirectIndexedXE0,                 WRAP_BANK, ROR)
+mOp16(76E0M0, DirectIndexedXE0,                 WRAP_BANK, ROR)
+mOpM (76Slow, DirectIndexedXSlow,               WRAP_BANK, ROR)
 
-mOP8 (6EM1,     Absolute,                         WRAP_NONE, ROR)
-mOP16(6EM0,     Absolute,                         WRAP_NONE, ROR)
-mOPM (6ESlow,   AbsoluteSlow,                     WRAP_NONE, ROR)
+mOp8 (6EM1,   Absolute,                         WRAP_NONE, ROR)
+mOp16(6EM0,   Absolute,                         WRAP_NONE, ROR)
+mOpM (6ESlow, AbsoluteSlow,                     WRAP_NONE, ROR)
 
-mOP8 (7EM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, ROR)
-mOP16(7EM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, ROR)
-mOP8 (7EM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, ROR)
-mOP16(7EM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, ROR)
-mOPM (7ESlow,   AbsoluteIndexedXSlow,             WRAP_NONE, ROR)
+mOp8 (7EM1X1, AbsoluteIndexedXX1,               WRAP_NONE, ROR)
+mOp16(7EM0X1, AbsoluteIndexedXX1,               WRAP_NONE, ROR)
+mOp8 (7EM1X0, AbsoluteIndexedXX0,               WRAP_NONE, ROR)
+mOp16(7EM0X0, AbsoluteIndexedXX0,               WRAP_NONE, ROR)
+mOpM (7ESlow, AbsoluteIndexedXSlow,             WRAP_NONE, ROR)
 
 /* SBC */
 static void OpE9M1()
@@ -1295,250 +1282,211 @@ static void OpE9Slow()
 		SBC16(Immediate16Slow(READ));
 }
 
-rOP8 (E5M1,     Direct,                           WRAP_BANK, SBC)
-rOP16(E5M0,     Direct,                           WRAP_BANK, SBC)
-rOPM (E5Slow,   DirectSlow,                       WRAP_BANK, SBC)
+rOp8 (E5M1,   Direct,                           WRAP_BANK, SBC)
+rOp16(E5M0,   Direct,                           WRAP_BANK, SBC)
+rOpM (E5Slow, DirectSlow,                       WRAP_BANK, SBC)
 
-rOPE1(F5,       DirectIndexedXE1,                 WRAP_BANK, SBC)
-rOP8 (F5E0M1,   DirectIndexedXE0,                 WRAP_BANK, SBC)
-rOP16(F5E0M0,   DirectIndexedXE0,                 WRAP_BANK, SBC)
-rOPM (F5Slow,   DirectIndexedXSlow,               WRAP_BANK, SBC)
+rOpE1(F5,     DirectIndexedXE1,                 WRAP_BANK, SBC)
+rOp8 (F5E0M1, DirectIndexedXE0,                 WRAP_BANK, SBC)
+rOp16(F5E0M0, DirectIndexedXE0,                 WRAP_BANK, SBC)
+rOpM (F5Slow, DirectIndexedXSlow,               WRAP_BANK, SBC)
 
-rOPE1(F2,       DirectIndirectE1,                 WRAP_NONE, SBC)
-rOP8 (F2E0M1,   DirectIndirectE0,                 WRAP_NONE, SBC)
-rOP16(F2E0M0,   DirectIndirectE0,                 WRAP_NONE, SBC)
-rOPM (F2Slow,   DirectIndirectSlow,               WRAP_NONE, SBC)
+rOpE1(F2,     DirectIndirectE1,                 WRAP_NONE, SBC)
+rOp8 (F2E0M1, DirectIndirectE0,                 WRAP_NONE, SBC)
+rOp16(F2E0M0, DirectIndirectE0,                 WRAP_NONE, SBC)
+rOpM (F2Slow, DirectIndirectSlow,               WRAP_NONE, SBC)
 
-rOPE1(E1,       DirectIndexedIndirectE1,          WRAP_NONE, SBC)
-rOP8 (E1E0M1,   DirectIndexedIndirectE0,          WRAP_NONE, SBC)
-rOP16(E1E0M0,   DirectIndexedIndirectE0,          WRAP_NONE, SBC)
-rOPM (E1Slow,   DirectIndexedIndirectSlow,        WRAP_NONE, SBC)
+rOpE1(E1,     DirectIndexedIndirectE1,          WRAP_NONE, SBC)
+rOp8 (E1E0M1, DirectIndexedIndirectE0,          WRAP_NONE, SBC)
+rOp16(E1E0M0, DirectIndexedIndirectE0,          WRAP_NONE, SBC)
+rOpM (E1Slow, DirectIndexedIndirectSlow,        WRAP_NONE, SBC)
 
-rOPE1(F1,       DirectIndirectIndexedE1,          WRAP_NONE, SBC)
-rOP8 (F1E0M1X1, DirectIndirectIndexedE0X1,        WRAP_NONE, SBC)
-rOP16(F1E0M0X1, DirectIndirectIndexedE0X1,        WRAP_NONE, SBC)
-rOP8 (F1E0M1X0, DirectIndirectIndexedE0X0,        WRAP_NONE, SBC)
-rOP16(F1E0M0X0, DirectIndirectIndexedE0X0,        WRAP_NONE, SBC)
-rOPM (F1Slow,   DirectIndirectIndexedSlow,        WRAP_NONE, SBC)
+rOpE1(F1,     DirectIndirectIndexedE1,          WRAP_NONE, SBC)
+rOp8 (F1E0M1, DirectIndirectIndexedE0,          WRAP_NONE, SBC)
+rOp16(F1E0M0, DirectIndirectIndexedE0,          WRAP_NONE, SBC)
+rOpM (F1Slow, DirectIndirectIndexedSlow,        WRAP_NONE, SBC)
 
-rOP8 (E7M1,     DirectIndirectLong,               WRAP_NONE, SBC)
-rOP16(E7M0,     DirectIndirectLong,               WRAP_NONE, SBC)
-rOPM (E7Slow,   DirectIndirectLongSlow,           WRAP_NONE, SBC)
+rOp8 (E7M1,   DirectIndirectLong,               WRAP_NONE, SBC)
+rOp16(E7M0,   DirectIndirectLong,               WRAP_NONE, SBC)
+rOpM (E7Slow, DirectIndirectLongSlow,           WRAP_NONE, SBC)
 
-rOP8 (F7M1,     DirectIndirectIndexedLong,        WRAP_NONE, SBC)
-rOP16(F7M0,     DirectIndirectIndexedLong,        WRAP_NONE, SBC)
-rOPM (F7Slow,   DirectIndirectIndexedLongSlow,    WRAP_NONE, SBC)
+rOp8 (F7M1,   DirectIndirectIndexedLong,        WRAP_NONE, SBC)
+rOp16(F7M0,   DirectIndirectIndexedLong,        WRAP_NONE, SBC)
+rOpM (F7Slow, DirectIndirectIndexedLongSlow,    WRAP_NONE, SBC)
 
-rOP8 (EDM1,     Absolute,                         WRAP_NONE, SBC)
-rOP16(EDM0,     Absolute,                         WRAP_NONE, SBC)
-rOPM (EDSlow,   AbsoluteSlow,                     WRAP_NONE, SBC)
+rOp8 (EDM1,   Absolute,                         WRAP_NONE, SBC)
+rOp16(EDM0,   Absolute,                         WRAP_NONE, SBC)
+rOpM (EDSlow, AbsoluteSlow,                     WRAP_NONE, SBC)
 
-rOP8 (FDM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, SBC)
-rOP16(FDM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, SBC)
-rOP8 (FDM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, SBC)
-rOP16(FDM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, SBC)
-rOPM (FDSlow,   AbsoluteIndexedXSlow,             WRAP_NONE, SBC)
+rOp8 (FDM1X1, AbsoluteIndexedXX1,               WRAP_NONE, SBC)
+rOp16(FDM0X1, AbsoluteIndexedXX1,               WRAP_NONE, SBC)
+rOp8 (FDM1X0, AbsoluteIndexedXX0,               WRAP_NONE, SBC)
+rOp16(FDM0X0, AbsoluteIndexedXX0,               WRAP_NONE, SBC)
+rOpM (FDSlow, AbsoluteIndexedXSlow,             WRAP_NONE, SBC)
 
-rOP8 (F9M1X1,   AbsoluteIndexedYX1,               WRAP_NONE, SBC)
-rOP16(F9M0X1,   AbsoluteIndexedYX1,               WRAP_NONE, SBC)
-rOP8 (F9M1X0,   AbsoluteIndexedYX0,               WRAP_NONE, SBC)
-rOP16(F9M0X0,   AbsoluteIndexedYX0,               WRAP_NONE, SBC)
-rOPM (F9Slow,   AbsoluteIndexedYSlow,             WRAP_NONE, SBC)
+rOp8 (F9M1X1, AbsoluteIndexedYX1,               WRAP_NONE, SBC)
+rOp16(F9M0X1, AbsoluteIndexedYX1,               WRAP_NONE, SBC)
+rOp8 (F9M1X0, AbsoluteIndexedYX0,               WRAP_NONE, SBC)
+rOp16(F9M0X0, AbsoluteIndexedYX0,               WRAP_NONE, SBC)
+rOpM (F9Slow, AbsoluteIndexedYSlow,             WRAP_NONE, SBC)
 
-rOP8 (EFM1,     AbsoluteLong,                     WRAP_NONE, SBC)
-rOP16(EFM0,     AbsoluteLong,                     WRAP_NONE, SBC)
-rOPM (EFSlow,   AbsoluteLongSlow,                 WRAP_NONE, SBC)
+rOp8 (EFM1,   AbsoluteLong,                     WRAP_NONE, SBC)
+rOp16(EFM0,   AbsoluteLong,                     WRAP_NONE, SBC)
+rOpM (EFSlow, AbsoluteLongSlow,                 WRAP_NONE, SBC)
 
-rOP8 (FFM1,     AbsoluteLongIndexedX,             WRAP_NONE, SBC)
-rOP16(FFM0,     AbsoluteLongIndexedX,             WRAP_NONE, SBC)
-rOPM (FFSlow,   AbsoluteLongIndexedXSlow,         WRAP_NONE, SBC)
+rOp8 (FFM1,   AbsoluteLongIndexedX,             WRAP_NONE, SBC)
+rOp16(FFM0,   AbsoluteLongIndexedX,             WRAP_NONE, SBC)
+rOpM (FFSlow, AbsoluteLongIndexedXSlow,         WRAP_NONE, SBC)
 
-rOP8 (E3M1,     StackRelative,                    WRAP_NONE, SBC)
-rOP16(E3M0,     StackRelative,                    WRAP_NONE, SBC)
-rOPM (E3Slow,   StackRelativeSlow,                WRAP_NONE, SBC)
+rOp8 (E3M1,   StackRelative,                    WRAP_NONE, SBC)
+rOp16(E3M0,   StackRelative,                    WRAP_NONE, SBC)
+rOpM (E3Slow, StackRelativeSlow,                WRAP_NONE, SBC)
 
-rOP8 (F3M1,     StackRelativeIndirectIndexed,     WRAP_NONE, SBC)
-rOP16(F3M0,     StackRelativeIndirectIndexed,     WRAP_NONE, SBC)
-rOPM (F3Slow,   StackRelativeIndirectIndexedSlow, WRAP_NONE, SBC)
+rOp8 (F3M1,   StackRelativeIndirectIndexed,     WRAP_NONE, SBC)
+rOp16(F3M0,   StackRelativeIndirectIndexed,     WRAP_NONE, SBC)
+rOpM (F3Slow, StackRelativeIndirectIndexedSlow, WRAP_NONE, SBC)
 
 /* STA */
-wOP8 (85M1,     Direct,                           WRAP_BANK, STA)
-wOP16(85M0,     Direct,                           WRAP_BANK, STA)
-wOPM (85Slow,   DirectSlow,                       WRAP_BANK, STA)
+wOp8 (85M1,   Direct,                           WRAP_BANK, STA)
+wOp16(85M0,   Direct,                           WRAP_BANK, STA)
+wOpM (85Slow, DirectSlow,                       WRAP_BANK, STA)
 
-wOPE1(95,       DirectIndexedXE1,                 WRAP_BANK, STA)
-wOP8 (95E0M1,   DirectIndexedXE0,                 WRAP_BANK, STA)
-wOP16(95E0M0,   DirectIndexedXE0,                 WRAP_BANK, STA)
-wOPM (95Slow,   DirectIndexedXSlow,               WRAP_BANK, STA)
+wOpE1(95,     DirectIndexedXE1,                 WRAP_BANK, STA)
+wOp8 (95E0M1, DirectIndexedXE0,                 WRAP_BANK, STA)
+wOp16(95E0M0, DirectIndexedXE0,                 WRAP_BANK, STA)
+wOpM (95Slow, DirectIndexedXSlow,               WRAP_BANK, STA)
 
-wOPE1(92,       DirectIndirectE1,                 WRAP_NONE, STA)
-wOP8 (92E0M1,   DirectIndirectE0,                 WRAP_NONE, STA)
-wOP16(92E0M0,   DirectIndirectE0,                 WRAP_NONE, STA)
-wOPM (92Slow,   DirectIndirectSlow,               WRAP_NONE, STA)
+wOpE1(92,     DirectIndirectE1,                 WRAP_NONE, STA)
+wOp8 (92E0M1, DirectIndirectE0,                 WRAP_NONE, STA)
+wOp16(92E0M0, DirectIndirectE0,                 WRAP_NONE, STA)
+wOpM (92Slow, DirectIndirectSlow,               WRAP_NONE, STA)
 
-wOPE1(81,       DirectIndexedIndirectE1,          WRAP_NONE, STA)
-wOP8 (81E0M1,   DirectIndexedIndirectE0,          WRAP_NONE, STA)
-wOP16(81E0M0,   DirectIndexedIndirectE0,          WRAP_NONE, STA)
-wOPM (81Slow,   DirectIndexedIndirectSlow,        WRAP_NONE, STA)
+wOpE1(81,     DirectIndexedIndirectE1,          WRAP_NONE, STA)
+wOp8 (81E0M1, DirectIndexedIndirectE0,          WRAP_NONE, STA)
+wOp16(81E0M0, DirectIndexedIndirectE0,          WRAP_NONE, STA)
+wOpM (81Slow, DirectIndexedIndirectSlow,        WRAP_NONE, STA)
 
-wOPE1(91,       DirectIndirectIndexedE1,          WRAP_NONE, STA)
-wOP8 (91E0M1X1, DirectIndirectIndexedE0X1,        WRAP_NONE, STA)
-wOP16(91E0M0X1, DirectIndirectIndexedE0X1,        WRAP_NONE, STA)
-wOP8 (91E0M1X0, DirectIndirectIndexedE0X0,        WRAP_NONE, STA)
-wOP16(91E0M0X0, DirectIndirectIndexedE0X0,        WRAP_NONE, STA)
-wOPM (91Slow,   DirectIndirectIndexedSlow,        WRAP_NONE, STA)
+wOpE1(91,     DirectIndirectIndexedE1,          WRAP_NONE, STA)
+wOp8 (91E0M1, DirectIndirectIndexedE0,          WRAP_NONE, STA)
+wOp16(91E0M0, DirectIndirectIndexedE0,          WRAP_NONE, STA)
+wOpM (91Slow, DirectIndirectIndexedSlow,        WRAP_NONE, STA)
 
-wOP8 (87M1,     DirectIndirectLong,               WRAP_NONE, STA)
-wOP16(87M0,     DirectIndirectLong,               WRAP_NONE, STA)
-wOPM (87Slow,   DirectIndirectLongSlow,           WRAP_NONE, STA)
+wOp8 (87M1,   DirectIndirectLong,               WRAP_NONE, STA)
+wOp16(87M0,   DirectIndirectLong,               WRAP_NONE, STA)
+wOpM (87Slow, DirectIndirectLongSlow,           WRAP_NONE, STA)
 
-wOP8 (97M1,     DirectIndirectIndexedLong,        WRAP_NONE, STA)
-wOP16(97M0,     DirectIndirectIndexedLong,        WRAP_NONE, STA)
-wOPM (97Slow,   DirectIndirectIndexedLongSlow,    WRAP_NONE, STA)
+wOp8 (97M1,   DirectIndirectIndexedLong,        WRAP_NONE, STA)
+wOp16(97M0,   DirectIndirectIndexedLong,        WRAP_NONE, STA)
+wOpM (97Slow, DirectIndirectIndexedLongSlow,    WRAP_NONE, STA)
 
-wOP8 (8DM1,     Absolute,                         WRAP_NONE, STA)
-wOP16(8DM0,     Absolute,                         WRAP_NONE, STA)
-wOPM (8DSlow,   AbsoluteSlow,                     WRAP_NONE, STA)
+wOp8 (8DM1,   Absolute,                         WRAP_NONE, STA)
+wOp16(8DM0,   Absolute,                         WRAP_NONE, STA)
+wOpM (8DSlow, AbsoluteSlow,                     WRAP_NONE, STA)
 
-wOP8 (9DM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, STA)
-wOP16(9DM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, STA)
-wOP8 (9DM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, STA)
-wOP16(9DM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, STA)
-wOPM (9DSlow,   AbsoluteIndexedXSlow,             WRAP_NONE, STA)
+wOp8 (9DM1X1, AbsoluteIndexedXX1,               WRAP_NONE, STA)
+wOp16(9DM0X1, AbsoluteIndexedXX1,               WRAP_NONE, STA)
+wOp8 (9DM1X0, AbsoluteIndexedXX0,               WRAP_NONE, STA)
+wOp16(9DM0X0, AbsoluteIndexedXX0,               WRAP_NONE, STA)
+wOpM (9DSlow, AbsoluteIndexedXSlow,             WRAP_NONE, STA)
 
-wOP8 (99M1X1,   AbsoluteIndexedYX1,               WRAP_NONE, STA)
-wOP16(99M0X1,   AbsoluteIndexedYX1,               WRAP_NONE, STA)
-wOP8 (99M1X0,   AbsoluteIndexedYX0,               WRAP_NONE, STA)
-wOP16(99M0X0,   AbsoluteIndexedYX0,               WRAP_NONE, STA)
-wOPM (99Slow,   AbsoluteIndexedYSlow,             WRAP_NONE, STA)
+wOp8 (99M1X1, AbsoluteIndexedYX1,               WRAP_NONE, STA)
+wOp16(99M0X1, AbsoluteIndexedYX1,               WRAP_NONE, STA)
+wOp8 (99M1X0, AbsoluteIndexedYX0,               WRAP_NONE, STA)
+wOp16(99M0X0, AbsoluteIndexedYX0,               WRAP_NONE, STA)
+wOpM (99Slow, AbsoluteIndexedYSlow,             WRAP_NONE, STA)
 
-wOP8 (8FM1,     AbsoluteLong,                     WRAP_NONE, STA)
-wOP16(8FM0,     AbsoluteLong,                     WRAP_NONE, STA)
-wOPM (8FSlow,   AbsoluteLongSlow,                 WRAP_NONE, STA)
+wOp8 (8FM1,   AbsoluteLong,                     WRAP_NONE, STA)
+wOp16(8FM0,   AbsoluteLong,                     WRAP_NONE, STA)
+wOpM (8FSlow, AbsoluteLongSlow,                 WRAP_NONE, STA)
 
-wOP8 (9FM1,     AbsoluteLongIndexedX,             WRAP_NONE, STA)
-wOP16(9FM0,     AbsoluteLongIndexedX,             WRAP_NONE, STA)
-wOPM (9FSlow,   AbsoluteLongIndexedXSlow,         WRAP_NONE, STA)
+wOp8 (9FM1,   AbsoluteLongIndexedX,             WRAP_NONE, STA)
+wOp16(9FM0,   AbsoluteLongIndexedX,             WRAP_NONE, STA)
+wOpM (9FSlow, AbsoluteLongIndexedXSlow,         WRAP_NONE, STA)
 
-wOP8 (83M1,     StackRelative,                    WRAP_NONE, STA)
-wOP16(83M0,     StackRelative,                    WRAP_NONE, STA)
-wOPM (83Slow,   StackRelativeSlow,                WRAP_NONE, STA)
+wOp8 (83M1,   StackRelative,                    WRAP_NONE, STA)
+wOp16(83M0,   StackRelative,                    WRAP_NONE, STA)
+wOpM (83Slow, StackRelativeSlow,                WRAP_NONE, STA)
 
-wOP8 (93M1,     StackRelativeIndirectIndexed,     WRAP_NONE, STA)
-wOP16(93M0,     StackRelativeIndirectIndexed,     WRAP_NONE, STA)
-wOPM (93Slow,   StackRelativeIndirectIndexedSlow, WRAP_NONE, STA)
+wOp8 (93M1,   StackRelativeIndirectIndexed,     WRAP_NONE, STA)
+wOp16(93M0,   StackRelativeIndirectIndexed,     WRAP_NONE, STA)
+wOpM (93Slow, StackRelativeIndirectIndexedSlow, WRAP_NONE, STA)
 
 /* STX */
-wOP8 (86X1,     Direct,                           WRAP_BANK, STX)
-wOP16(86X0,     Direct,                           WRAP_BANK, STX)
-wOPX (86Slow,   DirectSlow,                       WRAP_BANK, STX)
+wOp8 (86X1,   Direct,                           WRAP_BANK, STX)
+wOp16(86X0,   Direct,                           WRAP_BANK, STX)
+wOpX (86Slow, DirectSlow,                       WRAP_BANK, STX)
 
-wOPE1(96,       DirectIndexedYE1,                 WRAP_BANK, STX)
-wOP8 (96E0X1,   DirectIndexedYE0,                 WRAP_BANK, STX)
-wOP16(96E0X0,   DirectIndexedYE0,                 WRAP_BANK, STX)
-wOPX (96Slow,   DirectIndexedYSlow,               WRAP_BANK, STX)
+wOpE1(96,     DirectIndexedYE1,                 WRAP_BANK, STX)
+wOp8 (96E0X1, DirectIndexedYE0,                 WRAP_BANK, STX)
+wOp16(96E0X0, DirectIndexedYE0,                 WRAP_BANK, STX)
+wOpX (96Slow, DirectIndexedYSlow,               WRAP_BANK, STX)
 
-wOP8 (8EX1,     Absolute,                         WRAP_BANK, STX)
-wOP16(8EX0,     Absolute,                         WRAP_BANK, STX)
-wOPX (8ESlow,   AbsoluteSlow,                     WRAP_BANK, STX)
+wOp8 (8EX1,   Absolute,                         WRAP_BANK, STX)
+wOp16(8EX0,   Absolute,                         WRAP_BANK, STX)
+wOpX (8ESlow, AbsoluteSlow,                     WRAP_BANK, STX)
 
 /* STY */
-wOP8 (84X1,     Direct,                           WRAP_BANK, STY)
-wOP16(84X0,     Direct,                           WRAP_BANK, STY)
-wOPX (84Slow,   DirectSlow,                       WRAP_BANK, STY)
+wOp8 (84X1,   Direct,                           WRAP_BANK, STY)
+wOp16(84X0,   Direct,                           WRAP_BANK, STY)
+wOpX (84Slow, DirectSlow,                       WRAP_BANK, STY)
 
-wOPE1(94,       DirectIndexedXE1,                 WRAP_BANK, STY)
-wOP8 (94E0X1,   DirectIndexedXE0,                 WRAP_BANK, STY)
-wOP16(94E0X0,   DirectIndexedXE0,                 WRAP_BANK, STY)
-wOPX (94Slow,   DirectIndexedXSlow,               WRAP_BANK, STY)
+wOpE1(94,     DirectIndexedXE1,                 WRAP_BANK, STY)
+wOp8 (94E0X1, DirectIndexedXE0,                 WRAP_BANK, STY)
+wOp16(94E0X0, DirectIndexedXE0,                 WRAP_BANK, STY)
+wOpX (94Slow, DirectIndexedXSlow,               WRAP_BANK, STY)
 
-wOP8 (8CX1,     Absolute,                         WRAP_BANK, STY)
-wOP16(8CX0,     Absolute,                         WRAP_BANK, STY)
-wOPX (8CSlow,   AbsoluteSlow,                     WRAP_BANK, STY)
+wOp8 (8CX1,   Absolute,                         WRAP_BANK, STY)
+wOp16(8CX0,   Absolute,                         WRAP_BANK, STY)
+wOpX (8CSlow, AbsoluteSlow,                     WRAP_BANK, STY)
 
 /* STZ */
-wOP8 (64M1,     Direct,                           WRAP_BANK, STZ)
-wOP16(64M0,     Direct,                           WRAP_BANK, STZ)
-wOPM (64Slow,   DirectSlow,                       WRAP_BANK, STZ)
+wOp8 (64M1,   Direct,                           WRAP_BANK, STZ)
+wOp16(64M0,   Direct,                           WRAP_BANK, STZ)
+wOpM (64Slow, DirectSlow,                       WRAP_BANK, STZ)
 
-wOPE1(74,       DirectIndexedXE1,                 WRAP_BANK, STZ)
-wOP8 (74E0M1,   DirectIndexedXE0,                 WRAP_BANK, STZ)
-wOP16(74E0M0,   DirectIndexedXE0,                 WRAP_BANK, STZ)
-wOPM (74Slow,   DirectIndexedXSlow,               WRAP_BANK, STZ)
+wOpE1(74,     DirectIndexedXE1,                 WRAP_BANK, STZ)
+wOp8 (74E0M1, DirectIndexedXE0,                 WRAP_BANK, STZ)
+wOp16(74E0M0, DirectIndexedXE0,                 WRAP_BANK, STZ)
+wOpM (74Slow, DirectIndexedXSlow,               WRAP_BANK, STZ)
 
-wOP8 (9CM1,     Absolute,                         WRAP_NONE, STZ)
-wOP16(9CM0,     Absolute,                         WRAP_NONE, STZ)
-wOPM (9CSlow,   AbsoluteSlow,                     WRAP_NONE, STZ)
+wOp8 (9CM1,   Absolute,                         WRAP_NONE, STZ)
+wOp16(9CM0,   Absolute,                         WRAP_NONE, STZ)
+wOpM (9CSlow, AbsoluteSlow,                     WRAP_NONE, STZ)
 
-wOP8 (9EM1X1,   AbsoluteIndexedXX1,               WRAP_NONE, STZ)
-wOP16(9EM0X1,   AbsoluteIndexedXX1,               WRAP_NONE, STZ)
-wOP8 (9EM1X0,   AbsoluteIndexedXX0,               WRAP_NONE, STZ)
-wOP16(9EM0X0,   AbsoluteIndexedXX0,               WRAP_NONE, STZ)
-wOPM (9ESlow,   AbsoluteIndexedXSlow,             WRAP_NONE, STZ)
+wOp8 (9EM1X1, AbsoluteIndexedXX1,               WRAP_NONE, STZ)
+wOp16(9EM0X1, AbsoluteIndexedXX1,               WRAP_NONE, STZ)
+wOp8 (9EM1X0, AbsoluteIndexedXX0,               WRAP_NONE, STZ)
+wOp16(9EM0X0, AbsoluteIndexedXX0,               WRAP_NONE, STZ)
+wOpM (9ESlow, AbsoluteIndexedXSlow,             WRAP_NONE, STZ)
 
 /* TRB */
-mOP8 (14M1,     Direct,                           WRAP_BANK, TRB)
-mOP16(14M0,     Direct,                           WRAP_BANK, TRB)
-mOPM (14Slow,   DirectSlow,                       WRAP_BANK, TRB)
+mOp8 (14M1,   Direct,                           WRAP_BANK, TRB)
+mOp16(14M0,   Direct,                           WRAP_BANK, TRB)
+mOpM (14Slow, DirectSlow,                       WRAP_BANK, TRB)
 
-mOP8 (1CM1,     Absolute,                         WRAP_BANK, TRB)
-mOP16(1CM0,     Absolute,                         WRAP_BANK, TRB)
-mOPM (1CSlow,   AbsoluteSlow,                     WRAP_BANK, TRB)
+mOp8 (1CM1,   Absolute,                         WRAP_BANK, TRB)
+mOp16(1CM0,   Absolute,                         WRAP_BANK, TRB)
+mOpM (1CSlow, AbsoluteSlow,                     WRAP_BANK, TRB)
 
 /* TSB */
-mOP8 (04M1,     Direct,                           WRAP_BANK, TSB)
-mOP16(04M0,     Direct,                           WRAP_BANK, TSB)
-mOPM (04Slow,   DirectSlow,                       WRAP_BANK, TSB)
+mOp8 (04M1,   Direct,                           WRAP_BANK, TSB)
+mOp16(04M0,   Direct,                           WRAP_BANK, TSB)
+mOpM (04Slow, DirectSlow,                       WRAP_BANK, TSB)
 
-mOP8 (0CM1,     Absolute,                         WRAP_BANK, TSB)
-mOP16(0CM0,     Absolute,                         WRAP_BANK, TSB)
-mOPM (0CSlow,   AbsoluteSlow,                     WRAP_BANK, TSB)
+mOp8 (0CM1,   Absolute,                         WRAP_BANK, TSB)
+mOp16(0CM0,   Absolute,                         WRAP_BANK, TSB)
+mOpM (0CSlow, AbsoluteSlow,                     WRAP_BANK, TSB)
 
 /* Branch Instructions */
-/* BCC */
-bOPE1(90,     Relative,     1, !CheckCarry())
-bOP  (90E0,   Relative,     1, !CheckCarry(),    0)
-bOP  (90Slow, RelativeSlow, 1, !CheckCarry(),    CheckEmulation())
-
-/* BCS */
-bOPE1(B0,     Relative,     1,  CheckCarry())
-bOP  (B0E0,   Relative,     1,  CheckCarry(),    0)
-bOP  (B0Slow, RelativeSlow, 1,  CheckCarry(),    CheckEmulation())
-
-/* BEQ */
-bOPE1(F0,     Relative,     1,  CheckZero())
-bOP  (F0E0,   Relative,     1,  CheckZero(),     0)
-bOP  (F0Slow, RelativeSlow, 1,  CheckZero(),     CheckEmulation())
-
-/* BNE */
-bOPE1(D0,     Relative,     1, !CheckZero())
-bOP  (D0E0,   Relative,     1, !CheckZero(),     0)
-bOP  (D0Slow, RelativeSlow, 1, !CheckZero(),     CheckEmulation())
-
-/* BMI */
-bOPE1(30,     Relative,     1,  CheckNegative())
-bOP  (30E0,   Relative,     1,  CheckNegative(), 0)
-bOP  (30Slow, RelativeSlow, 1,  CheckNegative(), CheckEmulation())
-
-/* BPL */
-bOPE1(10,     Relative,     1, !CheckNegative())
-bOP  (10E0,   Relative,     1, !CheckNegative(), 0)
-bOP  (10Slow, RelativeSlow, 1, !CheckNegative(), CheckEmulation())
-
-/* BVC */
-bOPE1(50,     Relative,     1, !CheckOverflow())
-bOP  (50E0,   Relative,     1, !CheckOverflow(), 0)
-bOP  (50Slow, RelativeSlow, 1, !CheckOverflow(), CheckEmulation())
-
-/* BVS */
-bOPE1(70,     Relative,     1,  CheckOverflow())
-bOP  (70E0,   Relative,     1,  CheckOverflow(), 0)
-bOP  (70Slow, RelativeSlow, 1,  CheckOverflow(), CheckEmulation())
-
-/* BRA */
-bOPE1(80,     Relative,     0, 1)
-bOP  (80E0,   Relative,     0, 1,                0)
-bOP  (80Slow, RelativeSlow, 0, 1,                CheckEmulation())
+bOps(90, BranchCheck, !CheckCarry())     /* BCC */
+bOps(B0, BranchCheck,  CheckCarry())     /* BCS */
+bOps(F0, BranchCheck,  CheckZero())      /* BEQ */
+bOps(D0, BranchCheck, !CheckZero())      /* BNE */
+bOps(30, BranchCheck,  CheckNegative())  /* BMI */
+bOps(10, BranchCheck, !CheckNegative())  /* BPL */
+bOps(50, BranchCheck, !CheckOverflow())  /* BVC */
+bOps(70, BranchCheck,  CheckOverflow())  /* BVS */
+bOps(80, BranchCheck,  true)             /* BRA */
 
 /* BRL */
 static void Op82()
@@ -1736,30 +1684,29 @@ static void OpEA() /* NOP */
 }
 
 /* PUSH Instructions */
-#define PushB(b) \
-	SetByte(b, ICPU.Registers.S.W--)
+static INLINE void PushB(uint8_t b)
+{
+	SetByte(b, ICPU.Registers.S.W--);
+}
 
-#define PushBE(b)                       \
-	do                                  \
-	{                                   \
-		SetByte(b, ICPU.Registers.S.W); \
-		ICPU.Registers.SL--;            \
-	} while (0)
+static INLINE void PushBE(uint8_t b)
+{
+	SetByte(b, ICPU.Registers.S.W);
+	ICPU.Registers.SL--;
+}
 
-#define PushW(w)                                                 \
-	do                                                           \
-	{                                                            \
-		SetWord(w, ICPU.Registers.S.W - 1, WRAP_BANK, WRITE_10); \
-		ICPU.Registers.S.W -= 2;                                 \
-	} while (0)
+static INLINE void PushW(uint16_t w)
+{
+	SetWord(w, ICPU.Registers.S.W - 1, WRAP_BANK, WRITE_10);
+	ICPU.Registers.S.W -= 2;
+}
 
-#define PushWE(w)                                            \
-	do                                                       \
-	{                                                        \
-		ICPU.Registers.SL--;                                 \
-		SetWord(w, ICPU.Registers.S.W, WRAP_PAGE, WRITE_10); \
-		ICPU.Registers.SL--;                                 \
-	} while (0)
+static INLINE void PushWE(uint16_t w)
+{
+	ICPU.Registers.SL--;
+	SetWord(w, ICPU.Registers.S.W, WRAP_PAGE, WRITE_10);
+	ICPU.Registers.SL--;
+}
 
 /* PEA */
 NOT_SA1(
@@ -2086,40 +2033,38 @@ static void Op5ASlow()
 }
 
 /* PULL Instructions */
-#define PullB(b)                           \
-	do                                     \
-	{                                      \
-		b = GetByte(++ICPU.Registers.S.W); \
-	} while (0)
+static INLINE uint8_t PullB()
+{
+	return GetByte(++ICPU.Registers.S.W);
+}
 
-#define PullBE(b)                        \
-	do                                   \
-	{                                    \
-		ICPU.Registers.SL++;             \
-		b = GetByte(ICPU.Registers.S.W); \
-	} while (0)
+static INLINE uint8_t PullBE()
+{
+	ICPU.Registers.SL++;
+	return GetByte(ICPU.Registers.S.W);
+}
 
-#define PullW(w)                                        \
-	do                                                  \
-	{                                                   \
-		w = GetWord(ICPU.Registers.S.W + 1, WRAP_BANK); \
-		ICPU.Registers.S.W += 2;                        \
-	} while (0)
+static INLINE uint16_t PullW()
+{
+	uint16_t w = GetWord(ICPU.Registers.S.W + 1, WRAP_BANK);
+	ICPU.Registers.S.W += 2;
+	return w;
+}
 
-#define PullWE(w)                                   \
-	do                                              \
-	{                                               \
-		ICPU.Registers.SL++;                        \
-		w = GetWord(ICPU.Registers.S.W, WRAP_PAGE); \
-		ICPU.Registers.SL++;                        \
-	} while (0)
+static INLINE uint16_t PullWE()
+{
+	ICPU.Registers.SL++;
+	uint16_t w = GetWord(ICPU.Registers.S.W, WRAP_PAGE);
+	ICPU.Registers.SL++;
+	return w;
+}
 
 /* PLA */
 NOT_SA1(
 static void Op68E1()
 {
 	AddCycles(Settings.TwoCycles);
-	PullBE(ICPU.Registers.AL);
+	ICPU.Registers.AL = PullBE();
 	SetZN8(ICPU.Registers.AL);
 	ICPU.OpenBus = ICPU.Registers.AL;
 }
@@ -2128,7 +2073,7 @@ static void Op68E1()
 static void Op68E0M1()
 {
 	AddCycles(Settings.TwoCycles);
-	PullB(ICPU.Registers.AL);
+	ICPU.Registers.AL = PullB();
 	SetZN8(ICPU.Registers.AL);
 	ICPU.OpenBus = ICPU.Registers.AL;
 }
@@ -2136,7 +2081,7 @@ static void Op68E0M1()
 static void Op68E0M0()
 {
 	AddCycles(Settings.TwoCycles);
-	PullW(ICPU.Registers.A.W);
+	ICPU.Registers.A.W = PullW();
 	SetZN16(ICPU.Registers.A.W);
 	ICPU.OpenBus = ICPU.Registers.AH;
 }
@@ -2147,19 +2092,19 @@ static void Op68Slow()
 
 	if (CheckEmulation())
 	{
-		PullBE(ICPU.Registers.AL);
+		ICPU.Registers.AL = PullBE();
 		SetZN8(ICPU.Registers.AL);
 		ICPU.OpenBus = ICPU.Registers.AL;
 	}
 	else if (CheckMem())
 	{
-		PullB(ICPU.Registers.AL);
+		ICPU.Registers.AL = PullB();
 		SetZN8(ICPU.Registers.AL);
 		ICPU.OpenBus = ICPU.Registers.AL;
 	}
 	else
 	{
-		PullW(ICPU.Registers.A.W);
+		ICPU.Registers.A.W = PullW();
 		SetZN16(ICPU.Registers.A.W);
 		ICPU.OpenBus = ICPU.Registers.AH;
 	}
@@ -2170,7 +2115,7 @@ NOT_SA1(
 static void OpABE1()
 {
 	AddCycles(Settings.TwoCycles);
-	PullBE(ICPU.Registers.DB);
+	ICPU.Registers.DB = PullBE();
 	SetZN8(ICPU.Registers.DB);
 	ICPU.ShiftedDB = ICPU.Registers.DB << 16;
 	ICPU.OpenBus = ICPU.Registers.DB;
@@ -2180,7 +2125,7 @@ static void OpABE1()
 static void OpABE0()
 {
 	AddCycles(Settings.TwoCycles);
-	PullB(ICPU.Registers.DB);
+	ICPU.Registers.DB = PullB();
 	SetZN8(ICPU.Registers.DB);
 	ICPU.ShiftedDB = ICPU.Registers.DB << 16;
 	ICPU.OpenBus = ICPU.Registers.DB;
@@ -2189,12 +2134,7 @@ static void OpABE0()
 static void OpABSlow()
 {
 	AddCycles(Settings.TwoCycles);
-
-	if (CheckEmulation())
-		PullBE(ICPU.Registers.DB);
-	else
-		PullB(ICPU.Registers.DB);
-
+	ICPU.Registers.DB = (CheckEmulation() ? PullBE() : PullB());
 	SetZN8(ICPU.Registers.DB);
 	ICPU.ShiftedDB = ICPU.Registers.DB << 16;
 	ICPU.OpenBus = ICPU.Registers.DB;
@@ -2207,7 +2147,7 @@ static void Op2BE1()
 	/* Note: PLD is a new instruction,
 	 * and so doesn't respect the emu-mode stack bounds. */
 	AddCycles(Settings.TwoCycles);
-	PullW(ICPU.Registers.D.W);
+	ICPU.Registers.D.W = PullW();
 	SetZN16(ICPU.Registers.D.W);
 	ICPU.OpenBus = ICPU.Registers.DH;
 	ICPU.Registers.SH = 1;
@@ -2217,7 +2157,7 @@ static void Op2BE1()
 static void Op2BE0()
 {
 	AddCycles(Settings.TwoCycles);
-	PullW(ICPU.Registers.D.W);
+	ICPU.Registers.D.W = PullW();
 	SetZN16(ICPU.Registers.D.W);
 	ICPU.OpenBus = ICPU.Registers.DH;
 }
@@ -2225,7 +2165,7 @@ static void Op2BE0()
 static void Op2BSlow()
 {
 	AddCycles(Settings.TwoCycles);
-	PullW(ICPU.Registers.D.W);
+	ICPU.Registers.D.W = PullW();
 	SetZN16(ICPU.Registers.D.W);
 	ICPU.OpenBus = ICPU.Registers.DH;
 
@@ -2238,7 +2178,7 @@ NOT_SA1(
 static void Op28E1()
 {
 	AddCycles(Settings.TwoCycles);
-	PullBE(ICPU.Registers.PL);
+	ICPU.Registers.PL = PullBE();
 	ICPU.OpenBus = ICPU.Registers.PL;
 	SetFlags(MEMORY_FLAG | INDEX_FLAG);
 	UnpackStatus();
@@ -2250,7 +2190,7 @@ static void Op28E1()
 static void Op28E0()
 {
 	AddCycles(Settings.TwoCycles);
-	PullB(ICPU.Registers.PL);
+	ICPU.Registers.PL = PullB();
 	ICPU.OpenBus = ICPU.Registers.PL;
 	UnpackStatus();
 
@@ -2270,13 +2210,13 @@ static void Op28Slow()
 
 	if (CheckEmulation())
 	{
-		PullBE(ICPU.Registers.PL);
+		ICPU.Registers.PL = PullBE();
 		ICPU.OpenBus = ICPU.Registers.PL;
 		SetFlags(MEMORY_FLAG | INDEX_FLAG);
 	}
 	else
 	{
-		PullB(ICPU.Registers.PL);
+		ICPU.Registers.PL = PullB();
 		ICPU.OpenBus = ICPU.Registers.PL;
 	}
 
@@ -2297,7 +2237,7 @@ NOT_SA1(
 static void OpFAE1()
 {
 	AddCycles(Settings.TwoCycles);
-	PullBE(ICPU.Registers.XL);
+	ICPU.Registers.XL = PullBE();
 	SetZN8(ICPU.Registers.XL);
 	ICPU.OpenBus = ICPU.Registers.XL;
 }
@@ -2306,7 +2246,7 @@ static void OpFAE1()
 static void OpFAE0X1()
 {
 	AddCycles(Settings.TwoCycles);
-	PullB(ICPU.Registers.XL);
+	ICPU.Registers.XL = PullB();
 	SetZN8(ICPU.Registers.XL);
 	ICPU.OpenBus = ICPU.Registers.XL;
 }
@@ -2314,7 +2254,7 @@ static void OpFAE0X1()
 static void OpFAE0X0()
 {
 	AddCycles(Settings.TwoCycles);
-	PullW(ICPU.Registers.X.W);
+	ICPU.Registers.X.W = PullW();
 	SetZN16(ICPU.Registers.X.W);
 	ICPU.OpenBus = ICPU.Registers.XH;
 }
@@ -2325,19 +2265,19 @@ static void OpFASlow()
 
 	if (CheckEmulation())
 	{
-		PullBE(ICPU.Registers.XL);
+		ICPU.Registers.XL = PullBE();
 		SetZN8(ICPU.Registers.XL);
 		ICPU.OpenBus = ICPU.Registers.XL;
 	}
 	else if (CheckIndex())
 	{
-		PullB(ICPU.Registers.XL);
+		ICPU.Registers.XL = PullB();
 		SetZN8(ICPU.Registers.XL);
 		ICPU.OpenBus = ICPU.Registers.XL;
 	}
 	else
 	{
-		PullW(ICPU.Registers.X.W);
+		ICPU.Registers.X.W = PullW();
 		SetZN16(ICPU.Registers.X.W);
 		ICPU.OpenBus = ICPU.Registers.XH;
 	}
@@ -2348,7 +2288,7 @@ NOT_SA1(
 static void Op7AE1()
 {
 	AddCycles(Settings.TwoCycles);
-	PullBE(ICPU.Registers.YL);
+	ICPU.Registers.YL = PullBE();
 	SetZN8(ICPU.Registers.YL);
 	ICPU.OpenBus = ICPU.Registers.YL;
 }
@@ -2357,7 +2297,7 @@ static void Op7AE1()
 static void Op7AE0X1()
 {
 	AddCycles(Settings.TwoCycles);
-	PullB(ICPU.Registers.YL);
+	ICPU.Registers.YL = PullB();
 	SetZN8(ICPU.Registers.YL);
 	ICPU.OpenBus = ICPU.Registers.YL;
 }
@@ -2365,7 +2305,7 @@ static void Op7AE0X1()
 static void Op7AE0X0()
 {
 	AddCycles(Settings.TwoCycles);
-	PullW(ICPU.Registers.Y.W);
+	ICPU.Registers.Y.W = PullW();
 	SetZN16(ICPU.Registers.Y.W);
 	ICPU.OpenBus = ICPU.Registers.YH;
 }
@@ -2376,19 +2316,19 @@ static void Op7ASlow()
 
 	if (CheckEmulation())
 	{
-		PullBE(ICPU.Registers.YL);
+		ICPU.Registers.YL = PullBE();
 		SetZN8(ICPU.Registers.YL);
 		ICPU.OpenBus = ICPU.Registers.YL;
 	}
 	else if (CheckIndex())
 	{
-		PullB(ICPU.Registers.YL);
+		ICPU.Registers.YL = PullB();
 		SetZN8(ICPU.Registers.YL);
 		ICPU.OpenBus = ICPU.Registers.YL;
 	}
 	else
 	{
-		PullW(ICPU.Registers.Y.W);
+		ICPU.Registers.Y.W = PullW();
 		SetZN16(ICPU.Registers.Y.W);
 		ICPU.OpenBus = ICPU.Registers.YH;
 	}
@@ -2822,37 +2762,21 @@ static void Op02() /* COP */
 static void OpDC()
 {
 	SetPCBase(AbsoluteIndirectLong(JUMP));
-
-#ifdef SA1_OPCODES
-	AddCycles(Settings.OneCycle);
-#endif
 }
 
 static void OpDCSlow()
 {
 	SetPCBase(AbsoluteIndirectLongSlow(JUMP));
-
-#ifdef SA1_OPCODES
-	AddCycles(Settings.OneCycle);
-#endif
 }
 
 static void Op5C()
 {
 	SetPCBase(AbsoluteLong(JUMP));
-
-#ifdef SA1_OPCODES
-	AddCycles(Settings.OneCycle);
-#endif
 }
 
 static void Op5CSlow()
 {
 	SetPCBase(AbsoluteLongSlow(JUMP));
-
-#ifdef SA1_OPCODES
-	AddCycles(Settings.OneCycle);
-#endif
 }
 
 /* JMP */
@@ -2937,34 +2861,37 @@ static void Op6BE1()
 	/* Note: RTL is a new instruction,
 	 * and so doesn't respect the emu-mode stack bounds. */
 	AddCycles(Settings.TwoCycles);
-	PullW(ICPU.Registers.PCw);
-	PullB(ICPU.Registers.PB);
+	ICPU.Registers.PCw = PullW();
+	ICPU.Registers.PB = PullB();
 	ICPU.Registers.SH = 1;
 	ICPU.Registers.PCw++;
 	SetPCBase(ICPU.Registers.PBPC);
+	AddCycles(Settings.OneCycle);
 }
 )
 
 static void Op6BE0()
 {
 	AddCycles(Settings.TwoCycles);
-	PullW(ICPU.Registers.PCw);
-	PullB(ICPU.Registers.PB);
+	ICPU.Registers.PCw = PullW();
+	ICPU.Registers.PB = PullB();
 	ICPU.Registers.PCw++;
 	SetPCBase(ICPU.Registers.PBPC);
+	AddCycles(Settings.OneCycle);
 }
 
 static void Op6BSlow()
 {
 	AddCycles(Settings.TwoCycles);
-	PullW(ICPU.Registers.PCw);
-	PullB(ICPU.Registers.PB);
+	ICPU.Registers.PCw = PullW();
+	ICPU.Registers.PB = PullB();
 
 	if (CheckEmulation())
 		ICPU.Registers.SH = 1;
 
 	ICPU.Registers.PCw++;
 	SetPCBase(ICPU.Registers.PBPC);
+	AddCycles(Settings.OneCycle);
 }
 
 /* JSR/RTS */
@@ -3034,7 +2961,7 @@ NOT_SA1(
 static void Op60E1()
 {
 	AddCycles(Settings.TwoCycles);
-	PullWE(ICPU.Registers.PCw);
+	ICPU.Registers.PCw = PullWE();
 	AddCycles(Settings.OneCycle);
 	ICPU.Registers.PCw++;
 	SetPCBase(ICPU.Registers.PBPC);
@@ -3044,7 +2971,7 @@ static void Op60E1()
 static void Op60E0()
 {
 	AddCycles(Settings.TwoCycles);
-	PullW(ICPU.Registers.PCw);
+	ICPU.Registers.PCw = PullW();
 	AddCycles(Settings.OneCycle);
 	ICPU.Registers.PCw++;
 	SetPCBase(ICPU.Registers.PBPC);
@@ -3055,9 +2982,9 @@ static void Op60Slow()
 	AddCycles(Settings.TwoCycles);
 
 	if (CheckEmulation())
-		PullWE(ICPU.Registers.PCw);
+		ICPU.Registers.PCw = PullWE();
 	else
-		PullW(ICPU.Registers.PCw);
+		ICPU.Registers.PCw = PullW();
 
 	AddCycles(Settings.OneCycle);
 	ICPU.Registers.PCw++;
@@ -3307,18 +3234,18 @@ static void Op40Slow() /* RTI */
 
 	if (!CheckEmulation())
 	{
-		PullB(ICPU.Registers.PL);
+		ICPU.Registers.PL = PullB();
 		UnpackStatus();
-		PullW(ICPU.Registers.PCw);
-		PullB(ICPU.Registers.PB);
+		ICPU.Registers.PCw = PullW();
+		ICPU.Registers.PB = PullB();
 		ICPU.OpenBus = ICPU.Registers.PB;
 		ICPU.ShiftedPB = ICPU.Registers.PB << 16;
 	}
 	else
 	{
-		PullBE(ICPU.Registers.PL);
+		ICPU.Registers.PL = PullBE();
 		UnpackStatus();
-		PullWE(ICPU.Registers.PCw);
+		ICPU.Registers.PCw = PullWE();
 		ICPU.OpenBus = ICPU.Registers.PCh;
 		SetFlags(MEMORY_FLAG | INDEX_FLAG);
 	}
@@ -3360,10 +3287,10 @@ static void OpDB() /* Usually an STP opcode; SNESAdvance speed hack, not impleme
 	switch (NextByte & 0x80)
 	{
 		case 0x00: /* BNE */
-			bOPBody(OpAddress, 1, !CheckZero(), CheckEmulation())
+			bOpBody(OpAddress, BranchCheck, !CheckZero(), CheckEmulation())
 			return;
 		case 0x80: /* BEQ */
-			bOPBody(OpAddress, 1,  CheckZero(), CheckEmulation())
+			bOpBody(OpAddress, BranchCheck,  CheckZero(), CheckEmulation())
 			return;
 	}
 }
@@ -3380,31 +3307,31 @@ static void Op42() /* SNESAdvance speed hack, as implemented in Snes9xTYL / Snes
 	switch (NextByte & 0xF0)
 	{
 		case 0x10: /* BPL */
-			bOPBody(OpAddress, 1, !CheckNegative(), CheckEmulation())
+			bOpBody(OpAddress, BranchCheck, !CheckNegative(), CheckEmulation())
 			return;
 		case 0x30: /* BMI */
-			bOPBody(OpAddress, 1,  CheckNegative(), CheckEmulation())
+			bOpBody(OpAddress, BranchCheck,  CheckNegative(), CheckEmulation())
 			return;
 		case 0x50: /* BVC */
-			bOPBody(OpAddress, 1, !CheckOverflow(), CheckEmulation())
+			bOpBody(OpAddress, BranchCheck, !CheckOverflow(), CheckEmulation())
 			return;
 		case 0x70: /* BVS */
-			bOPBody(OpAddress, 1,  CheckOverflow(), CheckEmulation())
+			bOpBody(OpAddress, BranchCheck,  CheckOverflow(), CheckEmulation())
 			return;
 		case 0x80: /* BRA */
-			bOPBody(OpAddress, 0,  1,               CheckEmulation())
+			bOpBody(OpAddress, NoCheck,      true,            CheckEmulation())
 			return;
 		case 0x90: /* BCC */
-			bOPBody(OpAddress, 1, !CheckCarry(),    CheckEmulation())
+			bOpBody(OpAddress, BranchCheck, !CheckCarry(),    CheckEmulation())
 			return;
 		case 0xB0: /* BCS */
-			bOPBody(OpAddress, 1,  CheckCarry(),    CheckEmulation())
+			bOpBody(OpAddress, BranchCheck,  CheckCarry(),    CheckEmulation())
 			return;
 		case 0xD0: /* BNE */
-			bOPBody(OpAddress, 1, !CheckZero(),     CheckEmulation())
+			bOpBody(OpAddress, BranchCheck, !CheckZero(),     CheckEmulation())
 			return;
 		case 0xF0: /* BEQ */
-			bOPBody(OpAddress, 1,  CheckZero(),     CheckEmulation())
+			bOpBody(OpAddress, BranchCheck,  CheckZero(),     CheckEmulation())
 			return;
 	}
 }
@@ -3450,146 +3377,146 @@ SOpcodes OpcodesE1[256] =
 
 SOpcodes OpcodesM1X1[256] =
 {
-	{Op00},     {Op01E0M1},   {Op02},     {Op03M1}, {Op04M1},   {Op05M1},   {Op06M1},   {Op07M1},
-	{Op08E0},   {Op09M1},     {Op0AM1},   {Op0BE0}, {Op0CM1},   {Op0DM1},   {Op0EM1},   {Op0FM1},
-	{Op10E0},   {Op11E0M1X1}, {Op12E0M1}, {Op13M1}, {Op14M1},   {Op15E0M1}, {Op16E0M1}, {Op17M1},
-	{Op18},     {Op19M1X1},   {Op1AM1},   {Op1B},   {Op1CM1},   {Op1DM1X1}, {Op1EM1X1}, {Op1FM1},
-	{Op20E0},   {Op21E0M1},   {Op22E0},   {Op23M1}, {Op24M1},   {Op25M1},   {Op26M1},   {Op27M1},
-	{Op28E0},   {Op29M1},     {Op2AM1},   {Op2BE0}, {Op2CM1},   {Op2DM1},   {Op2EM1},   {Op2FM1},
-	{Op30E0},   {Op31E0M1X1}, {Op32E0M1}, {Op33M1}, {Op34E0M1}, {Op35E0M1}, {Op36E0M1}, {Op37M1},
-	{Op38},     {Op39M1X1},   {Op3AM1},   {Op3B},   {Op3CM1X1}, {Op3DM1X1}, {Op3EM1X1}, {Op3FM1},
-	{Op40Slow}, {Op41E0M1},   {Op42},     {Op43M1}, {Op44X1},   {Op45M1},   {Op46M1},   {Op47M1},
-	{Op48E0M1}, {Op49M1},     {Op4AM1},   {Op4BE0}, {Op4C},     {Op4DM1},   {Op4EM1},   {Op4FM1},
-	{Op50E0},   {Op51E0M1X1}, {Op52E0M1}, {Op53M1}, {Op54X1},   {Op55E0M1}, {Op56E0M1}, {Op57M1},
-	{Op58},     {Op59M1X1},   {Op5AE0X1}, {Op5B},   {Op5C},     {Op5DM1X1}, {Op5EM1X1}, {Op5FM1},
-	{Op60E0},   {Op61E0M1},   {Op62E0},   {Op63M1}, {Op64M1},   {Op65M1},   {Op66M1},   {Op67M1},
-	{Op68E0M1}, {Op69M1},     {Op6AM1},   {Op6BE0}, {Op6C},     {Op6DM1},   {Op6EM1},   {Op6FM1},
-	{Op70E0},   {Op71E0M1X1}, {Op72E0M1}, {Op73M1}, {Op74E0M1}, {Op75E0M1}, {Op76E0M1}, {Op77M1},
-	{Op78},     {Op79M1X1},   {Op7AE0X1}, {Op7B},   {Op7C},     {Op7DM1X1}, {Op7EM1X1}, {Op7FM1},
-	{Op80E0},   {Op81E0M1},   {Op82},     {Op83M1}, {Op84X1},   {Op85M1},   {Op86X1},   {Op87M1},
-	{Op88X1},   {Op89M1},     {Op8AM1},   {Op8BE0}, {Op8CX1},   {Op8DM1},   {Op8EX1},   {Op8FM1},
-	{Op90E0},   {Op91E0M1X1}, {Op92E0M1}, {Op93M1}, {Op94E0X1}, {Op95E0M1}, {Op96E0X1}, {Op97M1},
-	{Op98M1},   {Op99M1X1},   {Op9A},     {Op9BX1}, {Op9CM1},   {Op9DM1X1}, {Op9EM1X1}, {Op9FM1},
-	{OpA0X1},   {OpA1E0M1},   {OpA2X1},   {OpA3M1}, {OpA4X1},   {OpA5M1},   {OpA6X1},   {OpA7M1},
-	{OpA8X1},   {OpA9M1},     {OpAAX1},   {OpABE0}, {OpACX1},   {OpADM1},   {OpAEX1},   {OpAFM1},
-	{OpB0E0},   {OpB1E0M1X1}, {OpB2E0M1}, {OpB3M1}, {OpB4E0X1}, {OpB5E0M1}, {OpB6E0X1}, {OpB7M1},
-	{OpB8},     {OpB9M1X1},   {OpBAX1},   {OpBBX1}, {OpBCX1},   {OpBDM1X1}, {OpBEX1},   {OpBFM1},
-	{OpC0X1},   {OpC1E0M1},   {OpC2},     {OpC3M1}, {OpC4X1},   {OpC5M1},   {OpC6M1},   {OpC7M1},
-	{OpC8X1},   {OpC9M1},     {OpCAX1},   {OpCB},   {OpCCX1},   {OpCDM1},   {OpCEM1},   {OpCFM1},
-	{OpD0E0},   {OpD1E0M1X1}, {OpD2E0M1}, {OpD3M1}, {OpD4E0},   {OpD5E0M1}, {OpD6E0M1}, {OpD7M1},
-	{OpD8},     {OpD9M1X1},   {OpDAE0X1}, {OpDB},   {OpDC},     {OpDDM1X1}, {OpDEM1X1}, {OpDFM1},
-	{OpE0X1},   {OpE1E0M1},   {OpE2},     {OpE3M1}, {OpE4X1},   {OpE5M1},   {OpE6M1},   {OpE7M1},
-	{OpE8X1},   {OpE9M1},     {OpEA},     {OpEB},   {OpECX1},   {OpEDM1},   {OpEEM1},   {OpEFM1},
-	{OpF0E0},   {OpF1E0M1X1}, {OpF2E0M1}, {OpF3M1}, {OpF4E0},   {OpF5E0M1}, {OpF6E0M1}, {OpF7M1},
-	{OpF8},     {OpF9M1X1},   {OpFAE0X1}, {OpFB},   {OpFCE0},   {OpFDM1X1}, {OpFEM1X1}, {OpFFM1}
+	{Op00},     {Op01E0M1}, {Op02},     {Op03M1}, {Op04M1},   {Op05M1},   {Op06M1},   {Op07M1},
+	{Op08E0},   {Op09M1},   {Op0AM1},   {Op0BE0}, {Op0CM1},   {Op0DM1},   {Op0EM1},   {Op0FM1},
+	{Op10E0},   {Op11E0M1}, {Op12E0M1}, {Op13M1}, {Op14M1},   {Op15E0M1}, {Op16E0M1}, {Op17M1},
+	{Op18},     {Op19M1X1}, {Op1AM1},   {Op1B},   {Op1CM1},   {Op1DM1X1}, {Op1EM1X1}, {Op1FM1},
+	{Op20E0},   {Op21E0M1}, {Op22E0},   {Op23M1}, {Op24M1},   {Op25M1},   {Op26M1},   {Op27M1},
+	{Op28E0},   {Op29M1},   {Op2AM1},   {Op2BE0}, {Op2CM1},   {Op2DM1},   {Op2EM1},   {Op2FM1},
+	{Op30E0},   {Op31E0M1}, {Op32E0M1}, {Op33M1}, {Op34E0M1}, {Op35E0M1}, {Op36E0M1}, {Op37M1},
+	{Op38},     {Op39M1X1}, {Op3AM1},   {Op3B},   {Op3CM1X1}, {Op3DM1X1}, {Op3EM1X1}, {Op3FM1},
+	{Op40Slow}, {Op41E0M1}, {Op42},     {Op43M1}, {Op44X1},   {Op45M1},   {Op46M1},   {Op47M1},
+	{Op48E0M1}, {Op49M1},   {Op4AM1},   {Op4BE0}, {Op4C},     {Op4DM1},   {Op4EM1},   {Op4FM1},
+	{Op50E0},   {Op51E0M1}, {Op52E0M1}, {Op53M1}, {Op54X1},   {Op55E0M1}, {Op56E0M1}, {Op57M1},
+	{Op58},     {Op59M1X1}, {Op5AE0X1}, {Op5B},   {Op5C},     {Op5DM1X1}, {Op5EM1X1}, {Op5FM1},
+	{Op60E0},   {Op61E0M1}, {Op62E0},   {Op63M1}, {Op64M1},   {Op65M1},   {Op66M1},   {Op67M1},
+	{Op68E0M1}, {Op69M1},   {Op6AM1},   {Op6BE0}, {Op6C},     {Op6DM1},   {Op6EM1},   {Op6FM1},
+	{Op70E0},   {Op71E0M1}, {Op72E0M1}, {Op73M1}, {Op74E0M1}, {Op75E0M1}, {Op76E0M1}, {Op77M1},
+	{Op78},     {Op79M1X1}, {Op7AE0X1}, {Op7B},   {Op7C},     {Op7DM1X1}, {Op7EM1X1}, {Op7FM1},
+	{Op80E0},   {Op81E0M1}, {Op82},     {Op83M1}, {Op84X1},   {Op85M1},   {Op86X1},   {Op87M1},
+	{Op88X1},   {Op89M1},   {Op8AM1},   {Op8BE0}, {Op8CX1},   {Op8DM1},   {Op8EX1},   {Op8FM1},
+	{Op90E0},   {Op91E0M1}, {Op92E0M1}, {Op93M1}, {Op94E0X1}, {Op95E0M1}, {Op96E0X1}, {Op97M1},
+	{Op98M1},   {Op99M1X1}, {Op9A},     {Op9BX1}, {Op9CM1},   {Op9DM1X1}, {Op9EM1X1}, {Op9FM1},
+	{OpA0X1},   {OpA1E0M1}, {OpA2X1},   {OpA3M1}, {OpA4X1},   {OpA5M1},   {OpA6X1},   {OpA7M1},
+	{OpA8X1},   {OpA9M1},   {OpAAX1},   {OpABE0}, {OpACX1},   {OpADM1},   {OpAEX1},   {OpAFM1},
+	{OpB0E0},   {OpB1E0M1}, {OpB2E0M1}, {OpB3M1}, {OpB4E0X1}, {OpB5E0M1}, {OpB6E0X1}, {OpB7M1},
+	{OpB8},     {OpB9M1X1}, {OpBAX1},   {OpBBX1}, {OpBCX1},   {OpBDM1X1}, {OpBEX1},   {OpBFM1},
+	{OpC0X1},   {OpC1E0M1}, {OpC2},     {OpC3M1}, {OpC4X1},   {OpC5M1},   {OpC6M1},   {OpC7M1},
+	{OpC8X1},   {OpC9M1},   {OpCAX1},   {OpCB},   {OpCCX1},   {OpCDM1},   {OpCEM1},   {OpCFM1},
+	{OpD0E0},   {OpD1E0M1}, {OpD2E0M1}, {OpD3M1}, {OpD4E0},   {OpD5E0M1}, {OpD6E0M1}, {OpD7M1},
+	{OpD8},     {OpD9M1X1}, {OpDAE0X1}, {OpDB},   {OpDC},     {OpDDM1X1}, {OpDEM1X1}, {OpDFM1},
+	{OpE0X1},   {OpE1E0M1}, {OpE2},     {OpE3M1}, {OpE4X1},   {OpE5M1},   {OpE6M1},   {OpE7M1},
+	{OpE8X1},   {OpE9M1},   {OpEA},     {OpEB},   {OpECX1},   {OpEDM1},   {OpEEM1},   {OpEFM1},
+	{OpF0E0},   {OpF1E0M1}, {OpF2E0M1}, {OpF3M1}, {OpF4E0},   {OpF5E0M1}, {OpF6E0M1}, {OpF7M1},
+	{OpF8},     {OpF9M1X1}, {OpFAE0X1}, {OpFB},   {OpFCE0},   {OpFDM1X1}, {OpFEM1X1}, {OpFFM1}
 };
 
 SOpcodes OpcodesM1X0[256] =
 {
-	{Op00},     {Op01E0M1},   {Op02},     {Op03M1}, {Op04M1},   {Op05M1},   {Op06M1},   {Op07M1},
-	{Op08E0},   {Op09M1},     {Op0AM1},   {Op0BE0}, {Op0CM1},   {Op0DM1},   {Op0EM1},   {Op0FM1},
-	{Op10E0},   {Op11E0M1X0}, {Op12E0M1}, {Op13M1}, {Op14M1},   {Op15E0M1}, {Op16E0M1}, {Op17M1},
-	{Op18},     {Op19M1X0},   {Op1AM1},   {Op1B},   {Op1CM1},   {Op1DM1X0}, {Op1EM1X0}, {Op1FM1},
-	{Op20E0},   {Op21E0M1},   {Op22E0},   {Op23M1}, {Op24M1},   {Op25M1},   {Op26M1},   {Op27M1},
-	{Op28E0},   {Op29M1},     {Op2AM1},   {Op2BE0}, {Op2CM1},   {Op2DM1},   {Op2EM1},   {Op2FM1},
-	{Op30E0},   {Op31E0M1X0}, {Op32E0M1}, {Op33M1}, {Op34E0M1}, {Op35E0M1}, {Op36E0M1}, {Op37M1},
-	{Op38},     {Op39M1X0},   {Op3AM1},   {Op3B},   {Op3CM1X0}, {Op3DM1X0}, {Op3EM1X0}, {Op3FM1},
-	{Op40Slow}, {Op41E0M1},   {Op42},     {Op43M1}, {Op44X0},   {Op45M1},   {Op46M1},   {Op47M1},
-	{Op48E0M1}, {Op49M1},     {Op4AM1},   {Op4BE0}, {Op4C},     {Op4DM1},   {Op4EM1},   {Op4FM1},
-	{Op50E0},   {Op51E0M1X0}, {Op52E0M1}, {Op53M1}, {Op54X0},   {Op55E0M1}, {Op56E0M1}, {Op57M1},
-	{Op58},     {Op59M1X0},   {Op5AE0X0}, {Op5B},   {Op5C},     {Op5DM1X0}, {Op5EM1X0}, {Op5FM1},
-	{Op60E0},   {Op61E0M1},   {Op62E0},   {Op63M1}, {Op64M1},   {Op65M1},   {Op66M1},   {Op67M1},
-	{Op68E0M1}, {Op69M1},     {Op6AM1},   {Op6BE0}, {Op6C},     {Op6DM1},   {Op6EM1},   {Op6FM1},
-	{Op70E0},   {Op71E0M1X0}, {Op72E0M1}, {Op73M1}, {Op74E0M1}, {Op75E0M1}, {Op76E0M1}, {Op77M1},
-	{Op78},     {Op79M1X0},   {Op7AE0X0}, {Op7B},   {Op7C},     {Op7DM1X0}, {Op7EM1X0}, {Op7FM1},
-	{Op80E0},   {Op81E0M1},   {Op82},     {Op83M1}, {Op84X0},   {Op85M1},   {Op86X0},   {Op87M1},
-	{Op88X0},   {Op89M1},     {Op8AM1},   {Op8BE0}, {Op8CX0},   {Op8DM1},   {Op8EX0},   {Op8FM1},
-	{Op90E0},   {Op91E0M1X0}, {Op92E0M1}, {Op93M1}, {Op94E0X0}, {Op95E0M1}, {Op96E0X0}, {Op97M1},
-	{Op98M1},   {Op99M1X0},   {Op9A},     {Op9BX0}, {Op9CM1},   {Op9DM1X0}, {Op9EM1X0}, {Op9FM1},
-	{OpA0X0},   {OpA1E0M1},   {OpA2X0},   {OpA3M1}, {OpA4X0},   {OpA5M1},   {OpA6X0},   {OpA7M1},
-	{OpA8X0},   {OpA9M1},     {OpAAX0},   {OpABE0}, {OpACX0},   {OpADM1},   {OpAEX0},   {OpAFM1},
-	{OpB0E0},   {OpB1E0M1X0}, {OpB2E0M1}, {OpB3M1}, {OpB4E0X0}, {OpB5E0M1}, {OpB6E0X0}, {OpB7M1},
-	{OpB8},     {OpB9M1X0},   {OpBAX0},   {OpBBX0}, {OpBCX0},   {OpBDM1X0}, {OpBEX0},   {OpBFM1},
-	{OpC0X0},   {OpC1E0M1},   {OpC2},     {OpC3M1}, {OpC4X0},   {OpC5M1},   {OpC6M1},   {OpC7M1},
-	{OpC8X0},   {OpC9M1},     {OpCAX0},   {OpCB},   {OpCCX0},   {OpCDM1},   {OpCEM1},   {OpCFM1},
-	{OpD0E0},   {OpD1E0M1X0}, {OpD2E0M1}, {OpD3M1}, {OpD4E0},   {OpD5E0M1}, {OpD6E0M1}, {OpD7M1},
-	{OpD8},     {OpD9M1X0},   {OpDAE0X0}, {OpDB},   {OpDC},     {OpDDM1X0}, {OpDEM1X0}, {OpDFM1},
-	{OpE0X0},   {OpE1E0M1},   {OpE2},     {OpE3M1}, {OpE4X0},   {OpE5M1},   {OpE6M1},   {OpE7M1},
-	{OpE8X0},   {OpE9M1},     {OpEA},     {OpEB},   {OpECX0},   {OpEDM1},   {OpEEM1},   {OpEFM1},
-	{OpF0E0},   {OpF1E0M1X0}, {OpF2E0M1}, {OpF3M1}, {OpF4E0},   {OpF5E0M1}, {OpF6E0M1}, {OpF7M1},
-	{OpF8},     {OpF9M1X0},   {OpFAE0X0}, {OpFB},   {OpFCE0},   {OpFDM1X0}, {OpFEM1X0}, {OpFFM1}
+	{Op00},     {Op01E0M1}, {Op02},     {Op03M1}, {Op04M1},   {Op05M1},   {Op06M1},   {Op07M1},
+	{Op08E0},   {Op09M1},   {Op0AM1},   {Op0BE0}, {Op0CM1},   {Op0DM1},   {Op0EM1},   {Op0FM1},
+	{Op10E0},   {Op11E0M1}, {Op12E0M1}, {Op13M1}, {Op14M1},   {Op15E0M1}, {Op16E0M1}, {Op17M1},
+	{Op18},     {Op19M1X0}, {Op1AM1},   {Op1B},   {Op1CM1},   {Op1DM1X0}, {Op1EM1X0}, {Op1FM1},
+	{Op20E0},   {Op21E0M1}, {Op22E0},   {Op23M1}, {Op24M1},   {Op25M1},   {Op26M1},   {Op27M1},
+	{Op28E0},   {Op29M1},   {Op2AM1},   {Op2BE0}, {Op2CM1},   {Op2DM1},   {Op2EM1},   {Op2FM1},
+	{Op30E0},   {Op31E0M1}, {Op32E0M1}, {Op33M1}, {Op34E0M1}, {Op35E0M1}, {Op36E0M1}, {Op37M1},
+	{Op38},     {Op39M1X0}, {Op3AM1},   {Op3B},   {Op3CM1X0}, {Op3DM1X0}, {Op3EM1X0}, {Op3FM1},
+	{Op40Slow}, {Op41E0M1}, {Op42},     {Op43M1}, {Op44X0},   {Op45M1},   {Op46M1},   {Op47M1},
+	{Op48E0M1}, {Op49M1},   {Op4AM1},   {Op4BE0}, {Op4C},     {Op4DM1},   {Op4EM1},   {Op4FM1},
+	{Op50E0},   {Op51E0M1}, {Op52E0M1}, {Op53M1}, {Op54X0},   {Op55E0M1}, {Op56E0M1}, {Op57M1},
+	{Op58},     {Op59M1X0}, {Op5AE0X0}, {Op5B},   {Op5C},     {Op5DM1X0}, {Op5EM1X0}, {Op5FM1},
+	{Op60E0},   {Op61E0M1}, {Op62E0},   {Op63M1}, {Op64M1},   {Op65M1},   {Op66M1},   {Op67M1},
+	{Op68E0M1}, {Op69M1},   {Op6AM1},   {Op6BE0}, {Op6C},     {Op6DM1},   {Op6EM1},   {Op6FM1},
+	{Op70E0},   {Op71E0M1}, {Op72E0M1}, {Op73M1}, {Op74E0M1}, {Op75E0M1}, {Op76E0M1}, {Op77M1},
+	{Op78},     {Op79M1X0}, {Op7AE0X0}, {Op7B},   {Op7C},     {Op7DM1X0}, {Op7EM1X0}, {Op7FM1},
+	{Op80E0},   {Op81E0M1}, {Op82},     {Op83M1}, {Op84X0},   {Op85M1},   {Op86X0},   {Op87M1},
+	{Op88X0},   {Op89M1},   {Op8AM1},   {Op8BE0}, {Op8CX0},   {Op8DM1},   {Op8EX0},   {Op8FM1},
+	{Op90E0},   {Op91E0M1}, {Op92E0M1}, {Op93M1}, {Op94E0X0}, {Op95E0M1}, {Op96E0X0}, {Op97M1},
+	{Op98M1},   {Op99M1X0}, {Op9A},     {Op9BX0}, {Op9CM1},   {Op9DM1X0}, {Op9EM1X0}, {Op9FM1},
+	{OpA0X0},   {OpA1E0M1}, {OpA2X0},   {OpA3M1}, {OpA4X0},   {OpA5M1},   {OpA6X0},   {OpA7M1},
+	{OpA8X0},   {OpA9M1},   {OpAAX0},   {OpABE0}, {OpACX0},   {OpADM1},   {OpAEX0},   {OpAFM1},
+	{OpB0E0},   {OpB1E0M1}, {OpB2E0M1}, {OpB3M1}, {OpB4E0X0}, {OpB5E0M1}, {OpB6E0X0}, {OpB7M1},
+	{OpB8},     {OpB9M1X0}, {OpBAX0},   {OpBBX0}, {OpBCX0},   {OpBDM1X0}, {OpBEX0},   {OpBFM1},
+	{OpC0X0},   {OpC1E0M1}, {OpC2},     {OpC3M1}, {OpC4X0},   {OpC5M1},   {OpC6M1},   {OpC7M1},
+	{OpC8X0},   {OpC9M1},   {OpCAX0},   {OpCB},   {OpCCX0},   {OpCDM1},   {OpCEM1},   {OpCFM1},
+	{OpD0E0},   {OpD1E0M1}, {OpD2E0M1}, {OpD3M1}, {OpD4E0},   {OpD5E0M1}, {OpD6E0M1}, {OpD7M1},
+	{OpD8},     {OpD9M1X0}, {OpDAE0X0}, {OpDB},   {OpDC},     {OpDDM1X0}, {OpDEM1X0}, {OpDFM1},
+	{OpE0X0},   {OpE1E0M1}, {OpE2},     {OpE3M1}, {OpE4X0},   {OpE5M1},   {OpE6M1},   {OpE7M1},
+	{OpE8X0},   {OpE9M1},   {OpEA},     {OpEB},   {OpECX0},   {OpEDM1},   {OpEEM1},   {OpEFM1},
+	{OpF0E0},   {OpF1E0M1}, {OpF2E0M1}, {OpF3M1}, {OpF4E0},   {OpF5E0M1}, {OpF6E0M1}, {OpF7M1},
+	{OpF8},     {OpF9M1X0}, {OpFAE0X0}, {OpFB},   {OpFCE0},   {OpFDM1X0}, {OpFEM1X0}, {OpFFM1}
 };
 
 SOpcodes OpcodesM0X0[256] =
 {
-	{Op00},     {Op01E0M0},   {Op02},     {Op03M0}, {Op04M0},   {Op05M0},   {Op06M0},   {Op07M0},
-	{Op08E0},   {Op09M0},     {Op0AM0},   {Op0BE0}, {Op0CM0},   {Op0DM0},   {Op0EM0},   {Op0FM0},
-	{Op10E0},   {Op11E0M0X0}, {Op12E0M0}, {Op13M0}, {Op14M0},   {Op15E0M0}, {Op16E0M0}, {Op17M0},
-	{Op18},     {Op19M0X0},   {Op1AM0},   {Op1B},   {Op1CM0},   {Op1DM0X0}, {Op1EM0X0}, {Op1FM0},
-	{Op20E0},   {Op21E0M0},   {Op22E0},   {Op23M0}, {Op24M0},   {Op25M0},   {Op26M0},   {Op27M0},
-	{Op28E0},   {Op29M0},     {Op2AM0},   {Op2BE0}, {Op2CM0},   {Op2DM0},   {Op2EM0},   {Op2FM0},
-	{Op30E0},   {Op31E0M0X0}, {Op32E0M0}, {Op33M0}, {Op34E0M0}, {Op35E0M0}, {Op36E0M0}, {Op37M0},
-	{Op38},     {Op39M0X0},   {Op3AM0},   {Op3B},   {Op3CM0X0}, {Op3DM0X0}, {Op3EM0X0}, {Op3FM0},
-	{Op40Slow}, {Op41E0M0},   {Op42},     {Op43M0}, {Op44X0},   {Op45M0},   {Op46M0},   {Op47M0},
-	{Op48E0M0}, {Op49M0},     {Op4AM0},   {Op4BE0}, {Op4C},     {Op4DM0},   {Op4EM0},   {Op4FM0},
-	{Op50E0},   {Op51E0M0X0}, {Op52E0M0}, {Op53M0}, {Op54X0},   {Op55E0M0}, {Op56E0M0}, {Op57M0},
-	{Op58},     {Op59M0X0},   {Op5AE0X0}, {Op5B},   {Op5C},     {Op5DM0X0}, {Op5EM0X0}, {Op5FM0},
-	{Op60E0},   {Op61E0M0},   {Op62E0},   {Op63M0}, {Op64M0},   {Op65M0},   {Op66M0},   {Op67M0},
-	{Op68E0M0}, {Op69M0},     {Op6AM0},   {Op6BE0}, {Op6C},     {Op6DM0},   {Op6EM0},   {Op6FM0},
-	{Op70E0},   {Op71E0M0X0}, {Op72E0M0}, {Op73M0}, {Op74E0M0}, {Op75E0M0}, {Op76E0M0}, {Op77M0},
-	{Op78},     {Op79M0X0},   {Op7AE0X0}, {Op7B},   {Op7C},     {Op7DM0X0}, {Op7EM0X0}, {Op7FM0},
-	{Op80E0},   {Op81E0M0},   {Op82},     {Op83M0}, {Op84X0},   {Op85M0},   {Op86X0},   {Op87M0},
-	{Op88X0},   {Op89M0},     {Op8AM0},   {Op8BE0}, {Op8CX0},   {Op8DM0},   {Op8EX0},   {Op8FM0},
-	{Op90E0},   {Op91E0M0X0}, {Op92E0M0}, {Op93M0}, {Op94E0X0}, {Op95E0M0}, {Op96E0X0}, {Op97M0},
-	{Op98M0},   {Op99M0X0},   {Op9A},     {Op9BX0}, {Op9CM0},   {Op9DM0X0}, {Op9EM0X0}, {Op9FM0},
-	{OpA0X0},   {OpA1E0M0},   {OpA2X0},   {OpA3M0}, {OpA4X0},   {OpA5M0},   {OpA6X0},   {OpA7M0},
-	{OpA8X0},   {OpA9M0},     {OpAAX0},   {OpABE0}, {OpACX0},   {OpADM0},   {OpAEX0},   {OpAFM0},
-	{OpB0E0},   {OpB1E0M0X0}, {OpB2E0M0}, {OpB3M0}, {OpB4E0X0}, {OpB5E0M0}, {OpB6E0X0}, {OpB7M0},
-	{OpB8},     {OpB9M0X0},   {OpBAX0},   {OpBBX0}, {OpBCX0},   {OpBDM0X0}, {OpBEX0},   {OpBFM0},
-	{OpC0X0},   {OpC1E0M0},   {OpC2},     {OpC3M0}, {OpC4X0},   {OpC5M0},   {OpC6M0},   {OpC7M0},
-	{OpC8X0},   {OpC9M0},     {OpCAX0},   {OpCB},   {OpCCX0},   {OpCDM0},   {OpCEM0},   {OpCFM0},
-	{OpD0E0},   {OpD1E0M0X0}, {OpD2E0M0}, {OpD3M0}, {OpD4E0},   {OpD5E0M0}, {OpD6E0M0}, {OpD7M0},
-	{OpD8},     {OpD9M0X0},   {OpDAE0X0}, {OpDB},   {OpDC},     {OpDDM0X0}, {OpDEM0X0}, {OpDFM0},
-	{OpE0X0},   {OpE1E0M0},   {OpE2},     {OpE3M0}, {OpE4X0},   {OpE5M0},   {OpE6M0},   {OpE7M0},
-	{OpE8X0},   {OpE9M0},     {OpEA},     {OpEB},   {OpECX0},   {OpEDM0},   {OpEEM0},   {OpEFM0},
-	{OpF0E0},   {OpF1E0M0X0}, {OpF2E0M0}, {OpF3M0}, {OpF4E0},   {OpF5E0M0}, {OpF6E0M0}, {OpF7M0},
-	{OpF8},     {OpF9M0X0},   {OpFAE0X0}, {OpFB},   {OpFCE0},   {OpFDM0X0}, {OpFEM0X0}, {OpFFM0}
+	{Op00},     {Op01E0M0}, {Op02},     {Op03M0}, {Op04M0},   {Op05M0},   {Op06M0},   {Op07M0},
+	{Op08E0},   {Op09M0},   {Op0AM0},   {Op0BE0}, {Op0CM0},   {Op0DM0},   {Op0EM0},   {Op0FM0},
+	{Op10E0},   {Op11E0M0}, {Op12E0M0}, {Op13M0}, {Op14M0},   {Op15E0M0}, {Op16E0M0}, {Op17M0},
+	{Op18},     {Op19M0X0}, {Op1AM0},   {Op1B},   {Op1CM0},   {Op1DM0X0}, {Op1EM0X0}, {Op1FM0},
+	{Op20E0},   {Op21E0M0}, {Op22E0},   {Op23M0}, {Op24M0},   {Op25M0},   {Op26M0},   {Op27M0},
+	{Op28E0},   {Op29M0},   {Op2AM0},   {Op2BE0}, {Op2CM0},   {Op2DM0},   {Op2EM0},   {Op2FM0},
+	{Op30E0},   {Op31E0M0}, {Op32E0M0}, {Op33M0}, {Op34E0M0}, {Op35E0M0}, {Op36E0M0}, {Op37M0},
+	{Op38},     {Op39M0X0}, {Op3AM0},   {Op3B},   {Op3CM0X0}, {Op3DM0X0}, {Op3EM0X0}, {Op3FM0},
+	{Op40Slow}, {Op41E0M0}, {Op42},     {Op43M0}, {Op44X0},   {Op45M0},   {Op46M0},   {Op47M0},
+	{Op48E0M0}, {Op49M0},   {Op4AM0},   {Op4BE0}, {Op4C},     {Op4DM0},   {Op4EM0},   {Op4FM0},
+	{Op50E0},   {Op51E0M0}, {Op52E0M0}, {Op53M0}, {Op54X0},   {Op55E0M0}, {Op56E0M0}, {Op57M0},
+	{Op58},     {Op59M0X0}, {Op5AE0X0}, {Op5B},   {Op5C},     {Op5DM0X0}, {Op5EM0X0}, {Op5FM0},
+	{Op60E0},   {Op61E0M0}, {Op62E0},   {Op63M0}, {Op64M0},   {Op65M0},   {Op66M0},   {Op67M0},
+	{Op68E0M0}, {Op69M0},   {Op6AM0},   {Op6BE0}, {Op6C},     {Op6DM0},   {Op6EM0},   {Op6FM0},
+	{Op70E0},   {Op71E0M0}, {Op72E0M0}, {Op73M0}, {Op74E0M0}, {Op75E0M0}, {Op76E0M0}, {Op77M0},
+	{Op78},     {Op79M0X0}, {Op7AE0X0}, {Op7B},   {Op7C},     {Op7DM0X0}, {Op7EM0X0}, {Op7FM0},
+	{Op80E0},   {Op81E0M0}, {Op82},     {Op83M0}, {Op84X0},   {Op85M0},   {Op86X0},   {Op87M0},
+	{Op88X0},   {Op89M0},   {Op8AM0},   {Op8BE0}, {Op8CX0},   {Op8DM0},   {Op8EX0},   {Op8FM0},
+	{Op90E0},   {Op91E0M0}, {Op92E0M0}, {Op93M0}, {Op94E0X0}, {Op95E0M0}, {Op96E0X0}, {Op97M0},
+	{Op98M0},   {Op99M0X0}, {Op9A},     {Op9BX0}, {Op9CM0},   {Op9DM0X0}, {Op9EM0X0}, {Op9FM0},
+	{OpA0X0},   {OpA1E0M0}, {OpA2X0},   {OpA3M0}, {OpA4X0},   {OpA5M0},   {OpA6X0},   {OpA7M0},
+	{OpA8X0},   {OpA9M0},   {OpAAX0},   {OpABE0}, {OpACX0},   {OpADM0},   {OpAEX0},   {OpAFM0},
+	{OpB0E0},   {OpB1E0M0}, {OpB2E0M0}, {OpB3M0}, {OpB4E0X0}, {OpB5E0M0}, {OpB6E0X0}, {OpB7M0},
+	{OpB8},     {OpB9M0X0}, {OpBAX0},   {OpBBX0}, {OpBCX0},   {OpBDM0X0}, {OpBEX0},   {OpBFM0},
+	{OpC0X0},   {OpC1E0M0}, {OpC2},     {OpC3M0}, {OpC4X0},   {OpC5M0},   {OpC6M0},   {OpC7M0},
+	{OpC8X0},   {OpC9M0},   {OpCAX0},   {OpCB},   {OpCCX0},   {OpCDM0},   {OpCEM0},   {OpCFM0},
+	{OpD0E0},   {OpD1E0M0}, {OpD2E0M0}, {OpD3M0}, {OpD4E0},   {OpD5E0M0}, {OpD6E0M0}, {OpD7M0},
+	{OpD8},     {OpD9M0X0}, {OpDAE0X0}, {OpDB},   {OpDC},     {OpDDM0X0}, {OpDEM0X0}, {OpDFM0},
+	{OpE0X0},   {OpE1E0M0}, {OpE2},     {OpE3M0}, {OpE4X0},   {OpE5M0},   {OpE6M0},   {OpE7M0},
+	{OpE8X0},   {OpE9M0},   {OpEA},     {OpEB},   {OpECX0},   {OpEDM0},   {OpEEM0},   {OpEFM0},
+	{OpF0E0},   {OpF1E0M0}, {OpF2E0M0}, {OpF3M0}, {OpF4E0},   {OpF5E0M0}, {OpF6E0M0}, {OpF7M0},
+	{OpF8},     {OpF9M0X0}, {OpFAE0X0}, {OpFB},   {OpFCE0},   {OpFDM0X0}, {OpFEM0X0}, {OpFFM0}
 };
 
 SOpcodes OpcodesM0X1[256] =
 {
-	{Op00},     {Op01E0M0},   {Op02},     {Op03M0}, {Op04M0},   {Op05M0},   {Op06M0},   {Op07M0},
-	{Op08E0},   {Op09M0},     {Op0AM0},   {Op0BE0}, {Op0CM0},   {Op0DM0},   {Op0EM0},   {Op0FM0},
-	{Op10E0},   {Op11E0M0X1}, {Op12E0M0}, {Op13M0}, {Op14M0},   {Op15E0M0}, {Op16E0M0}, {Op17M0},
-	{Op18},     {Op19M0X1},   {Op1AM0},   {Op1B},   {Op1CM0},   {Op1DM0X1}, {Op1EM0X1}, {Op1FM0},
-	{Op20E0},   {Op21E0M0},   {Op22E0},   {Op23M0}, {Op24M0},   {Op25M0},   {Op26M0},   {Op27M0},
-	{Op28E0},   {Op29M0},     {Op2AM0},   {Op2BE0}, {Op2CM0},   {Op2DM0},   {Op2EM0},   {Op2FM0},
-	{Op30E0},   {Op31E0M0X1}, {Op32E0M0}, {Op33M0}, {Op34E0M0}, {Op35E0M0}, {Op36E0M0}, {Op37M0},
-	{Op38},     {Op39M0X1},   {Op3AM0},   {Op3B},   {Op3CM0X1}, {Op3DM0X1}, {Op3EM0X1}, {Op3FM0},
-	{Op40Slow}, {Op41E0M0},   {Op42},     {Op43M0}, {Op44X1},   {Op45M0},   {Op46M0},   {Op47M0},
-	{Op48E0M0}, {Op49M0},     {Op4AM0},   {Op4BE0}, {Op4C},     {Op4DM0},   {Op4EM0},   {Op4FM0},
-	{Op50E0},   {Op51E0M0X1}, {Op52E0M0}, {Op53M0}, {Op54X1},   {Op55E0M0}, {Op56E0M0}, {Op57M0},
-	{Op58},     {Op59M0X1},   {Op5AE0X1}, {Op5B},   {Op5C},     {Op5DM0X1}, {Op5EM0X1}, {Op5FM0},
-	{Op60E0},   {Op61E0M0},   {Op62E0},   {Op63M0}, {Op64M0},   {Op65M0},   {Op66M0},   {Op67M0},
-	{Op68E0M0}, {Op69M0},     {Op6AM0},   {Op6BE0}, {Op6C},     {Op6DM0},   {Op6EM0},   {Op6FM0},
-	{Op70E0},   {Op71E0M0X1}, {Op72E0M0}, {Op73M0}, {Op74E0M0}, {Op75E0M0}, {Op76E0M0}, {Op77M0},
-	{Op78},     {Op79M0X1},   {Op7AE0X1}, {Op7B},   {Op7C},     {Op7DM0X1}, {Op7EM0X1}, {Op7FM0},
-	{Op80E0},   {Op81E0M0},   {Op82},     {Op83M0}, {Op84X1},   {Op85M0},   {Op86X1},   {Op87M0},
-	{Op88X1},   {Op89M0},     {Op8AM0},   {Op8BE0}, {Op8CX1},   {Op8DM0},   {Op8EX1},   {Op8FM0},
-	{Op90E0},   {Op91E0M0X1}, {Op92E0M0}, {Op93M0}, {Op94E0X1}, {Op95E0M0}, {Op96E0X1}, {Op97M0},
-	{Op98M0},   {Op99M0X1},   {Op9A},     {Op9BX1}, {Op9CM0},   {Op9DM0X1}, {Op9EM0X1}, {Op9FM0},
-	{OpA0X1},   {OpA1E0M0},   {OpA2X1},   {OpA3M0}, {OpA4X1},   {OpA5M0},   {OpA6X1},   {OpA7M0},
-	{OpA8X1},   {OpA9M0},     {OpAAX1},   {OpABE0}, {OpACX1},   {OpADM0},   {OpAEX1},   {OpAFM0},
-	{OpB0E0},   {OpB1E0M0X1}, {OpB2E0M0}, {OpB3M0}, {OpB4E0X1}, {OpB5E0M0}, {OpB6E0X1}, {OpB7M0},
-	{OpB8},     {OpB9M0X1},   {OpBAX1},   {OpBBX1}, {OpBCX1},   {OpBDM0X1}, {OpBEX1},   {OpBFM0},
-	{OpC0X1},   {OpC1E0M0},   {OpC2},     {OpC3M0}, {OpC4X1},   {OpC5M0},   {OpC6M0},   {OpC7M0},
-	{OpC8X1},   {OpC9M0},     {OpCAX1},   {OpCB},   {OpCCX1},   {OpCDM0},   {OpCEM0},   {OpCFM0},
-	{OpD0E0},   {OpD1E0M0X1}, {OpD2E0M0}, {OpD3M0}, {OpD4E0},   {OpD5E0M0}, {OpD6E0M0}, {OpD7M0},
-	{OpD8},     {OpD9M0X1},   {OpDAE0X1}, {OpDB},   {OpDC},     {OpDDM0X1}, {OpDEM0X1}, {OpDFM0},
-	{OpE0X1},   {OpE1E0M0},   {OpE2},     {OpE3M0}, {OpE4X1},   {OpE5M0},   {OpE6M0},   {OpE7M0},
-	{OpE8X1},   {OpE9M0},     {OpEA},     {OpEB},   {OpECX1},   {OpEDM0},   {OpEEM0},   {OpEFM0},
-	{OpF0E0},   {OpF1E0M0X1}, {OpF2E0M0}, {OpF3M0}, {OpF4E0},   {OpF5E0M0}, {OpF6E0M0}, {OpF7M0},
-	{OpF8},     {OpF9M0X1},   {OpFAE0X1}, {OpFB},   {OpFCE0},   {OpFDM0X1}, {OpFEM0X1}, {OpFFM0}
+	{Op00},     {Op01E0M0}, {Op02},     {Op03M0}, {Op04M0},   {Op05M0},   {Op06M0},   {Op07M0},
+	{Op08E0},   {Op09M0},   {Op0AM0},   {Op0BE0}, {Op0CM0},   {Op0DM0},   {Op0EM0},   {Op0FM0},
+	{Op10E0},   {Op11E0M0}, {Op12E0M0}, {Op13M0}, {Op14M0},   {Op15E0M0}, {Op16E0M0}, {Op17M0},
+	{Op18},     {Op19M0X1}, {Op1AM0},   {Op1B},   {Op1CM0},   {Op1DM0X1}, {Op1EM0X1}, {Op1FM0},
+	{Op20E0},   {Op21E0M0}, {Op22E0},   {Op23M0}, {Op24M0},   {Op25M0},   {Op26M0},   {Op27M0},
+	{Op28E0},   {Op29M0},   {Op2AM0},   {Op2BE0}, {Op2CM0},   {Op2DM0},   {Op2EM0},   {Op2FM0},
+	{Op30E0},   {Op31E0M0}, {Op32E0M0}, {Op33M0}, {Op34E0M0}, {Op35E0M0}, {Op36E0M0}, {Op37M0},
+	{Op38},     {Op39M0X1}, {Op3AM0},   {Op3B},   {Op3CM0X1}, {Op3DM0X1}, {Op3EM0X1}, {Op3FM0},
+	{Op40Slow}, {Op41E0M0}, {Op42},     {Op43M0}, {Op44X1},   {Op45M0},   {Op46M0},   {Op47M0},
+	{Op48E0M0}, {Op49M0},   {Op4AM0},   {Op4BE0}, {Op4C},     {Op4DM0},   {Op4EM0},   {Op4FM0},
+	{Op50E0},   {Op51E0M0}, {Op52E0M0}, {Op53M0}, {Op54X1},   {Op55E0M0}, {Op56E0M0}, {Op57M0},
+	{Op58},     {Op59M0X1}, {Op5AE0X1}, {Op5B},   {Op5C},     {Op5DM0X1}, {Op5EM0X1}, {Op5FM0},
+	{Op60E0},   {Op61E0M0}, {Op62E0},   {Op63M0}, {Op64M0},   {Op65M0},   {Op66M0},   {Op67M0},
+	{Op68E0M0}, {Op69M0},   {Op6AM0},   {Op6BE0}, {Op6C},     {Op6DM0},   {Op6EM0},   {Op6FM0},
+	{Op70E0},   {Op71E0M0}, {Op72E0M0}, {Op73M0}, {Op74E0M0}, {Op75E0M0}, {Op76E0M0}, {Op77M0},
+	{Op78},     {Op79M0X1}, {Op7AE0X1}, {Op7B},   {Op7C},     {Op7DM0X1}, {Op7EM0X1}, {Op7FM0},
+	{Op80E0},   {Op81E0M0}, {Op82},     {Op83M0}, {Op84X1},   {Op85M0},   {Op86X1},   {Op87M0},
+	{Op88X1},   {Op89M0},   {Op8AM0},   {Op8BE0}, {Op8CX1},   {Op8DM0},   {Op8EX1},   {Op8FM0},
+	{Op90E0},   {Op91E0M0}, {Op92E0M0}, {Op93M0}, {Op94E0X1}, {Op95E0M0}, {Op96E0X1}, {Op97M0},
+	{Op98M0},   {Op99M0X1}, {Op9A},     {Op9BX1}, {Op9CM0},   {Op9DM0X1}, {Op9EM0X1}, {Op9FM0},
+	{OpA0X1},   {OpA1E0M0}, {OpA2X1},   {OpA3M0}, {OpA4X1},   {OpA5M0},   {OpA6X1},   {OpA7M0},
+	{OpA8X1},   {OpA9M0},   {OpAAX1},   {OpABE0}, {OpACX1},   {OpADM0},   {OpAEX1},   {OpAFM0},
+	{OpB0E0},   {OpB1E0M0}, {OpB2E0M0}, {OpB3M0}, {OpB4E0X1}, {OpB5E0M0}, {OpB6E0X1}, {OpB7M0},
+	{OpB8},     {OpB9M0X1}, {OpBAX1},   {OpBBX1}, {OpBCX1},   {OpBDM0X1}, {OpBEX1},   {OpBFM0},
+	{OpC0X1},   {OpC1E0M0}, {OpC2},     {OpC3M0}, {OpC4X1},   {OpC5M0},   {OpC6M0},   {OpC7M0},
+	{OpC8X1},   {OpC9M0},   {OpCAX1},   {OpCB},   {OpCCX1},   {OpCDM0},   {OpCEM0},   {OpCFM0},
+	{OpD0E0},   {OpD1E0M0}, {OpD2E0M0}, {OpD3M0}, {OpD4E0},   {OpD5E0M0}, {OpD6E0M0}, {OpD7M0},
+	{OpD8},     {OpD9M0X1}, {OpDAE0X1}, {OpDB},   {OpDC},     {OpDDM0X1}, {OpDEM0X1}, {OpDFM0},
+	{OpE0X1},   {OpE1E0M0}, {OpE2},     {OpE3M0}, {OpE4X1},   {OpE5M0},   {OpE6M0},   {OpE7M0},
+	{OpE8X1},   {OpE9M0},   {OpEA},     {OpEB},   {OpECX1},   {OpEDM0},   {OpEEM0},   {OpEFM0},
+	{OpF0E0},   {OpF1E0M0}, {OpF2E0M0}, {OpF3M0}, {OpF4E0},   {OpF5E0M0}, {OpF6E0M0}, {OpF7M0},
+	{OpF8},     {OpF9M0X1}, {OpFAE0X1}, {OpFB},   {OpFCE0},   {OpFDM0X1}, {OpFEM0X1}, {OpFFM0}
 };
 
 SOpcodes OpcodesSlow[256] =

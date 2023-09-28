@@ -1120,7 +1120,8 @@ void SetCPU(uint8_t byte, uint16_t Address)
 			if ((byte & 1) == (Memory.FillRAM[0x420d] & 1))
 				break;
 
-			FixROMSpeed((byte & 1) ? Settings.OneCycle : Settings.SlowOneCycle);
+			CPU.FastROMSpeed = (byte & 1 ? Settings.OneCycle : Settings.SlowOneCycle);
+			SetPCBase(ICPU.Registers.PBPC); /* will update CPU.MemSpeed and CPU.MemSpeedx2 */
 			break;
 		case 0x420e:
 		case 0x420f: /* --->>> Unknown */

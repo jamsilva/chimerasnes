@@ -1156,34 +1156,10 @@ void InitROM()
 	}
 
 	Memory.SRAMMask = Memory.SRAMSize ? ((1 << (Memory.SRAMSize + 3)) * 128) - 1 : 0;
-	SetMainLoop();
-	ResetSpeedMap();
-	ApplyROMFixes();
 	sprintf(Memory.ROMName, "%s", Safe(Memory.ROMName));
 	sprintf(Memory.ROMId,   "%s", Safe(Memory.ROMId));
-}
-
-void FixROMSpeed(int32_t FastROMSpeed)
-{
-	int32_t c;
-
-	for (c = 0x800; c < 0x1000; c++)
-		if (c & 0x8 || c & 0x400)
-			Memory.MemorySpeed[c] = (uint8_t) FastROMSpeed;
-}
-
-void ResetSpeedMap()
-{
-	int32_t i;
-	memset(Memory.MemorySpeed, Settings.SlowOneCycle, 0x1000);
-
-	for (i = 0; i < 0x400; i += 0x10)
-	{
-		Memory.MemorySpeed[i + 2] = Memory.MemorySpeed[0x800 + i + 2] = Settings.OneCycle;
-		Memory.MemorySpeed[i + 3] = Memory.MemorySpeed[0x800 + i + 3] = Settings.OneCycle;
-		Memory.MemorySpeed[i + 4] = Memory.MemorySpeed[0x800 + i + 4] = Settings.OneCycle;
-		Memory.MemorySpeed[i + 5] = Memory.MemorySpeed[0x800 + i + 5] = Settings.OneCycle;
-	}
+	SetMainLoop();
+	ApplyROMFixes();
 }
 
 uint32_t map_mirror(uint32_t size, uint32_t pos)
@@ -1756,8 +1732,6 @@ void ApplyROMFixes()
 	APUTimingHacks();
 
 	/* Specific game fixes */
-	Settings.BSXHack              = match_na("BS ZELDA REMIX") || (Settings.Chip & BS) == BS;
-	Settings.MetroidHack          = match_na("Super Metroid");
 	Settings.SecretOfEvermoreHack = match_na("SECRET OF EVERMORE") && Settings.PAL;
 
 	HDMATimingHacks();
@@ -1800,14 +1774,14 @@ void APUTimingHacks()
 	         match_na("DARK KINGDOM") ||
 	         match_na("ZAN3 SFC") ||
 	         match_na("HIOUDEN") ||
-		match_na("\xC3\xDD\xBC\xC9\xB3\xC0")                || /* Tenshi no Uta */
+	         match_na("\xC3\xDD\xBC\xC9\xB3\xC0")                || /* Tenshi no Uta */
 	         match_na("FORTUNE QUEST") ||
 	         match_na("FISHING TO BASSING") ||
 	         match_na("TokyoDome '95Battle 7") ||
 	         match_na("OHMONO BLACKBASS") ||
 	         match_na("SWORD WORLD SFC") ||
 	         match_na("MASTERS") || /* Augusta 2 J */
-		match_na("SFC \xB6\xD2\xDD\xD7\xB2\xC0\xDE\xB0")    || /* Kamen Rider */
+	         match_na("SFC \xB6\xD2\xDD\xD7\xB2\xC0\xDE\xB0")    || /* Kamen Rider */
 	         match_na("LETs PACHINKO("))  /* A set of BS games */
 		IAPU.OneCycle = 15;
 	else
@@ -1817,6 +1791,7 @@ void APUTimingHacks()
 void HDMATimingHacks()
 {
 	Settings.H_Max = SNES_CYCLES_PER_SCANLINE;
+	Settings.GetSetDMATimingHacks = false;
 
 	/* A Couple of HDMA related hacks - Lantus */
 	if (match_na("SFX SUPERBUTOUDEN2")  ||
@@ -1839,6 +1814,11 @@ void HDMATimingHacks()
 		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 101) / 100;
 
 	Settings.HBlankStart = (256 * Settings.H_Max) / SNES_MAX_HCOUNTER;
+
+	if ((match_na("\?\?\?\?\?\?\?!") && Settings.Chip == DSP_1) || /* Ace O Nerae */
+	     match_na("BATMAN returns") ||                             /* Batman Returns */
+	     match_na("BS ZELDA REMIX"))                               /* BS Zelda MottZilla */
+		Settings.GetSetDMATimingHacks = true;
 }
 
 void SA1ShutdownAddressHacks()

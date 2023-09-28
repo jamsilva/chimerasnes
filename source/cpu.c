@@ -43,6 +43,7 @@ void ResetCPU()
 	CPU.NextEvent = Settings.HBlankStart;
 	CPU.MemSpeed = Settings.SlowOneCycle;
 	CPU.MemSpeedx2 = Settings.SlowOneCycle * 2;
+	CPU.FastROMSpeed = Settings.SlowOneCycle;
 	CPU.SRAMModified = false;
 	SetPCBase(ICPU.Registers.PCw);
 	ICPU.Opcodes = OpcodesE1;

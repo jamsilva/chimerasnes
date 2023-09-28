@@ -82,32 +82,6 @@ enum
 	SCAN_KEYS_FLAG = (1u << 2)
 };
 
-typedef struct
-{
-	bool     BranchSkip          : 1;
-	bool     InDMA               : 1;
-	bool     NMIActive           : 1;
-	bool     SRAMModified        : 1;
-	bool     WaitingForInterrupt : 1;
-	int16_t  _SCPUState_PAD1     : 11;
-	uint8_t  IRQActive;
-	uint8_t  WhichEvent;
-	uint16_t PCAtOpcodeStart;
-	uint16_t WaitPC;
-	int32_t  Cycles;
-	int32_t  FastROMSpeed;
-	int32_t  MemSpeed;
-	int32_t  MemSpeedx2;
-	int32_t  NextEvent;
-	int32_t  V_Counter;
-	uint32_t Flags;
-	uint32_t IRQCycleCount;
-	uint32_t NMICycleCount;
-	uint32_t NMITriggerPoint;
-	uint32_t WaitCounter;
-	uint8_t* PCBase;
-} SCPUState;
-
 enum
 {
 	HBLANK_START_EVENT  = 0,
@@ -165,14 +139,39 @@ enum
 
 typedef struct
 {
+	bool     BranchSkip          : 1;
+	bool     InDMA               : 1;
+	bool     NMIActive           : 1;
+	bool     SRAMModified        : 1;
+	bool     WaitingForInterrupt : 1;
+	int16_t  _SCPUState_PAD1     : 11;
+	uint8_t  IRQActive;
+	uint8_t  WhichEvent;
+	uint16_t PCAtOpcodeStart;
+	uint16_t WaitPC;
+	int32_t  Cycles;
+	int32_t  FastROMSpeed;
+	int32_t  MemSpeed;
+	int32_t  MemSpeedx2;
+	int32_t  NextEvent;
+	int32_t  V_Counter;
+	uint32_t Flags;
+	uint32_t IRQCycleCount;
+	uint32_t NMICycleCount;
+	uint32_t NMITriggerPoint;
+	uint32_t WaitCounter;
+	uint8_t* PCBase;
+} SCPUState;
+
+typedef struct
+{
 	bool     APUEnabled           : 1;
 	bool     PAL                  : 1;
 	bool     ReduceSpriteFlicker  : 1;
 	bool     Shutdown             : 1;
-	bool     BSXHack              : 1;
-	bool     MetroidHack          : 1;
 	bool     SecretOfEvermoreHack : 1;
-	uint8_t  _SSettings_PAD1      : 1;
+	bool     GetSetDMATimingHacks : 1;
+	uint8_t  _SSettings_PAD1      : 2;
 	uint8_t  OneCycle;
 	uint8_t  SlowOneCycle;
 	uint8_t  TwoCycles;

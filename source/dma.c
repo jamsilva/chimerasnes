@@ -712,8 +712,7 @@ uint8_t DoHDMA(uint8_t byte)
 			case 1:
 				SetPPU(HDMAMemPointers[d][0], 0x2100 + p->BAddress);
 				AddCycles(Settings.SlowOneCycle);
-				ICPU.OpenBus = HDMAMemPointers[d][1];
-				SetPPU(ICPU.OpenBus, 0x2101 + p->BAddress);
+				SetPPU(HDMAMemPointers[d][1], 0x2101 + p->BAddress);
 				AddCycles(Settings.SlowOneCycle);
 				HDMAMemPointers[d] += 2;
 				break;

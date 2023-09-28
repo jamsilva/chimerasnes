@@ -12,25 +12,29 @@
 
 static INLINE int32_t memory_speed(uint32_t address)
 {
-	int32_t block = (address & 0xffffff) >> MEMMAP_SHIFT;
-	return Memory.MemorySpeed[block];
+	if (address & 0x408000)
+	{
+		if (address & 0x800000)
+			return CPU.FastROMSpeed;
+
+		return Settings.SlowOneCycle;
+	}
+
+	if ((address + 0x6000) & 0x4000)
+		return Settings.SlowOneCycle;
+
+	if ((address - 0x4000) & 0x7e00)
+		return Settings.OneCycle;
+
+	return Settings.TwoCycles;
 }
 
 static INLINE void AddNumCyclesInMemAccess(int32_t cycles)
 {
-	if (CPU.InDMA || (Settings.MetroidHack && IPPU.HDMA))
+	if (!Settings.GetSetDMATimingHacks && (CPU.InDMA || IPPU.HDMA))
 		return;
 
 	CPU.Cycles += cycles;
-	HBlankProcessingLoop();
-}
-
-static INLINE void AddCyclesHack(int32_t cycles)
-{
-	if (Settings.BSXHack && CPU.InDMA && CPU.WhichEvent == HBLANK_START_EVENT)
-		CPU.Cycles += cycles; /* This is a hack but allows some BSX games to work */
-	else
-		AddNumCyclesInMemAccess(cycles);
 }
 
 static INLINE void AddCyclesInMemAccess(uint32_t address)
@@ -284,7 +288,7 @@ void SetByte(uint8_t Byte, uint32_t Address)
 		}
 
 		*SetAddress = Byte;
-		AddCyclesHack(memory_speed(Address));
+		AddCyclesInMemAccess(Address);
 		return;
 	}
 
@@ -412,7 +416,7 @@ void SetWord(uint16_t Word, uint32_t Address, wrap_t w, writeorder_t o)
 		}
 
 		WRITE_WORD(SetAddress, Word);
-		AddCyclesHack(memory_speed(Address) << 1);
+		AddCyclesX2InMemAccess(Address);
 		return;
 	}
 

@@ -659,7 +659,6 @@ bool retro_unserialize(const void* data, size_t size)
 	memcpy(&s7r, buffer, sizeof(s7r));
 	buffer += sizeof(s7r);
 	memcpy(&rtc_f9, buffer, sizeof(rtc_f9));
-	FixROMSpeed(Settings.SlowOneCycle);
 	IPPU.ColorsChanged = true;
 	IPPU.OBJChanged = true;
 	CPU.InDMA = false;

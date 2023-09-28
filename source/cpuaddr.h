@@ -247,43 +247,17 @@ static INLINE uint32_t DirectIndirectE1(AccessMode a) /* (d) */
 
 static INLINE uint32_t DirectIndirectIndexedSlow(AccessMode a) /* (d),Y */
 {
-	uint32_t addr = DirectIndirectSlow(a);
-
-	if ((a & WRITE) || !CheckIndex() || (addr & 0xff) + ICPU.Registers.YL >= 0x100)
-		AddCycles(Settings.OneCycle);
-
-	return addr + ICPU.Registers.Y.W;
+	return DirectIndirectSlow(a) + ICPU.Registers.Y.W;
 }
 
-static INLINE uint32_t DirectIndirectIndexedE0X0(AccessMode a) /* (d),Y */
+static INLINE uint32_t DirectIndirectIndexedE0(AccessMode a) /* (d),Y */
 {
-	uint32_t addr = DirectIndirectE0(a);
-	AddCycles(Settings.OneCycle);
-
-	if (a & WRITE)
-		AddCycles(Settings.OneCycle);
-
-	return addr + ICPU.Registers.Y.W;
-}
-
-static INLINE uint32_t DirectIndirectIndexedE0X1(AccessMode a) /* (d),Y */
-{
-	uint32_t addr = DirectIndirectE0(a);
-
-	if ((a & WRITE) || (addr & 0xff) + ICPU.Registers.YL >= 0x100)
-		AddCycles(Settings.OneCycle);
-
-	return addr + ICPU.Registers.Y.W;
+	return DirectIndirectE0(a) + ICPU.Registers.Y.W;
 }
 
 static INLINE uint32_t DirectIndirectIndexedE1(AccessMode a) /* (d),Y */
 {
-	uint32_t addr = DirectIndirectE1(a);
-
-	if ((a & WRITE) || (addr & 0xff) + ICPU.Registers.YL >= 0x100)
-		AddCycles(Settings.OneCycle);
-
-	return addr + ICPU.Registers.Y.W;
+	return DirectIndirectE1(a) + ICPU.Registers.Y.W;
 }
 
 static INLINE uint32_t DirectIndirectLongSlow(AccessMode a) /* [d] */
