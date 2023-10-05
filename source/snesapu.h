@@ -12,7 +12,7 @@
 #define MFLG_SSRC 0x10 /* StartSrc */
 
 /* Envelope precision */
-#define E_SHIFT 8 /* Amount to shift envelope to get 8-bit signed value */
+#define E_SHIFT 4 /* Amount to shift envelope to get 8-bit signed value */
 
 #define FIXED_POINT 0x10000
 #define FIXED_POINT_REMAINDER 0xffff

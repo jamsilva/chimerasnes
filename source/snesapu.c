@@ -207,7 +207,7 @@ static const uint32_t freqTab[32] = /* Frequency table; number of samples betwee
 	10,  8,    6,    5,    4,    3,   2,   1
 };
 
-static const uint16_t rate_table[32] =
+static const uint16_t noiseRateTable[32] =
 {
 	0x0000, 0x000F, 0x0014, 0x0018, 0x001E, 0x0028, 0x0030, 0x003C,
 	0x0050, 0x0060, 0x0078, 0x00A0, 0x00C0, 0x00F0, 0x0140, 0x0180,
@@ -430,7 +430,7 @@ static INLINE void UpdateSrc(int32_t ch)
 
 static INLINE void SetNoiseHertz()
 {
-	nRate = rate_table[APU.DSP[APU_FLG] & 0x1f];
+	nRate = noiseRateTable[APU.DSP[APU_FLG] & 0x1f];
 }
 
 static INLINE void InitReg(int32_t reg, uint8_t val)
@@ -461,19 +461,13 @@ void InitAPUDSP()
 		mix[i].bCur = DSPGetSrc(i);
 	}
 
-	/* Build a look-up table for all possible expanded values in a BRR block. */
-	for (i = 0; i < 13; i++) /* Range 0-12 */
+	for (i = 0; i < 13; i++) /* Build a look-up table for all possible expanded values in a BRR block. Range 0-12 */
 		for (c = 0; c < 16; c++)
-			brrTab[(i << 4) + c] = (int32_t) (((c ^ 8) - 8) << i);
+			brrTab[(i << 4) + c] = (int32_t) ((int16_t) (c << 12) >> 12) << i >> 1;
 
 	for (i = 13; i < 16; i++) /* Range 13-15 */
-	{
-		for (c = 0; c < 8; c++)
-			brrTab[(i << 4) + c] = 0;
-
-		for (; c < 16; c++)
-			brrTab[(i << 4) + c] = -4096;
-	}
+		for (c = 0; c < 16; c++)
+			brrTab[(i << 4) + c] = (int32_t) ((int16_t) (c << 12) >> 12) & ~0x7ff;
 
 	for (i = 0; i < 256; i++) /* Interleave Gaussian table */
 	{
@@ -1528,23 +1522,15 @@ static INLINE int32_t UnpckSrcFilter(int32_t f, int32_t p1, int32_t p2)
 {
 	switch (f)
 	{
-		case 1:
-			return p1 + ((-p1) >> 4);
-		case 2:
-			return (p1 << 1) + (-((p1 << 1) + p1) >> 5) + (p2 >> 4) - p2;
-		case 3:
-			return (p1 << 1) + (-((p1 << 3) + (p1 << 2) + p1) >> 6) + (((p2 << 1) + p2) >> 4) - p2;
-		default:
+		case 1: /* Method1 - [Delta]+[Smp-1](15/16) */
+			return ((p1 >> 1) + ((-p1) >> 5));
+		case 2: /* Method2 - [Delta]+[Smp-1](61/32)-[Smp-2](15/16) */
+			return (p1 - (p2 >> 1) + (p2 >> 5) + ((p1 * -3) >> 6));
+		case 3: /* Method3 - [Delta]+[Smp-1](115/64)-[Smp-2](13/16) */
+			return (p1 - (p2 >> 1) + ((p1 * -13) >> 7) + (((p2 >> 1) * 3) >> 4));
+		default: /* Method0 - [Smp] */
 			return 0;
 	}
-}
-
-static INLINE void FixSmp(int32_t* smp)
-{
-	if (*smp < -65536 || *smp >= 65535)
-		*smp = 0;
-	else
-		*smp = (int32_t)(int16_t) *smp;
 }
 
 static void UnpckSrc(uint8_t blk_hdr, uint16_t* xsample_blk, int16_t* output_buf, int32_t* smp_1, int32_t* smp_2)
@@ -1558,10 +1544,10 @@ static void UnpckSrc(uint8_t blk_hdr, uint16_t* xsample_blk, int16_t* output_buf
 	for (i = 0; i < 8; i++)
 	{
 		*smp_2 = BRR_row[sample_blk[0] >> 4] + UnpckSrcFilter(f, *smp_1, *smp_2);
-		FixSmp(smp_2);
+		*smp_2 = (int16_t) (INT16_CLAMP(*smp_2) << 1);
 		output_buf[0] = *smp_2;
 		*smp_1 = BRR_row[sample_blk[0] & 0x0f] + UnpckSrcFilter(f, *smp_2, *smp_1);
-		FixSmp(smp_1);
+		*smp_1 = (int16_t) (INT16_CLAMP(*smp_1) << 1);
 		output_buf[1] = *smp_1;
 		sample_blk++;
 		output_buf += 2;

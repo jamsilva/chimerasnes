@@ -21,6 +21,9 @@
 #include "sa1.h"
 #include "libretro_core_options.h"
 
+#define FRAME_TIME         (Settings.PAL ? 20000        : 16667)
+#define FRAMES_PER_SECOND  (Settings.PAL ? 50.006977968 : 60.09881389744051)
+
 static retro_log_printf_t         log_cb         = NULL;
 static retro_video_refresh_t      video_cb       = NULL;
 static retro_input_poll_t         poll_cb        = NULL;
@@ -30,9 +33,6 @@ static retro_environment_t        environ_cb     = NULL;
 
 static bool libretro_supports_option_categories = false;
 static bool libretro_supports_bitmasks = false;
-
-#define FRAME_TIME         (Settings.PAL ? 20000        : 16667)
-#define FRAMES_PER_SECOND  (Settings.PAL ? 50.006977968 : 60.09881389744051)
 
 static int16_t* audio_out_buffer           = NULL;
 static float    audio_samples_per_frame    = 0.0f;
@@ -45,7 +45,7 @@ static bool     retro_audio_buff_active    = false;
 static uint8_t  retro_audio_buff_occupancy = 0;
 static bool     retro_audio_buff_underrun  = false;
 
-static uint16_t retro_audio_latency        = 0;
+static unsigned retro_audio_latency        = 0;
 static bool     update_audio_latency       = false;
 static bool     mute_audio                 = false;
 
@@ -130,7 +130,7 @@ static void retro_set_audio_buff_status_cb()
 			 * buffer underruns */
 			uint32_t frame_time_usec = FRAME_TIME;
 			/* Set latency to 6x current frame time... */
-			retro_audio_latency = (uint16_t) (6 * frame_time_usec / 1000);
+			retro_audio_latency = (unsigned) (6 * frame_time_usec / 1000);
 			/* ...then round up to nearest multiple of 32 */
 			retro_audio_latency = (retro_audio_latency + 0x1F) & ~0x1F;
 		}
@@ -417,9 +417,9 @@ static void check_variables(bool first_run)
 
 void retro_run()
 {
-	bool updated = false;
 	int result;
 	bool okay;
+	bool updated = false;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
 		check_variables(false);
@@ -483,9 +483,9 @@ void retro_run()
 
 	poll_cb();
 	MainLoop();
+	audio_upload_samples();
 
 #ifdef NO_VIDEO_OUTPUT
-	audio_upload_samples();
 	return;
 #endif
 
@@ -510,8 +510,6 @@ void retro_run()
 	}
 	else
 		video_cb(NULL, IPPU.RenderedScreenWidth, IPPU.RenderedScreenHeight, GFX.Pitch);
-
-	audio_upload_samples();
 }
 
 bool ReadMousePosition(int32_t which1, int32_t* x, int32_t* y, uint32_t* buttons)
@@ -548,11 +546,12 @@ unsigned retro_get_region()
 
 void retro_get_system_info(struct retro_system_info* info)
 {
-	info->need_fullpath = false;
-	info->valid_extensions = "smc|fig|sfc|gd3|gd7|dx2|bsx|bs|swc|st";
 #ifndef GIT_VERSION
 	#define GIT_VERSION ""
 #endif
+
+	info->need_fullpath    = false;
+	info->valid_extensions = "smc|fig|sfc|gd3|gd7|dx2|bsx|bs|swc|st";
 	info->library_version = GIT_VERSION;
 	info->library_name = "ChimeraSNES";
 	info->block_extract = false;
