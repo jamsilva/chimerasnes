@@ -8,7 +8,11 @@
 #include "port.h"
 #include "65c816.h"
 
-#define ROM_NAME_LEN 23
+#define ROM_NAME_LEN        (22 + 1)
+#define ROM_ID_LEN          (4 + 1)
+#define SAFE_LEN_MULTIPLIER (3)
+#define SAFE_ROM_NAME_LEN   (((ROM_NAME_LEN - 1) * SAFE_LEN_MULTIPLIER) + 1)
+#define SAFE_ROM_ID_LEN     (((ROM_ID_LEN   - 1) * SAFE_LEN_MULTIPLIER) + 1)
 
 #define SNES_WIDTH           256
 #define SNES_HEIGHT          224

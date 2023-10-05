@@ -70,8 +70,8 @@ typedef struct
 {
 	bool     LoROM        : 1;
 	int8_t   _CMemory_PAD : 7;
-	char     ROMId[5];
-	char     ROMName[ROM_NAME_LEN];
+	char     ROMId[SAFE_ROM_ID_LEN];
+	char     ROMName[SAFE_ROM_NAME_LEN];
 	uint8_t  ExtendedFormat;
 	uint8_t  SRAMSize;
 	uint8_t  ROMRegion;

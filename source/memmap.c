@@ -212,39 +212,22 @@ static int32_t ScoreLoROM(bool skip_header, int32_t romoff)
 	return score;
 }
 
-static char* Safe(const char* s)
+static void MakeSafe(char* s)
 {
-	static char* safe;
-	static int32_t safe_len = 0;
-	int32_t i, len;
+	size_t olen = strlen(s);
+	uint8_t* oc = (uint8_t*) s + olen * (SAFE_LEN_MULTIPLIER - 1);
+	uint8_t* nc = (uint8_t*) s;
+	memmove(oc, s, olen + 1);
 
-	if (s == NULL)
+	for ( ; *oc ; oc++)
 	{
-		free(safe);
-		safe = NULL;
-		return NULL;
-	}
-
-	len = strlen(s);
-
-	if (!safe || len + 1 > safe_len)
-	{
-		if (safe)
-			free(safe);
-
-		safe = (char*) malloc(safe_len = len + 1);
-	}
-
-	for (i = 0; i < len; i++)
-	{
-		if (s[i] >= 32 && s[i] < 127)
-			safe[i] = s[i];
+		if (*oc >= 32 && *oc <= 127)
+			*nc++ = *oc;
 		else
-			safe[i] = '?';
+			nc += sprintf((char*) nc, "$%02x", *oc);
 	}
 
-	safe[len] = 0;
-	return safe;
+	*nc = '\0';
 }
 
 bool InitMemory()
@@ -287,8 +270,6 @@ void DeinitMemory()
 		free(IPPU.TileCached[t]);
 		IPPU.TileCache[t] = IPPU.TileCached[t] = NULL;
 	}
-
-	Safe(NULL);
 }
 
 static void LoadSFTBIOS()
@@ -923,7 +904,7 @@ void ParseSNESHeader(uint8_t* RomHeader)
 
 	Memory.ROMRegion = RomHeader[0x29];
 	/* memmove converted: Different mallocs [Neb] */
-	memcpy(Memory.ROMId, RomHeader + 0x02, 4);
+	memcpy(Memory.ROMId, RomHeader + 0x02, ROM_ID_LEN - 1);
 
 	if (RomHeader[0x2A] != 0x33)
 	{
@@ -954,7 +935,7 @@ void InitROM()
 
 	memset(Memory.BlockIsRAM, 0, MEMMAP_NUM_BLOCKS);
 	memset(Memory.BlockIsROM, 0, MEMMAP_NUM_BLOCKS);
-	memset(Memory.ROMId, 0, 5);
+	Memory.ROMId[ROM_ID_LEN - 1] = '\0';
 	Memory.CompanyId = 0;
 	InitBSX(); /* Set BS-X header before parsing */
 	ParseSNESHeader(RomHeader);
@@ -1156,8 +1137,8 @@ void InitROM()
 	}
 
 	Memory.SRAMMask = Memory.SRAMSize ? ((1 << (Memory.SRAMSize + 3)) * 128) - 1 : 0;
-	sprintf(Memory.ROMName, "%s", Safe(Memory.ROMName));
-	sprintf(Memory.ROMId,   "%s", Safe(Memory.ROMId));
+	MakeSafe(Memory.ROMName);
+	MakeSafe(Memory.ROMId);
 	SetMainLoop();
 	ApplyROMFixes();
 }
@@ -1674,7 +1655,7 @@ bool match_na(const char* str)
 {
 	size_t len = strlen(str);
 
-	if (len > ROM_NAME_LEN)
+	if (len >= SAFE_ROM_NAME_LEN)
 		return false;
 
 	return !strncmp(Memory.ROMName, str, len);
@@ -1684,7 +1665,7 @@ bool match_lo_na(const char* str)
 {
 	size_t len = strlen(str);
 
-	if (len > ROM_NAME_LEN)
+	if (len >= SAFE_ROM_NAME_LEN)
 		return false;
 
 	return !strncmp((char*) Memory.ROM + 0x7fc0, str, len);
@@ -1694,7 +1675,7 @@ bool match_hi_na(const char* str)
 {
 	size_t len = strlen(str);
 
-	if (len > ROM_NAME_LEN)
+	if (len >= SAFE_ROM_NAME_LEN)
 		return false;
 
 	return !strncmp((char*) Memory.ROM + 0xffc0, str, len);
@@ -1702,7 +1683,12 @@ bool match_hi_na(const char* str)
 
 bool match_id(const char* str)
 {
-	return !strncmp(Memory.ROMId, str, strlen(str));
+	size_t len = strlen(str);
+
+	if (len >= SAFE_ROM_ID_LEN)
+		return false;
+
+	return !strncmp(Memory.ROMId, str, len);
 }
 
 void ApplyROMFixes()
@@ -1747,43 +1733,43 @@ void ApplyROMFixes()
 
 void APUTimingHacks()
 {
-	if (match_id("CQ  ") ||                                            /* Stunt Racer FX */
-	    match_id("JG") ||                                              /* Illusion of Gaia */
-	    match_na("GAIA GENSOUKI 1 JPN"))                               /* Illusion of Gaia J */
+	if (match_id("CQ  ") ||                                      /* Stunt Racer FX */
+	    match_id("JG") ||                                        /* Illusion of Gaia */
+	    match_na("GAIA GENSOUKI 1 JPN"))                         /* Illusion of Gaia (J) */
 		IAPU.OneCycle = 13;
-	else if (!strcmp(Memory.ROMName, "UMIHARAKAWASE"))                 /* Umihara Kawase */
+	else if (!strcmp(Memory.ROMName, "UMIHARAKAWASE"))           /* Umihara Kawase */
 		IAPU.OneCycle = 20;
-	else if (match_id("AVCJ") ||                                       /* Rendering Ranger R2 */
-	         match_na("THE FISHING MASTER") ||                         /* Mark Davis - needs >= actual APU timing. (21 is .002 Mhz slower) */
-	         match_id("ARF") ||                                        /* Star Ocean */
-	         match_id("ATV") ||                                        /* Tales of Phantasia */
-	         !strncasecmp(Memory.ROMName, "ActRaiser", 9) ||           /* Act Raiser 1 & 2 */
-	         match_na("SOULBLAZER - 1 USA") ||                         /* Soulblazer */
-	         match_na("SOULBLADER - 1") ||                             /* Soulblazer J */
-	         match_id("AQT") ||                                        /* Terranigma */
-	         match_id("E9 ") ||                                        /* Robotrek */
-	         match_na("SLAP STICK 1 JPN") ||                           /* Robotrek J */
-	         match_id("APR") ||                                        /* ZENNIHON PURORESU2 */
-	         match_id("A4B") ||                                        /* Bomberman 4 */
-	         match_id("Y7 ") ||                                        /* UFO KAMEN YAKISOBAN */
-	         match_id("Y9 ") ||                                        /* Panic Bomber World */
+	else if (match_id("AVCJ") ||                                 /* Rendering Ranger R2 */
+	         match_na("THE FISHING MASTER") ||                   /* Mark Davis - needs >= actual APU timing. (21 is .002 Mhz slower) */
+	         match_id("ARF") ||                                  /* Star Ocean */
+	         match_id("ATV") ||                                  /* Tales of Phantasia */
+	         !strncasecmp(Memory.ROMName, "ActRaiser", 9) ||     /* Act Raiser 1 & 2 */
+	         match_na("SOULBLAZER - 1 USA") ||                   /* Soulblazer */
+	         match_na("SOULBLADER - 1") ||                       /* Soulblazer (J) */
+	         match_id("AQT") ||                                  /* Terranigma */
+	         match_id("E9 ") ||                                  /* Robotrek */
+	         match_na("SLAP STICK 1 JPN") ||                     /* Robotrek (J) */
+	         match_id("APR") ||                                  /* ZENNIHON PURORESU2 */
+	         match_id("A4B") ||                                  /* Bomberman 4 */
+	         match_id("Y7 ") ||                                  /* UFO KAMEN YAKISOBAN */
+	         match_id("Y9 ") ||                                  /* Panic Bomber World */
 	         match_id("APB") ||
 	         ((match_na("Parlor") ||
 	           match_na("HEIWA Parlor!Mini8") ||
-	           match_na("SANKYO Fever! \xCC\xA8\xB0\xCA\xDE\xB0!")) &&
+	           match_na("SANKYO Fever! $cc$a8$b0$ca$de$b0!")) &&
 	           Memory.CompanyId == 0x168) ||
 	         match_na("DARK KINGDOM") ||
 	         match_na("ZAN3 SFC") ||
 	         match_na("HIOUDEN") ||
-	         match_na("\xC3\xDD\xBC\xC9\xB3\xC0") ||                   /* Tenshi no Uta */
+	         match_na("$c3$dd$bc$c9$b3$c0") ||                   /* Tenshi no Uta */
 	         match_na("FORTUNE QUEST") ||
 	         match_na("FISHING TO BASSING") ||
 	         match_na("TokyoDome '95Battle 7") ||
 	         match_na("OHMONO BLACKBASS") ||
 	         match_na("SWORD WORLD SFC") ||
-	         match_na("MASTERS") ||                                    /* Harukanaru Augusta 2 */
-	         match_na("SFC \xB6\xD2\xDD\xD7\xB2\xC0\xDE\xB0") ||       /* Kamen Rider */
-	         match_na("LETs PACHINKO("))                               /* A set of Pachinko BSX games */
+	         match_na("MASTERS") ||                              /* Harukanaru Augusta 2 */
+	         match_na("SFC $b6$d2$dd$d7$b2$c0$de$b0") ||         /* Kamen Rider */
+	         match_na("LETs PACHINKO("))                         /* A set of Pachinko BSX games */
 		IAPU.OneCycle = 15;
 	else
 		IAPU.OneCycle  = DEFAULT_ONE_APU_CYCLE;
@@ -1797,7 +1783,7 @@ void HDMATimingHacks()
 	/* A Couple of HDMA related hacks - Lantus */
 	if (match_id("ASRJ"))                                        /* Street Racer */
 		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 95) / 100;
-	else if (match_na("\x0bd\x0da\x0b2\x0d4\x0b0\x0bd\x0de"))
+	else if (match_na("$0bd$0da$0b2$0d4$0b0$0bd$0de"))
 		Settings.H_Max = (SNES_CYCLES_PER_SCANLINE * 101) / 100;
 	else if (match_id("A3R") ||                                  /* Power Rangers Fight */
 	         match_id("AJE"))                                    /* Clock Tower */
@@ -1815,9 +1801,17 @@ void HDMATimingHacks()
 
 	Settings.HBlankStart = (256 * Settings.H_Max) / SNES_MAX_HCOUNTER;
 
-	if ((match_na("??????\?!") && Settings.Chip == DSP_1) || /* Ace O Nerae */
-	     match_na("BATMAN returns") ||                       /* Batman Returns */
-	     match_na("BS ZELDA REMIX"))                         /* BS Zelda MottZilla */
+	if (match_na("$b4$b0$bd$a6$c8$d7$b4!") ||                /* Ace O Nerae */
+	    match_na("BATMAN returns") ||                        /* Batman Returns */
+	    match_na("BS ZELDA$91$e6$82P$98b  $ff") ||           /* BS Zelda - Part 1 */
+	    match_na("BS ZELDA$91$e6$82Q$98b  $ff") ||           /* BS Zelda - Part 2 */
+	    match_na("BS ZELDA$91$e6$82R$98b  $ff") ||           /* BS Zelda - Part 3 */
+	    match_na("BS ZELDA$91$e6$82S$98b  $ff") ||           /* BS Zelda - Part 4 */
+	    match_na("BS ZELDA1       $ff") ||                   /* BS Zelda Map 2 */
+	    match_na("$83N$83I$83$93$83p$82a$82r$94$c5  $ff") || /* BS Cu-On-Pa */
+	    match_na("BS$cf$b2$c3$a8$ce$df$b9$af$c21week$ff") || /* Mighty Pockets - Investigation 1 */
+	    match_na("BS$cf$b2$c3$a8$ce$df$b9$af$c22week$ff") || /* Mighty Pockets - Investigation 2 */
+	    match_na("BS ZELDA REMIX"))                          /* BS Zelda MottZilla */
 		Settings.GetSetDMATimingHacks = true;
 }
 
