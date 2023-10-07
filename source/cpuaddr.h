@@ -118,7 +118,6 @@ static INLINE uint32_t AbsoluteIndexedIndirect(AccessMode a) /* (a,X) */
 {
 	uint16_t addr, addr2;
 	addr = Immediate16Slow(READ);
-	AddCycles(Settings.OneCycle);
 	addr += ICPU.Registers.X.W;
 	addr2 = GetWord(ICPU.ShiftedPB | addr, WRAP_BANK); /* Address load wraps within the bank */
 	ICPU.OpenBus = addr2 >> 8;
@@ -247,17 +246,37 @@ static INLINE uint32_t DirectIndirectE1(AccessMode a) /* (d) */
 
 static INLINE uint32_t DirectIndirectIndexedSlow(AccessMode a) /* (d),Y */
 {
-	return DirectIndirectSlow(a) + ICPU.Registers.Y.W;
+	uint32_t addr = DirectIndirectSlow(a);
+
+	if ((a & WRITE) || !CheckIndex() || (addr & 0xff) + ICPU.Registers.YL >= 0x100)
+		AddCycles(Settings.OneCycle);
+
+	return addr + ICPU.Registers.Y.W;
 }
 
-static INLINE uint32_t DirectIndirectIndexedE0(AccessMode a) /* (d),Y */
+static INLINE uint32_t DirectIndirectIndexedE0X0(AccessMode a) /* (d),Y */
 {
 	return DirectIndirectE0(a) + ICPU.Registers.Y.W;
 }
 
+static INLINE uint32_t DirectIndirectIndexedE0X1(AccessMode a) /* (d),Y */
+{
+	uint32_t addr = DirectIndirectE0(a);
+
+	if ((a & WRITE) || (addr & 0xff) + ICPU.Registers.YL >= 0x100)
+		AddCycles(Settings.OneCycle);
+
+	return addr + ICPU.Registers.Y.W;
+}
+
 static INLINE uint32_t DirectIndirectIndexedE1(AccessMode a) /* (d),Y */
 {
-	return DirectIndirectE1(a) + ICPU.Registers.Y.W;
+	uint32_t addr = DirectIndirectE1(a);
+
+	if ((a & WRITE) || (addr & 0xff) + ICPU.Registers.YL >= 0x100)
+		AddCycles(Settings.OneCycle);
+
+	return addr + ICPU.Registers.Y.W;
 }
 
 static INLINE uint32_t DirectIndirectLongSlow(AccessMode a) /* [d] */
@@ -482,6 +501,7 @@ static INLINE uint32_t StackRelativeIndirectIndexed(AccessMode a) /* (d,S),Y */
 		ICPU.OpenBus = (uint8_t) (addr >> 8);
 
 	addr = (addr + ICPU.Registers.Y.W + ICPU.ShiftedDB) & 0xffffff;
+	AddCycles(Settings.OneCycle);
 	return addr;
 }
 #endif
